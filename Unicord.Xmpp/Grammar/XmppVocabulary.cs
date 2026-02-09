@@ -1,0 +1,207 @@
+﻿using System;
+using System.Xml;
+
+namespace Unicord.Xmpp.Grammar;
+
+internal class XmppVocabulary : NameTable
+{
+    public static readonly Key Empty = new("");
+
+    public static readonly Key Xmlns = new("xmlns");
+    public static readonly Key XmlnsNs = new("http://www.w3.org/2000/xmlns/");
+
+    public static readonly Key StreamsNs = new("http://etherx.jabber.org/streams");
+    public static readonly Key JabberClientNs = new("jabber:client");
+    public static readonly Key JabberIqAuthNs = new("jabber:iq:auth");
+    public static readonly Key JabberIqGatewayNs = new("jabber:iq:gateway");
+    public static readonly Key JabberIqLastNs = new("jabber:iq:last");
+    public static readonly Key JabberIqOobNs = new("jabber:iq:oob");
+    public static readonly Key JabberIqPrivacyNs = new("jabber:iq:privacy");
+    public static readonly Key JabberIqPrivateNs = new("jabber:iq:private");
+    public static readonly Key JabberIqRegisterNs = new("jabber:iq:register");
+    public static readonly Key JabberIqRosterNs = new("jabber:iq:roster");
+    public static readonly Key JabberIqRpcNs = new("jabber:iq:rpc");
+    public static readonly Key JabberIqSearchNs = new("jabber:iq:search");
+    public static readonly Key JabberIqVersionNs = new("jabber:iq:version");
+    public static readonly Key IqAuthNs = new("http://jabber.org/features/iq-auth");
+    public static readonly Key SaslNs = new("urn:ietf:params:xml:ns:xmpp-sasl");
+
+    public static readonly Key Stream = new("stream");
+    public static readonly Key Features = new("features");
+
+    public static readonly Key Mechanisms = new("mechanisms");
+    public static readonly Key Mechanism = new("mechanism");
+    public static readonly Key Auth = new("auth");
+
+    public static readonly Key Message = new("message");
+    public static readonly Key Presence = new("presence");
+    public static readonly Key Iq = new("iq");
+
+    public static readonly Key Type = new("type");
+    public static readonly Key Id = new("id");
+    public static readonly Key From = new("from");
+    public static readonly Key To = new("to");
+    public static readonly Key Version = new("version");
+
+    public static readonly Key Subject = new("subject");
+    public static readonly Key Body = new("body");
+
+    public static readonly Key Show = new("show");
+    public static readonly Key Status = new("status");
+
+    public static readonly Key Query = new("query");
+
+    public static readonly Key Item = new("item");
+    public static readonly Key Jid = new("jid");
+
+    public static readonly Key Username = new("username");
+    public static readonly Key Password = new("password");
+    public static readonly Key Digest = new("digest");
+    public static readonly Key Resource = new("resource");
+
+    bool allowAdding = true;
+    readonly object syncRoot = new();
+
+    public XmppVocabulary()
+    {
+        AddKey(Empty);
+        AddKey(Xmlns);
+        AddKey(XmlnsNs);
+
+        AddKey(StreamsNs);
+        AddKey(JabberClientNs);
+        AddKey(JabberIqAuthNs);
+        AddKey(JabberIqGatewayNs);
+        AddKey(JabberIqLastNs);
+        AddKey(JabberIqOobNs);
+        AddKey(JabberIqPrivacyNs);
+        AddKey(JabberIqPrivateNs);
+        AddKey(JabberIqRegisterNs);
+        AddKey(JabberIqRosterNs);
+        AddKey(JabberIqRpcNs);
+        AddKey(JabberIqSearchNs);
+        AddKey(JabberIqVersionNs);
+        AddKey(IqAuthNs);
+        AddKey(SaslNs);
+
+        AddKey(Stream);
+        AddKey(Features);
+
+        AddKey(Mechanisms);
+        AddKey(Mechanism);
+        AddKey(Auth);
+
+        AddKey(Message);
+        AddKey(Presence);
+        AddKey(Iq);
+
+        AddKey(Type);
+        AddKey(Id);
+        AddKey(From);
+        AddKey(To);
+        AddKey(Version);
+
+        AddKey(Subject);
+        AddKey(Body);
+
+        AddKey(Show);
+        AddKey(Status);
+
+        AddKey(Query);
+
+        AddKey(Item);
+        AddKey(Jid);
+
+        AddKey(Username);
+        AddKey(Password);
+        AddKey(Digest);
+        AddKey(Resource);
+
+        AddKey("xml");
+        AddKey("encoding");
+        AddKey("standalone");
+        AddKey("lang");
+        AddKey("en");
+        AddKey("http://www.w3.org/XML/1998/namespace");
+    }
+
+    public override string Add(char[] key, int start, int len)
+    {
+        return base.Get(key, start, len) ?? AddSynchronized(key, start, len);
+    }
+
+    public override string Add(string key)
+    {
+        return base.Get(key) ?? AddSynchronized(key);
+    }
+
+    private void AddKey(string key)
+    {
+        if (!ReferenceEquals(key, base.Add(key)))
+        {
+            throw new NotSupportedException("The key reference is invalid.");
+        }
+    }
+
+    private string AddSynchronized(char[] key, int start, int len)
+    {
+        if (!allowAdding)
+        {
+            throw new InvalidOperationException($"{new string(key, start, len)} is not found in the table.");
+        }
+        lock (syncRoot)
+        {
+            return base.Add(key, start, len);
+        }
+    }
+
+    private string AddSynchronized(string key)
+    {
+        if (!allowAdding)
+        {
+            throw new InvalidOperationException($"{key} is not found in the table.");
+        }
+        lock (syncRoot)
+        {
+            return base.Add(key);
+        }
+    }
+
+    public override string? Get(char[] key, int start, int len)
+    {
+        return base.Get(key, start, len);
+    }
+
+    public override string? Get(string value)
+    {
+        return base.Get(value);
+    }
+
+    public readonly record struct Key(string Value)
+    {
+        public static bool operator ==(string a, Key b)
+        {
+            return ReferenceEquals(a, b.Value);
+        }
+
+        public static bool operator !=(string a, Key b)
+        {
+            return !ReferenceEquals(a, b.Value);
+        }
+
+        public static bool operator ==(Key a, string b)
+        {
+            return ReferenceEquals(a.Value, b);
+        }
+
+        public static bool operator !=(Key a, string b)
+        {
+            return !ReferenceEquals(a.Value, b);
+        }
+
+        public static implicit operator string(Key key)
+        {
+            return key.Value;
+        }
+    }
+}
