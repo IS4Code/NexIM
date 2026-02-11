@@ -12,7 +12,7 @@ static file class Constants
 {
     public const string Client = "jabber:client";
     public const string IqRoster = "jabber:iq:roster";
-    public const string IqAuth = "jabber:iq:roster";
+    public const string IqAuth = "jabber:iq:auth";
 }
 
 [StructLayout(LayoutKind.Auto)]

@@ -92,9 +92,9 @@ internal abstract class XmppXmlSession : IXmppSession
             Session = session;
         }
 
-        protected sealed override XmppEncoder ForkInner()
+        protected sealed override ValueTask<XmppEncoder> ForkInner()
         {
-            return new ElementHandler(Session);
+            return new(new ElementHandler(Session));
         }
 
         public async override ValueTask DisposeAsync()
