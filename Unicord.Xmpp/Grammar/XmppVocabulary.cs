@@ -3,7 +3,7 @@ using System.Xml;
 
 namespace Unicord.Xmpp.Grammar;
 
-internal class XmppVocabulary : NameTable
+internal partial class XmppVocabulary : NameTable
 {
     public static readonly Key Empty = new("");
 
@@ -12,26 +12,9 @@ internal class XmppVocabulary : NameTable
 
     public static readonly Key StreamsNs = new("http://etherx.jabber.org/streams");
     public static readonly Key JabberClientNs = new("jabber:client");
-    public static readonly Key JabberIqAuthNs = new("jabber:iq:auth");
-    public static readonly Key JabberIqGatewayNs = new("jabber:iq:gateway");
-    public static readonly Key JabberIqLastNs = new("jabber:iq:last");
-    public static readonly Key JabberIqOobNs = new("jabber:iq:oob");
-    public static readonly Key JabberIqPrivacyNs = new("jabber:iq:privacy");
-    public static readonly Key JabberIqPrivateNs = new("jabber:iq:private");
-    public static readonly Key JabberIqRegisterNs = new("jabber:iq:register");
-    public static readonly Key JabberIqRosterNs = new("jabber:iq:roster");
-    public static readonly Key JabberIqRpcNs = new("jabber:iq:rpc");
-    public static readonly Key JabberIqSearchNs = new("jabber:iq:search");
-    public static readonly Key JabberIqVersionNs = new("jabber:iq:version");
-    public static readonly Key IqAuthNs = new("http://jabber.org/features/iq-auth");
-    public static readonly Key SaslNs = new("urn:ietf:params:xml:ns:xmpp-sasl");
 
     public static readonly Key Stream = new("stream");
     public static readonly Key Features = new("features");
-
-    public static readonly Key Mechanisms = new("mechanisms");
-    public static readonly Key Mechanism = new("mechanism");
-    public static readonly Key Auth = new("auth");
 
     public static readonly Key Message = new("message");
     public static readonly Key Presence = new("presence");
@@ -43,24 +26,10 @@ internal class XmppVocabulary : NameTable
     public static readonly Key To = new("to");
     public static readonly Key Version = new("version");
 
-    public static readonly Key Subject = new("subject");
-    public static readonly Key Body = new("body");
-
-    public static readonly Key Show = new("show");
-    public static readonly Key Status = new("status");
-
-    public static readonly Key Query = new("query");
-
-    public static readonly Key Item = new("item");
-    public static readonly Key Jid = new("jid");
-
-    public static readonly Key Username = new("username");
-    public static readonly Key Password = new("password");
-    public static readonly Key Digest = new("digest");
-    public static readonly Key Resource = new("resource");
-
     bool allowAdding = true;
     readonly object syncRoot = new();
+
+    private partial void AddKeys();
 
     public XmppVocabulary()
     {
@@ -68,28 +37,13 @@ internal class XmppVocabulary : NameTable
         AddKey(Xmlns);
         AddKey(XmlnsNs);
 
+        AddKeys();
+
         AddKey(StreamsNs);
         AddKey(JabberClientNs);
-        AddKey(JabberIqAuthNs);
-        AddKey(JabberIqGatewayNs);
-        AddKey(JabberIqLastNs);
-        AddKey(JabberIqOobNs);
-        AddKey(JabberIqPrivacyNs);
-        AddKey(JabberIqPrivateNs);
-        AddKey(JabberIqRegisterNs);
-        AddKey(JabberIqRosterNs);
-        AddKey(JabberIqRpcNs);
-        AddKey(JabberIqSearchNs);
-        AddKey(JabberIqVersionNs);
-        AddKey(IqAuthNs);
-        AddKey(SaslNs);
 
         AddKey(Stream);
         AddKey(Features);
-
-        AddKey(Mechanisms);
-        AddKey(Mechanism);
-        AddKey(Auth);
 
         AddKey(Message);
         AddKey(Presence);
@@ -100,22 +54,6 @@ internal class XmppVocabulary : NameTable
         AddKey(From);
         AddKey(To);
         AddKey(Version);
-
-        AddKey(Subject);
-        AddKey(Body);
-
-        AddKey(Show);
-        AddKey(Status);
-
-        AddKey(Query);
-
-        AddKey(Item);
-        AddKey(Jid);
-
-        AddKey(Username);
-        AddKey(Password);
-        AddKey(Digest);
-        AddKey(Resource);
 
         AddKey("xml");
         AddKey("encoding");
@@ -135,7 +73,7 @@ internal class XmppVocabulary : NameTable
         return base.Get(key) ?? AddSynchronized(key);
     }
 
-    private void AddKey(string key)
+    private partial void AddKey(string key)
     {
         if (!ReferenceEquals(key, base.Add(key)))
         {
