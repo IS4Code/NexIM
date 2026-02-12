@@ -1,10 +1,11 @@
 ﻿using System.Threading.Tasks;
 using System;
 using Unicord.Xmpp.Protocol;
+using System.Xml.Linq;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal abstract class CommandHandler
+internal abstract class CommandHandler : IPayloadHandler
 {
     public XmppServer Server { get; }
     public IXmppSession Session { get; }
@@ -16,4 +17,21 @@ internal abstract class CommandHandler
         Session = session;
         Identifier = identifier;
     }
+
+    protected void SetOnce<T>(ref T storage, T value)
+    {
+        if(storage != null)
+        {
+            throw new XmppException("Property set multiple times.", false);
+        }
+        storage = value;
+    }
+
+    public virtual ValueTask Other(XElement payload)
+    {
+        Console.WriteLine("Unknown payload: " + payload);
+        return default;
+    }
+
+    public abstract ValueTask DisposeAsync();
 }

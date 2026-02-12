@@ -4,5 +4,5 @@ namespace Unicord.Xmpp.Protocol;
 
 public interface IXmppReceiver
 {
-    ValueTask<IXmppHandler> Connected(IXmppSession session);
+    ValueTask<IStanzaHandler> Connected(IXmppSession session);
 }

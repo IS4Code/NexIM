@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using System.Xml.Linq;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -11,7 +10,7 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
 
     }
 
-    public ValueTask DisposeAsync()
+    public override ValueTask DisposeAsync()
     {
         // TODO No payload or multiple payloads
         return default;
@@ -37,10 +36,5 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
                 //"set" => new SetAuthQuery(Server, Session, Identifier)
             }
         );
-    }
-
-    async ValueTask IPayloadHandler.Other(XElement payload)
-    {
-        await Program.NotImplemented<object>();
     }
 }

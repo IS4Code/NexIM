@@ -104,6 +104,7 @@ public class XmppListener
                             continue;
 
                         case XmlNodeType.Element:
+                            bool isEmpty = reader.IsEmptyElement;
                             switch(depth)
                             {
                                 case 0:
@@ -136,16 +137,10 @@ public class XmppListener
 
                                 case 1:
                                     // Individual command
-                                    var commandName = reader.Name;
-                                    var commandNs = reader.NamespaceURI;
-
-                                    // Fill stanza attributes
-                                    var stanza = ParseStanza(reader);
-
-                                    if(await EnterCommand(stanza, commandName, commandNs, handler) is { } payloadHandler)
+                                    if(await EnterCommand(reader, handler) is (true, var commandHandler))
                                     {
                                         // Recognized command type
-                                        handlers.Push(payloadHandler);
+                                        await EnterHandler(commandHandler);
                                     }
                                     else
                                     {
@@ -158,12 +153,12 @@ public class XmppListener
 
                                 default:
                                     // Payload of a known command
-                                    var (success, newHandler) = await XmppDecoder.DecodePayload(reader, handlers.Get<IPayloadHandler>());
-                                    if(newHandler != null)
+                                    if(await XmppDecoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
                                     {
-                                        handlers.Push(newHandler);
+                                        // Recognized payload type
+                                        await EnterHandler(payloadHandler);
                                     }
-                                    if(!success)
+                                    else
                                     {
                                         // Unknown element
                                         using var subtreeReader = reader.ReadSubtree();
@@ -171,6 +166,23 @@ public class XmppListener
                                         await handlers.Get<IPayloadHandler>().Other(element);
                                     }
                                     break;
+                            }
+
+                            ValueTask EnterHandler(IPayloadHandler? handler)
+                            {
+                                if(handler != null)
+                                {
+                                    if(isEmpty)
+                                    {
+                                        // No EndElement, close now
+                                        return handler.DisposeAsync();
+                                    }
+                                    else
+                                    {
+                                        handlers.Push(handler);
+                                    }
+                                }
+                                return default;
                             }
                             break;
 
@@ -265,41 +277,48 @@ public class XmppListener
         return stanza;
     }
 
-    private ValueTask<IPayloadHandler?> EnterCommand(in Stanza stanza, string commandName, string commandNs, IXmppHandler commandHandler)
+    private ValueTask<XmppDecoder.Result> EnterCommand(XmlReader reader, IStanzaHandler handler)
     {
-        if(commandNs == JabberClientNs)
+        var elementName = reader.Name;
+        var elementNs = reader.NamespaceURI;
+        if(elementNs == JabberClientNs)
         {
-            switch(commandName[0])
+            switch(elementName[0])
             {
                 case 'i':
-                    if(commandName == Iq)
+                    if(elementName == Iq)
                     {
-                        return Cast(commandHandler.InfoQuery(stanza));
+                        var stanza = ParseStanza(reader);
+                        return Success(handler.InfoQuery(stanza));
                     }
                     break;
                 case 'm':
-                    if(commandName == Message)
+                    if(elementName == Message)
                     {
-                        return Cast(commandHandler.Message(stanza));
+                        var stanza = ParseStanza(reader);
+                        return Success(handler.Message(stanza));
                     }
                     break;
                 case 'p':
-                    if(commandName == Presence)
+                    if(elementName == Presence)
                     {
-                        return Cast(commandHandler.Presence(stanza));
+                        var stanza = ParseStanza(reader);
+                        return Success(handler.Presence(stanza));
                     }
                     break;
             }
         }
-        return default;
 
-        static async ValueTask<IPayloadHandler?> Cast<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
+        // Not a stanza - decode normally
+        return XmppDecoder.DecodePayload(reader, handler);
+
+        static async ValueTask<XmppDecoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
         {
-            return await task;
+            return new(true, await task);
         }
     }
 
-    private async ValueTask WriteFeatures(IXmppHandler session)
+    private async ValueTask WriteFeatures(IStanzaHandler session)
     {
         await using var features = await session.Features();
 

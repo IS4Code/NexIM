@@ -1,43 +1,53 @@
 ﻿using System.Threading.Tasks;
-using System.Xml.Linq;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal sealed class StreamHandler : CommandHandler, IXmppHandler
+internal sealed class StreamHandler : CommandHandler, IStanzaHandler
 {
     public StreamHandler(XmppServer server, IXmppSession session) : base(server, session, session.StreamIdentifier)
     {
 
     }
 
-    ValueTask<IFeaturesHandler> IXmppHandler.Features()
+    ValueTask<IFeaturesHandler> IStreamHandler.Features()
     {
         return Program.NotImplemented<IFeaturesHandler>();
     }
 
-    ValueTask<IMessageHandler> IXmppHandler.Message(in Stanza stanza)
+    ValueTask<IMessageHandler> IStanzaHandler.Message(in Stanza stanza)
     {
+        Validate(stanza);
         return Program.NotImplemented<IMessageHandler>();
     }
 
-    ValueTask<IPresenceHandler> IXmppHandler.Presence(in Stanza stanza)
+    ValueTask<IPresenceHandler> IStanzaHandler.Presence(in Stanza stanza)
     {
-        return Program.NotImplemented<IPresenceHandler>();
+        Validate(stanza);
+        return new(new Presence(Server, Session, stanza));
     }
 
-    ValueTask<IInfoQueryHandler> IXmppHandler.InfoQuery(in Stanza stanza)
+    ValueTask<IInfoQueryHandler> IStanzaHandler.InfoQuery(in Stanza stanza)
     {
-        if (stanza.To is { } to && to != Session.LocalResource)
+        if(stanza.To is { } to && !to.IsNarrowerThan(Session.LocalResource))
         {
             // Someone else is the receiver
-            return Program.NotImplemented<IInfoQueryHandler>();
+            Program.NotImplemented<object>().AsTask().GetAwaiter().GetResult();
         }
+        Validate(stanza);
         return new(new InfoQuery(Server, Session, stanza));
     }
 
-    async ValueTask IXmppHandler.Other(XElement message)
+    private void Validate(in Stanza stanza)
     {
-        await Program.NotImplemented<object>();
+        if(stanza.From is { } from && !from.IsNarrowerThan(Session.RemoteResource))
+        {
+            throw new XmppException("Command is comming from an unauthorized sender.", false);
+        }
+    }
+
+    public override ValueTask DisposeAsync()
+    {
+        return default;
     }
 }

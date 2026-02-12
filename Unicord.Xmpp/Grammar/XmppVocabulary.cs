@@ -14,7 +14,6 @@ internal partial class XmppVocabulary : NameTable
     public static readonly Key JabberClientNs = new("jabber:client");
 
     public static readonly Key Stream = new("stream");
-    public static readonly Key Features = new("features");
 
     public static readonly Key Message = new("message");
     public static readonly Key Presence = new("presence");
@@ -43,7 +42,6 @@ internal partial class XmppVocabulary : NameTable
         AddKey(JabberClientNs);
 
         AddKey(Stream);
-        AddKey(Features);
 
         AddKey(Message);
         AddKey(Presence);

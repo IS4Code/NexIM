@@ -9,13 +9,12 @@ using Unicord.Xmpp.Grammar;
 
 namespace Unicord.Xmpp.Protocol;
 
-using static XmppVocabulary;
-
-public interface IXmppSession : IXmppHandler
+public interface IXmppSession : IStanzaHandler
 {
     bool Connected { get; }
     string? StreamIdentifier { get; }
     XmppResource? LocalResource { get; }
+    XmppResource? RemoteResource { get; set; }
     EndPoint? RemoteEndPoint { get; }
 }
 
@@ -27,6 +26,7 @@ internal abstract class XmppXmlSession : IXmppSession
     public abstract bool Connected { get; }
     public string? StreamIdentifier { get; set; }
     public XmppResource? LocalResource { get; set; }
+    public XmppResource? RemoteResource { get; set; }
     public abstract EndPoint? RemoteEndPoint { get; }
 
     public abstract CancellationToken CancellationToken { get; }
@@ -57,7 +57,7 @@ internal abstract class XmppXmlSession : IXmppSession
 
     public ValueTask<IInfoQueryHandler> InfoQuery(in Stanza stanza)
     {
-        var handler = new StanzaHandler(Iq, stanza, this);
+        var handler = new StanzaHandler(XmppVocabulary.Iq, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
     }
 
@@ -80,6 +80,8 @@ internal abstract class XmppXmlSession : IXmppSession
         }
     }
 
+    public abstract ValueTask DisposeAsync();
+
     abstract class PayloadHandler : XmppEncoder
     {
         protected XmppXmlSession Session { get; }
@@ -92,18 +94,60 @@ internal abstract class XmppXmlSession : IXmppSession
             Session = session;
         }
 
-        protected sealed override ValueTask<XmppEncoder> ForkInner()
+        protected override ValueTask<XmppEncoder> ForkInner()
         {
             return new(new ElementHandler(Session));
         }
 
-        public async override ValueTask DisposeAsync()
+        public override ValueTask DisposeAsync()
         {
-            await Writer.WriteEndElementAsync();
+            return new(Writer.WriteEndElementAsync());
         }
     }
 
-    sealed class StanzaHandler : PayloadHandler
+    abstract class SynchronizedHandler : PayloadHandler
+    {
+        protected SynchronizedHandler(XmppXmlSession session) : base(session)
+        {
+
+        }
+
+        protected abstract ValueTask AcquireImpl();
+
+        public async ValueTask Acquire()
+        {
+            await Session.semaphore.WaitAsync(CancellationToken);
+
+            try
+            {
+                await AcquireImpl();
+            }
+            catch when(OnAcquireException())
+            {
+                // An exception here means the handler is not returned and thus must unlock
+            }
+
+            bool OnAcquireException()
+            {
+                Session.semaphore.Release();
+                return false;
+            }
+        }
+
+        public async sealed override ValueTask DisposeAsync()
+        {
+            try
+            {
+                await base.DisposeAsync();
+            }
+            finally
+            {
+                Session.semaphore.Release();
+            }
+        }
+    }
+
+    sealed class StanzaHandler : SynchronizedHandler
     {
         readonly string kind;
         readonly Stanza stanza;
@@ -114,103 +158,66 @@ internal abstract class XmppXmlSession : IXmppSession
             this.stanza = stanza;
         }
 
-        public async ValueTask Acquire()
+        protected async override ValueTask AcquireImpl()
         {
-            await Session.semaphore.WaitAsync(CancellationToken);
+            var writer = Writer;
+            await writer.WriteStartElementAsync(null, kind, XmppVocabulary.JabberClientNs);
 
-            try
+            if(stanza.Type is { } type)
             {
-                var writer = Writer;
-                await writer.WriteStartElementAsync(null, kind, JabberClientNs);
-
-                if(stanza.Type is { } type)
-                {
-                    await writer.WriteAttributeStringAsync(null, Type, null, type);
-                }
-                if(stanza.From is { } from)
-                {
-                    await writer.WriteAttributeStringAsync(null, From, null, from.ToString());
-                }
-                if(stanza.To is { } to)
-                {
-                    await writer.WriteAttributeStringAsync(null, To, null, to.ToString());
-                }
-                if(stanza.Identifier is { } identifier)
-                {
-                    await writer.WriteAttributeStringAsync(null, Id, null, identifier);
-                }
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Type, null, type);
             }
-            catch when(OnAcquireException())
+            if(stanza.From is { } from)
             {
-                // An exception here means the handler is not returned and thus must unlock
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.From, null, from.ToString());
             }
-
-            bool OnAcquireException()
+            if(stanza.To is { } to)
             {
-                Session.semaphore.Release();
-                return false;
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.To, null, to.ToString());
             }
-        }
-
-        public override async ValueTask DisposeAsync()
-        {
-            try
+            if(stanza.Identifier is { } identifier)
             {
-                await base.DisposeAsync();
-            }
-            finally
-            {
-                Session.semaphore.Release();
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Id, null, identifier);
             }
         }
     }
 
     sealed class ElementHandler : PayloadHandler
     {
+        int level = 1;
+
         public ElementHandler(XmppXmlSession session) : base(session)
         {
 
         }
+
+        protected override ValueTask<XmppEncoder> ForkInner()
+        {
+            // Reuse the current instance to encode nested elements
+            Interlocked.Increment(ref level);
+            return new(this);
+        }
+
+        public async override ValueTask DisposeAsync()
+        {
+            while(Interlocked.Decrement(ref level) >= 0)
+            {
+                await base.DisposeAsync();
+            }
+        }
     }
 
-    sealed class FeaturesHandler : PayloadHandler
+    sealed class FeaturesHandler : SynchronizedHandler
     {
         public FeaturesHandler(XmppXmlSession session) : base(session)
         {
 
         }
 
-        public async ValueTask Acquire()
+        protected async override ValueTask AcquireImpl()
         {
-            await Session.semaphore.WaitAsync(CancellationToken);
-
-            try
-            {
-                var writer = Writer;
-                await writer.WriteStartElementAsync(null, XmppVocabulary.Features, StreamsNs);
-            }
-            catch when(OnAcquireException())
-            {
-                // An exception here means the handler is not returned and thus must unlock
-            }
-
-            bool OnAcquireException()
-            {
-                Session.semaphore.Release();
-                return false;
-            }
-        }
-
-        public async override ValueTask DisposeAsync()
-        {
-            try
-            {
-                await base.DisposeAsync();
-            }
-            finally
-            {
-                Session.semaphore.Release();
-            }
+            var writer = Writer;
+            await writer.WriteStartElementAsync(null, XmppVocabulary.Features, XmppVocabulary.StreamsNs);
         }
     }
 }
@@ -227,5 +234,10 @@ internal class XmppTcpXmlSession : XmppXmlSession
     {
         this.client = client;
         CancellationToken = cancellationToken;
+    }
+
+    public async override ValueTask DisposeAsync()
+    {
+        client.Dispose();
     }
 }

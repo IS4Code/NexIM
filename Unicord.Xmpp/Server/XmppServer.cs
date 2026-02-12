@@ -6,7 +6,7 @@ namespace Unicord.Xmpp.Server;
 
 public class XmppServer : IXmppReceiver
 {
-    public ValueTask<IXmppHandler> Connected(IXmppSession session)
+    public ValueTask<IStanzaHandler> Connected(IXmppSession session)
     {
         return new(new StreamHandler(this, session));
     }

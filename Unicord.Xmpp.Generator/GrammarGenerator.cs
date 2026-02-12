@@ -362,16 +362,18 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                             var param = pair2.Value;
 
                                             // Get value from attribute
-                                            sb.Append($"var {param.Name} = ");
-                                            StringToParam(param.Type);
-                                            sb.Append($"(reader.GetAttribute(XmppVocabulary.");
+                                            sb.Append($"var {param.Name} = reader.GetAttribute(XmppVocabulary.");
                                             sb.Append(vocabulary[attrName]);
                                             if(attrNs != null)
                                             {
                                                 sb.Append(", XmppVocabulary.");
                                                 sb.Append(vocabulary[attrNs]);
                                             }
-                                            sb.Append(");");
+                                            sb.Append(") is { } v ? ");
+                                            StringToParam(param.Type, "v");
+                                            sb.Append(" : ");
+                                            DefaultParamValue(param);
+                                            sb.AppendLine(";");
                                         }
 
                                         if(returnsHandler)
@@ -386,9 +388,11 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                             if(valueParam != null)
                                             {
                                                 // Get value from content
-                                                sb.Append($"var {valueParam.Name} = ");
-                                                StringToParam(valueParam.Type);
-                                                sb.AppendLine("(await ReadElementTextAsync(reader));");
+                                                sb.Append($"var {valueParam.Name} = (await ReadElementTextAsync(reader)) is {{ }} v ? ");
+                                                StringToParam(valueParam.Type, "v");
+                                                sb.Append(" : ");
+                                                DefaultParamValue(valueParam);
+                                                sb.AppendLine(";");
                                             }
                                             else
                                             {
@@ -436,12 +440,34 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("}");
         return sb.ToString();
 
-        void StringToParam(ITypeSymbol type)
+        void StringToParam(ITypeSymbol type, string name)
         {
             if(GetQualifiedName(type) != typeof(string).FullName)
             {
                 // Needs conversion from string
-                sb.Append($"XmlConvert.To{type.Name}");
+
+                if(type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "System.Nullable")
+                {
+                    type = namedType.TypeArguments[0];
+                }
+
+                sb.Append($"XmlConvert.To{type.Name}({name})");
+            }
+            else
+            {
+                sb.Append(name);
+            }
+        }
+
+        void DefaultParamValue(IParameterSymbol param)
+        {
+            if(param.HasExplicitDefaultValue && param.ExplicitDefaultValue is { } defaultValue)
+            {
+                sb.Append($"({Format(param.Type)}){SymbolDisplay.FormatPrimitive(defaultValue, true, false)}");
+            }
+            else
+            {
+                sb.Append($"default({Format(param.Type)})");
             }
         }
     }

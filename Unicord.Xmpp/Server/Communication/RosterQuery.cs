@@ -17,12 +17,7 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
         await Program.NotImplemented<object>();
     }
 
-    async ValueTask IPayloadHandler.Other(XElement payload)
-    {
-        await Program.NotImplemented<object>();
-    }
-
-    public async ValueTask DisposeAsync()
+    public async override ValueTask DisposeAsync()
     {
         await using var iq = await Session.InfoQuery(new(Type: "result", Identifier: Identifier));
     }

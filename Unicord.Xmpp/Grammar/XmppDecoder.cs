@@ -24,19 +24,19 @@ internal static partial class XmppDecoder
         }
     }
 
-    private static partial async ValueTask<string> ReadElementTextAsync(XmlReader reader)
+    private static partial async ValueTask<string?> ReadElementTextAsync(XmlReader reader)
     {
         if(reader.IsEmptyElement)
         {
             // Known to be empty
-            return "";
+            return null;
         }
 
         await reader.ReadAsync();
         switch(reader.NodeType)
         {
             case XmlNodeType.EndElement:
-                return "";
+                return null;
             case XmlNodeType.Element:
                 throw new XmppException("Element was expected to have textual value.", false);
         }

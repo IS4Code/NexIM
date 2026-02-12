@@ -14,6 +14,26 @@ public readonly record struct XmppResource(XmppAddress Address, string? Resource
 
     }
 
+    public bool IsWiderThan(XmppResource? other)
+    {
+        if(other is not { } value)
+        {
+            return false;
+        }
+        return
+            Address == value.Address &&
+            (ResourceIdentifier == null || ResourceIdentifier == value.ResourceIdentifier);
+    }
+
+    public bool IsNarrowerThan(XmppResource? other)
+    {
+        if(other is not { } value)
+        {
+            return true;
+        }
+        return value.IsWiderThan(this);
+    }
+
     public static XmppResource Parse(string text)
     {
         if(resourceRegex.Match(text) is not { Success: true } match)

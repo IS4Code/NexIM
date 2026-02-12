@@ -53,6 +53,12 @@ public interface IPresenceHandler : IPayloadHandler
 
     [Name("status")]
     ValueTask Status(string? text);
+
+    [Name("priority")]
+    ValueTask Priority(sbyte? value);
+
+    [Name("delay", "urn:xmpp:delay")]
+    ValueTask Delay([Name("stamp")] DateTimeOffset stamp);
 }
 
 [ComplexType]
