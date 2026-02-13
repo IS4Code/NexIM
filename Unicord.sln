@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Xmpp", "Unicord.Xmp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Xmpp.Generator", "Unicord.Xmpp.Generator\Unicord.Xmpp.Generator.csproj", "{F7E98F9D-95B1-465F-8413-19944EC9A964}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Server", "Unicord.Server\Unicord.Server.csproj", "{15D1C188-75E4-48FB-BE36-318C6953CFA0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{F7E98F9D-95B1-465F-8413-19944EC9A964}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F7E98F9D-95B1-465F-8413-19944EC9A964}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F7E98F9D-95B1-465F-8413-19944EC9A964}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15D1C188-75E4-48FB-BE36-318C6953CFA0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15D1C188-75E4-48FB-BE36-318C6953CFA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15D1C188-75E4-48FB-BE36-318C6953CFA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15D1C188-75E4-48FB-BE36-318C6953CFA0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

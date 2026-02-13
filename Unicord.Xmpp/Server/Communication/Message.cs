@@ -20,6 +20,26 @@ internal class Message : StanzaHandler, IMessageHandler
         await Program.NotImplemented<object>();
     }
 
+    async ValueTask IMessageHandler.Active()
+    {
+        await Program.NotImplemented<object>();
+    }
+
+    async ValueTask IMessageHandler.Composing()
+    {
+        await Program.NotImplemented<object>();
+    }
+
+    async ValueTask IMessageHandler.Paused()
+    {
+        await Program.NotImplemented<object>();
+    }
+
+    async ValueTask IMessageHandler.Gone()
+    {
+        await Program.NotImplemented<object>();
+    }
+
     public async override ValueTask DisposeAsync()
     {
 

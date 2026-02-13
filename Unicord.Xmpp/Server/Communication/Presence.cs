@@ -29,13 +29,21 @@ internal class Presence : StanzaHandler, IPresenceHandler
         SetOnce(ref priority, value);
     }
 
-    ValueTask IPresenceHandler.Delay(DateTimeOffset stamp)
+    ValueTask IPresenceHandler.Delay(DateTimeOffset? stamp)
     {
         return default;
     }
 
     public async override ValueTask DisposeAsync()
     {
-
+        if(priority is { } newPriority && Session.ClientSession is { } clientSession)
+        {
+            var currentPriority = clientSession.Priority;
+            if(currentPriority != newPriority)
+            {
+                clientSession.Priority = newPriority;
+                Server.Sessions.AddOrUpdateSession(Session.AccountName, Session.ClientSession);
+            }
+        }
     }
 }

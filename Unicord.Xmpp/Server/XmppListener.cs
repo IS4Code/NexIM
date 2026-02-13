@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
-using System.Net.Sockets;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,18 +9,18 @@ using System.Xml;
 using System.Xml.Linq;
 using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
 using static XmppVocabulary;
 
-public class XmppListener
+public abstract class XmppListener<TClient>
 {
     readonly XmppVocabulary nametable;
     readonly XmlReaderSettings readerSettings;
     readonly XmlWriterSettings writerSettings;
 
-    readonly TcpListener listener;
     readonly IXmppReceiver receiver;
 
     const bool prettyOutput = true;
@@ -62,170 +61,150 @@ public class XmppListener
             NewLineOnAttributes = prettyOutput,
             WriteEndDocumentOnClose = true
         };
-
-        listener = new(IPAddress.Any, 5222);
     }
 
-    public async Task RunAsync(CancellationToken cancellationToken = default)
-    {
-        listener.Start();
-        while(await listener.AcceptTcpClientAsync(cancellationToken) is { } client)
-        {
-            HandleClient(client, cancellationToken);
-        }
-    }
+    public abstract Task RunAsync(CancellationToken cancellationToken = default);
 
-    private async void HandleClient(TcpClient client, CancellationToken cancellationToken)
+    protected abstract ValueTask<XmppXmlSession> StartSession(TClient client, XmlWriter writer, CancellationToken cancellationToken);
+
+    protected async ValueTask HandleStream(TClient client, Stream stream, CancellationToken cancellationToken)
     {
         const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
 
-        try
+        using var reader = XmlReader.Create(stream, readerSettings);
+        //using var writer = XmlWriter.Create(stream, writerSettings);
+
+        using var writer = XmlWriter.Create(new DuplicatingStream(stream, Console.OpenStandardOutput()), writerSettings);
+
+        var session = await StartSession(client, writer, cancellationToken);
+
+        var handler = await receiver.Connected(session);
+
+        await using PayloadHandlers handlers = new();
+        while(await reader.ReadAsync())
         {
-            await using var stream = client.GetStream();
-
-            using var reader = XmlReader.Create(stream, readerSettings);
-            //using var writer = XmlWriter.Create(stream, writerSettings);
-
-            using var writer = XmlWriter.Create(new DuplicatingStream(stream, Console.OpenStandardOutput()), writerSettings);
-
-            var session = new XmppTcpXmlSession(client, writer, cancellationToken);
-
-            var handler = await receiver.Connected(session);
-
-            await using PayloadHandlers handlers = new();
-            while(await reader.ReadAsync())
+            try
             {
-                try
+                int depth = reader.Depth;
+                switch(reader.NodeType)
                 {
-                    int depth = reader.Depth;
-                    switch(reader.NodeType)
-                    {
-                        case XmlNodeType.XmlDeclaration:
-                            continue;
+                    case XmlNodeType.XmlDeclaration:
+                        continue;
 
-                        case XmlNodeType.Element:
-                            bool isEmpty = reader.IsEmptyElement;
-                            switch(depth)
-                            {
-                                case 0:
-                                    // Root stream element
-                                    if(reader.Name != Stream && reader.NamespaceURI != StreamsNs)
-                                    {
-                                        throw new XmppException("Unexpected root element name.", fatal: true);
-                                    }
-
-                                    if(reader.GetAttribute("to") is not { } to)
-                                    {
-                                        throw new XmppException("Destination address missing.", fatal: true);
-                                    }
-
-                                    session.LocalResource = XmppResource.Parse(to);
-
-                                    await writer.WriteStartElementAsync(Stream, Stream, StreamsNs);
-                                    await writer.WriteAttributeStringAsync(Xmlns, Stream, XmlnsNs, StreamsNs);
-                                    await writer.WriteAttributeStringAsync(null, Xmlns, null, JabberClientNs);
-
-                                    session.StreamIdentifier = Guid.NewGuid().ToString("N");
-
-                                    await writer.WriteAttributeStringAsync(null, Version, null, "1.0");
-                                    await writer.WriteAttributeStringAsync(null, From, null, session.LocalResource.ToString());
-                                    await writer.WriteAttributeStringAsync(null, Id, null, session.StreamIdentifier);
-
-                                    // Features
-                                    await WriteFeatures(session);
-                                    break;
-
-                                case 1:
-                                    // Individual command
-                                    if(await EnterCommand(reader, handler) is (true, var commandHandler))
-                                    {
-                                        // Recognized command type
-                                        await EnterHandler(commandHandler);
-                                    }
-                                    else
-                                    {
-                                        // Unknown type
-                                        using var subtreeReader = reader.ReadSubtree();
-                                        var element = await XElement.LoadAsync(subtreeReader, elementLoadOptions, cancellationToken);
-                                        await handler.Other(element);
-                                    }
-                                    break;
-
-                                default:
-                                    // Payload of a known command
-                                    if(await XmppDecoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
-                                    {
-                                        // Recognized payload type
-                                        await EnterHandler(payloadHandler);
-                                    }
-                                    else
-                                    {
-                                        // Unknown element
-                                        using var subtreeReader = reader.ReadSubtree();
-                                        var element = await XElement.LoadAsync(subtreeReader, elementLoadOptions, cancellationToken);
-                                        await handlers.Get<IPayloadHandler>().Other(element);
-                                    }
-                                    break;
-                            }
-
-                            ValueTask EnterHandler(IPayloadHandler? handler)
-                            {
-                                if(handler != null)
+                    case XmlNodeType.Element:
+                        bool isEmpty = reader.IsEmptyElement;
+                        switch(depth)
+                        {
+                            case 0:
+                                // Root stream element
+                                if(reader.Name != Stream && reader.NamespaceURI != StreamsNs)
                                 {
-                                    if(isEmpty)
-                                    {
-                                        // No EndElement, close now
-                                        return handler.DisposeAsync();
-                                    }
-                                    else
-                                    {
-                                        handlers.Push(handler);
-                                    }
+                                    throw new XmppException("Unexpected root element name.", fatal: true);
                                 }
-                                return default;
-                            }
-                            break;
 
-                        case XmlNodeType.EndElement:
-                            switch(depth)
+                                if(reader.GetAttribute("to") is not { } to)
+                                {
+                                    throw new XmppException("Destination address missing.", fatal: true);
+                                }
+
+                                session.LocalResource = XmppResource.Parse(to);
+
+                                await writer.WriteStartElementAsync(Stream, Stream, StreamsNs);
+                                await writer.WriteAttributeStringAsync(Xmlns, Stream, XmlnsNs, StreamsNs);
+                                await writer.WriteAttributeStringAsync(null, Xmlns, null, JabberClientNs);
+
+                                session.StreamIdentifier = Guid.NewGuid().ToString("N");
+
+                                await writer.WriteAttributeStringAsync(null, Version, null, "1.0");
+                                await writer.WriteAttributeStringAsync(null, From, null, session.LocalResource.ToString());
+                                await writer.WriteAttributeStringAsync(null, Id, null, session.StreamIdentifier);
+
+                                // Features
+                                await WriteFeatures(session);
+                                break;
+
+                            case 1:
+                                // Individual command
+                                if(await EnterCommand(reader, handler) is (true, var commandHandler))
+                                {
+                                    // Recognized command type
+                                    await EnterHandler(commandHandler);
+                                }
+                                else
+                                {
+                                    // Unknown type
+                                    using var subtreeReader = reader.ReadSubtree();
+                                    var element = await XElement.LoadAsync(subtreeReader, elementLoadOptions, cancellationToken);
+                                    await handler.Other(element);
+                                }
+                                break;
+
+                            default:
+                                // Payload of a known command
+                                if(await XmppDecoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
+                                {
+                                    // Recognized payload type
+                                    await EnterHandler(payloadHandler);
+                                }
+                                else
+                                {
+                                    // Unknown element
+                                    using var subtreeReader = reader.ReadSubtree();
+                                    var element = await XElement.LoadAsync(subtreeReader, elementLoadOptions, cancellationToken);
+                                    await handlers.Get<IPayloadHandler>().Other(element);
+                                }
+                                break;
+                        }
+
+                        ValueTask EnterHandler(IPayloadHandler? handler)
+                        {
+                            if(handler != null)
                             {
-                                case 0:
-                                    // End of stream
-                                    continue;
-                                default:
-                                    if(!handlers.TryPop(out var top))
-                                    {
-                                        continue;
-                                    }
-                                    await top.DisposeAsync();
-                                    break;
+                                if(isEmpty)
+                                {
+                                    // No EndElement, close now
+                                    return handler.DisposeAsync();
+                                }
+                                else
+                                {
+                                    handlers.Push(handler);
+                                }
                             }
-                            break;
-                    }
-                }
-                catch(Exception e) when(GetXmppException(e, out var xe))
-                {
-                    if(xe.Fatal)
-                    {
-                        // Close connection
-                        throw;
-                    }
+                            return default;
+                        }
+                        break;
 
-                    Console.WriteLine(e);
-                }
-                finally
-                {
-                    await writer.FlushAsync();
+                    case XmlNodeType.EndElement:
+                        switch(depth)
+                        {
+                            case 0:
+                                // End of stream
+                                continue;
+                            default:
+                                if(!handlers.TryPop(out var top))
+                                {
+                                    continue;
+                                }
+                                await top.DisposeAsync();
+                                break;
+                        }
+                        break;
                 }
             }
-        }
-        catch(Exception e)
-        {
-            Console.WriteLine(e);
-        }
-        finally
-        {
-            client.Dispose();
+            catch(Exception e) when(GetXmppException(e, out var xe))
+            {
+                if(xe.Fatal)
+                {
+                    // Close connection
+                    throw;
+                }
+
+                Console.WriteLine(e);
+            }
+            finally
+            {
+                await writer.FlushAsync();
+            }
         }
     }
 

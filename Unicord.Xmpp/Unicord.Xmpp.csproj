@@ -11,7 +11,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Unicord.Server\Unicord.Server.csproj" />
     <ProjectReference Include="..\Unicord.Xmpp.Generator\Unicord.Xmpp.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Tools\" />
   </ItemGroup>
 
 </Project>

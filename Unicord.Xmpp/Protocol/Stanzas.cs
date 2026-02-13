@@ -13,6 +13,7 @@ static file class Constants
     public const string Client = "jabber:client";
     public const string IqRoster = "jabber:iq:roster";
     public const string IqAuth = "jabber:iq:auth";
+    public const string ChatStates = "http://jabber.org/protocol/chatstates";
 }
 
 [StructLayout(LayoutKind.Auto)]
@@ -43,6 +44,18 @@ public interface IMessageHandler : IPayloadHandler
 
     [Name("body")]
     ValueTask Body(string? text);
+
+    [Name("active", ChatStates)]
+    ValueTask Active();
+
+    [Name("composing", ChatStates)]
+    ValueTask Composing();
+
+    [Name("paused", ChatStates)]
+    ValueTask Paused();
+
+    [Name("gone", ChatStates)]
+    ValueTask Gone();
 }
 
 [ComplexType, Namespace(Client)]
@@ -58,7 +71,7 @@ public interface IPresenceHandler : IPayloadHandler
     ValueTask Priority(sbyte? value);
 
     [Name("delay", "urn:xmpp:delay")]
-    ValueTask Delay([Name("stamp")] DateTimeOffset stamp);
+    ValueTask Delay([Name("stamp")] DateTimeOffset? stamp);
 }
 
 [ComplexType]

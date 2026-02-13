@@ -18,6 +18,11 @@ internal abstract class CommandHandler : IPayloadHandler
         Identifier = identifier;
     }
 
+    protected Stanza NewResponse(string? type = "result")
+    {
+        return new Stanza(Type: type, Identifier: Identifier);
+    }
+
     protected void SetOnce<T>(ref T storage, T value)
     {
         if(storage != null)
@@ -25,6 +30,11 @@ internal abstract class CommandHandler : IPayloadHandler
             throw new XmppException("Property set multiple times.", false);
         }
         storage = value;
+    }
+
+    protected async ValueTask Unexpected()
+    {
+        throw new XmppException("Element was not expected.", false);
     }
 
     public virtual ValueTask Other(XElement payload)

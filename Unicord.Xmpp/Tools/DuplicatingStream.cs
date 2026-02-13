@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Tools;
 
 internal sealed class DuplicatingStream : Stream
 {

@@ -5,31 +5,41 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Unicord.Server;
 using Unicord.Xmpp.Grammar;
+using Unicord.Xmpp.Server;
 
 namespace Unicord.Xmpp.Protocol;
 
 public interface IXmppSession : IStanzaHandler
 {
     bool Connected { get; }
+    bool IsSecure { get; }
     string? StreamIdentifier { get; }
     XmppResource? LocalResource { get; }
     XmppResource? RemoteResource { get; set; }
     EndPoint? RemoteEndPoint { get; }
+
+    AccountName AccountName { get; }
+    ClientSession? ClientSession { get; set; }
 }
 
-internal abstract class XmppXmlSession : IXmppSession
+public abstract class XmppXmlSession : IXmppSession
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
     readonly XmlWriter writer;
 
     public abstract bool Connected { get; }
+    public abstract bool IsSecure { get; }
     public string? StreamIdentifier { get; set; }
     public XmppResource? LocalResource { get; set; }
     public XmppResource? RemoteResource { get; set; }
     public abstract EndPoint? RemoteEndPoint { get; }
 
     public abstract CancellationToken CancellationToken { get; }
+
+    public AccountName AccountName => new(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
+    public ClientSession? ClientSession { get; set; }
 
     public XmppXmlSession(XmlWriter writer)
     {
@@ -227,6 +237,10 @@ internal class XmppTcpXmlSession : XmppXmlSession
     readonly TcpClient client;
 
     public override bool Connected => client.Connected;
+
+    // Loopback connection is considered secure
+    public override bool IsSecure => client.Client.RemoteEndPoint is IPEndPoint { Address: var addr } && IPAddress.IsLoopback(addr);
+
     public override EndPoint? RemoteEndPoint => client.Client.RemoteEndPoint;
     public override CancellationToken CancellationToken { get; }
 
