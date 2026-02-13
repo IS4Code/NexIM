@@ -13,4 +13,9 @@ public readonly record struct AccountName(object? Identifier)
     {
         return Identifier?.GetHashCode() ?? 0;
     }
+
+    public override string? ToString()
+    {
+        return Identifier?.ToString();
+    }
 }

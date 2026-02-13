@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace Unicord.Server;
 
@@ -66,35 +67,29 @@ public class SessionsManager
         }
     }
 
-    public IClientSession? GetSession(AccountName account, string? identifier)
+    public IEnumerable<IClientSession> GetSessions(AccountName account, string? identifier)
     {
         if(!activeSessions.TryGetValue(account, out var sessions))
         {
             // No online account
-            return null;
+            return Array.Empty<IClientSession>();
         }
         if(identifier == null)
         {
-            foreach(var pair in sessions.ByPriority)
-            {
-                if(pair.Key < 0)
-                {
-                    // Must be explicitly identified to be usable
-                    return null;
-                }
-                foreach(var session in pair.Value)
-                {
-                    // TODO: Pick the best one
-                    return session;
-                }
-            }
+            // All sessions with non-zero descending priority
+            var byPriority =
+                sessions.ByPriority
+                .TakeWhile(static pair => pair.Key >= 0)
+                .SelectMany(static pair => pair.Value);
+
+            return byPriority;
         }
         else if(sessions.ByIdentifier.TryGetValue(identifier, out var session))
         {
             // Found
-            return session;
+            return new[] { session };
         }
-        return null;
+        return Array.Empty<IClientSession>();
     }
 
     readonly record struct AccountSessions(

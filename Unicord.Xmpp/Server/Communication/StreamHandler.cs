@@ -17,13 +17,13 @@ internal sealed class StreamHandler : CommandHandler, IStanzaHandler
 
     ValueTask<IMessageHandler> IStanzaHandler.Message(in Stanza stanza)
     {
-        Validate(stanza);
-        return Program.NotImplemented<IMessageHandler>();
+        ValidateSender(stanza);
+        return new(new Message(Server, Session, stanza));
     }
 
     ValueTask<IPresenceHandler> IStanzaHandler.Presence(in Stanza stanza)
     {
-        Validate(stanza);
+        ValidateSender(stanza);
         return new(new Presence(Server, Session, stanza));
     }
 
@@ -34,16 +34,8 @@ internal sealed class StreamHandler : CommandHandler, IStanzaHandler
             // Someone else is the receiver
             Program.NotImplemented<object>().AsTask().GetAwaiter().GetResult();
         }
-        Validate(stanza);
+        ValidateSender(stanza);
         return new(new InfoQuery(Server, Session, stanza));
-    }
-
-    private void Validate(in Stanza stanza)
-    {
-        if(stanza.From is { } from && !from.IsNarrowerThan(Session.RemoteResource))
-        {
-            throw new XmppException("Command is comming from an unauthorized sender.", false);
-        }
     }
 
     public override ValueTask DisposeAsync()

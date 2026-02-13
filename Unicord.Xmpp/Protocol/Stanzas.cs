@@ -48,6 +48,9 @@ public interface IMessageHandler : IPayloadHandler
     [Name("active", ChatStates)]
     ValueTask Active();
 
+    [Name("inactive", ChatStates)]
+    ValueTask Inactive();
+
     [Name("composing", ChatStates)]
     ValueTask Composing();
 

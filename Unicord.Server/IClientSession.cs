@@ -8,5 +8,6 @@ public interface IClientSession
     string Identifier { get; }
     sbyte Priority { get; }
 
-    ValueTask Send(Message message);
+    ValueTask Send(Sender sender, Message message);
+    ValueTask Notify(Sender sender, ChatState chatState);
 }
