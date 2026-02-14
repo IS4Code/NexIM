@@ -71,14 +71,15 @@ public abstract class XmppListener<TClient>
     {
         const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
 
-        using var reader = XmlReader.Create(stream, readerSettings);
-        //using var writer = XmlWriter.Create(stream, writerSettings);
+        // Debug
+        stream = new ConsoleDebuggingStream(stream);
 
-        using var writer = XmlWriter.Create(new DuplicatingStream(stream, Console.OpenStandardOutput()), writerSettings);
+        using var reader = XmlReader.Create(stream, readerSettings);
+        using var writer = XmlWriter.Create(stream, writerSettings);
 
         var session = await StartSession(client, writer, cancellationToken);
 
-        var handler = await receiver.Connected(session);
+        await using var handler = await receiver.Connected(session);
 
         await using PayloadHandlers handlers = new();
         while(await reader.ReadAsync())
@@ -107,7 +108,13 @@ public abstract class XmppListener<TClient>
                                     throw new XmppException("Destination address missing.", fatal: true);
                                 }
 
+                                // TODO Verify that the resource matches exactly the host of the server
                                 session.LocalResource = XmppResource.Parse(to);
+
+                                if(reader.GetAttribute("from") is { } from)
+                                {
+                                    session.RemoteResource = XmppResource.Parse(from);
+                                }
 
                                 await writer.WriteStartElementAsync(Stream, Stream, StreamsNs);
                                 await writer.WriteAttributeStringAsync(Xmlns, Stream, XmlnsNs, StreamsNs);

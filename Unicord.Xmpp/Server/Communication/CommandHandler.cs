@@ -54,7 +54,10 @@ internal abstract class CommandHandler : IPayloadHandler
 
     public virtual ValueTask Other(XElement payload)
     {
-        Console.WriteLine("Unknown payload: " + payload);
+        lock(typeof(Console))
+        {
+            Console.WriteLine("Unknown payload: " + payload);
+        }
         return default;
     }
 
