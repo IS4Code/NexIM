@@ -53,7 +53,14 @@ internal static partial class XmppDecoder
             return null;
         }
 
-        return await reader.ReadContentAsStringAsync();
+        try
+        {
+            return await reader.ReadContentAsStringAsync();
+        }
+        finally
+        {
+            EnsureEndElement(reader);
+        }
     }
 
     static readonly ArrayPool<char> arrayPool = ArrayPool<char>.Create();
@@ -73,7 +80,15 @@ internal static partial class XmppDecoder
         try
         {
             await str.ReadFromAsync(xmlTemporaryStringReader, reader);
-            return str;
+            try
+            {
+                await reader.ReadAsync();
+                return str;
+            }
+            finally
+            {
+                EnsureEndElement(reader);
+            }
         }
         catch when(Dispose())
         {
@@ -85,6 +100,14 @@ internal static partial class XmppDecoder
         {
             str.Dispose();
             return false;
+        }
+    }
+
+    static void EnsureEndElement(XmlReader reader)
+    {
+        if(reader.NodeType != XmlNodeType.EndElement)
+        {
+            throw new XmppException("Element was expected to have textual value.", false);
         }
     }
 }

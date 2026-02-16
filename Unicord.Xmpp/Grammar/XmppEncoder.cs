@@ -19,12 +19,9 @@ internal abstract partial class XmppEncoder : IPayloadHandler
         await payload.WriteToAsync(Writer, CancellationToken);
     }
 
-    static readonly TemporaryString.AsynchronousArrayWriter<XmlWriter> xmlTemporaryStringWriter = static async (segment, writer) => {
-        await writer.WriteCharsAsync(segment.Array!, segment.Offset, segment.Count);
-    };
-
     private static partial async ValueTask WriteAsync(XmlWriter writer, TemporaryString str)
     {
-        await str.WriteToAsync(xmlTemporaryStringWriter, writer);
+        var value = str.Value;
+        await writer.WriteCharsAsync(value.Array!, value.Offset, value.Count);
     }
 }
