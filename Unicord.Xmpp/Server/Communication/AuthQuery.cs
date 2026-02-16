@@ -67,21 +67,41 @@ internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
 internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
 {
     string? username, resource;
+    TemporaryString? password;
 
     public SetAuthQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
     {
 
     }
 
-    ValueTask IAuthQueryHandler.Username(string? value)
+    async ValueTask IAuthQueryHandler.Username(string? value)
     {
         SetOnce(ref username, value);
-        return default;
     }
 
-    ValueTask IAuthQueryHandler.Password(TemporaryString? value)
+    async ValueTask IAuthQueryHandler.Password(TemporaryString? value)
     {
-        return default;
+        if(value == null)
+        {
+            return;
+        }
+
+        var copy = TemporaryString.MoveFrom(value);
+
+        try
+        {
+            SetOnce(ref password, copy);
+        }
+        catch when(Dispose())
+        {
+            // Dispose the string when not set
+        }
+
+        bool Dispose()
+        {
+            copy.Dispose();
+            return false;
+        }
     }
 
     ValueTask IAuthQueryHandler.Digest(string? value)
@@ -89,28 +109,37 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
         return default;
     }
 
-    ValueTask IAuthQueryHandler.Resource(string? value)
+    async ValueTask IAuthQueryHandler.Resource(string? value)
     {
         SetOnce(ref resource, value);
-        return default;
     }
 
     public async override ValueTask DisposeAsync()
     {
-        // TODO Validate
-
-        if(Session.LocalResource is { } localResource)
+        try
         {
-            var identifier = new XmppResource(username, localResource.Address.Host, resource);
-            Session.RemoteResource = identifier;
+            if(!await Server.Accounts.Authenticate(username, password))
+            {
+                throw new XmppException("Not authenticated.", true);
+            }
 
-            var clientSession = new ClientSession(Session);
-            Server.Sessions.AddSession(Session.AccountName, clientSession);
-            Session.ClientSession = clientSession;
+            if(Session.LocalResource is { } localResource)
+            {
+                var identifier = new XmppResource(username, localResource.Address.Host, resource);
+                Session.RemoteResource = identifier;
+
+                var clientSession = new ClientSession(Session);
+                Server.Sessions.AddSession(Session.AccountName, clientSession);
+                Session.ClientSession = clientSession;
+            }
+            else
+            {
+                throw new XmppException("The remote server is not properly identified.", false);
+            }
         }
-        else
+        finally
         {
-            throw new XmppException("The remote server is not properly identified.", false);
+            password?.Dispose();
         }
 
         await using var iq = await Session.InfoQuery(NewResponse());

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Unicord.Server;
 using Unicord.Xmpp.Server;
 
 namespace Unicord.Xmpp;
@@ -10,8 +9,7 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        var sessions = new SessionsManager();
-        var server = new XmppTcpListener(new XmppServer(sessions));
+        var server = new XmppTcpListener(new XmppServer(new(), new()));
 
         await server.RunAsync();
     }

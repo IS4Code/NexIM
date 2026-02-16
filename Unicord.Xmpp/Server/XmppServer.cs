@@ -8,10 +8,12 @@ namespace Unicord.Xmpp.Server;
 public class XmppServer : IXmppReceiver
 {
     internal SessionsManager Sessions { get; }
+    internal AccountsManager Accounts { get; }
 
-    public XmppServer(SessionsManager sessions)
+    public XmppServer(SessionsManager sessions, AccountsManager accounts)
     {
         Sessions = sessions;
+        Accounts = accounts;
     }
 
     public ValueTask<IStanzaHandler> Connected(IXmppSession session)
