@@ -7,12 +7,23 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class Message : StanzaHandler, IMessageHandler
 {
+    ConversationType? type;
+
     string? subject, body;
     ChatState? state;
 
     public Message(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
     {
-
+        type = stanza.Type switch
+        {
+            null => null,
+            "normal" => ConversationType.Normal,
+            "chat" => ConversationType.Chat,
+            "groupchat" => ConversationType.GroupChat,
+            "headline" => ConversationType.Headline,
+            "error" => ConversationType.Error,
+            _ => throw new XmppException("Invalid message type.", false)
+        };
     }
 
     async ValueTask IMessageHandler.Body(string? text)
@@ -62,13 +73,12 @@ internal class Message : StanzaHandler, IMessageHandler
             throw new XmppException("Receiver of a message is not connected.", false);
         }
         var sender = new Sender(targetAccount, targetIdentifier);
-        if(subject != null || body != null)
-        {
-            await target.Send(sender, new Unicord.Server.Model.Message(subject, body));
-        }
-        if(state is { } newState)
-        {
-            await target.Notify(sender, newState);
-        }
+
+        var message =
+            (subject != null || body != null)
+            ? new Unicord.Server.Model.Message(subject, body)
+            : null;
+
+        await target.Conversation(sender, type, message, state);
     }
 }

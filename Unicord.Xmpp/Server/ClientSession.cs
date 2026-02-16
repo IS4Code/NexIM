@@ -19,11 +19,32 @@ public class ClientSession : IClientSession
         this.xmpp = xmpp;
     }
 
-    async ValueTask IClientSession.Send(Sender sender, Message message)
+    private string? MessageType(ConversationType? type)
+    {
+        return type switch
+        {
+            ConversationType.Normal => "normal",
+            ConversationType.Chat => "chat",
+            ConversationType.GroupChat => "groupchat",
+            ConversationType.Headline => "headline",
+            ConversationType.Error => "error",
+            _ => null
+        };
+    }
+
+    async ValueTask IClientSession.Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState)
     {
         var from = new XmppResource(sender);
 
-        await using var msg = await xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource));
+        if(message == null)
+        {
+            // Activity with no message
+            await Notify(from, type, chatState);
+            return;
+        }
+
+        await using var msg = await xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
+        
         if(message.Subject is { } subject)
         {
             await msg.Subject(subject);
@@ -32,12 +53,31 @@ public class ClientSession : IClientSession
         {
             await msg.Body(body);
         }
+
+        switch(chatState)
+        {
+            case ChatState.Active:
+                await msg.Active();
+                break;
+            case ChatState.Inactive:
+                await msg.Inactive();
+                break;
+            case ChatState.Composing:
+                await msg.Composing();
+                break;
+            case ChatState.Paused:
+                await msg.Paused();
+                break;
+            case ChatState.Gone:
+                await msg.Gone();
+                break;
+            default:
+                break;
+        }
     }
 
-    async ValueTask IClientSession.Notify(Sender sender, ChatState chatState)
+    private async ValueTask Notify(XmppResource from, ConversationType? type, ChatState? chatState)
     {
-        var from = new XmppResource(sender);
-
         switch(chatState)
         {
             case ChatState.Active:
@@ -71,13 +111,13 @@ public class ClientSession : IClientSession
                     return;
                 }
             default:
-                // Unsupported notification type
+                // Unsupported notification type does not need to cause a message
                 return;
         }
 
         ValueTask<IMessageHandler> Write()
         {
-            return xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource));
+            return xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
         }
     }
 }
