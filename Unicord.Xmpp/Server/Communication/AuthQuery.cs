@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using System.Xml.Linq;
+using Unicord.Server.Tools;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -21,7 +22,7 @@ internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
 
     // Other elements are not expected
 
-    ValueTask IAuthQueryHandler.Password(string? value)
+    ValueTask IAuthQueryHandler.Password(TemporaryString? value)
     {
         return Unexpected();
     }
@@ -78,7 +79,7 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
         return default;
     }
 
-    ValueTask IAuthQueryHandler.Password(string? value)
+    ValueTask IAuthQueryHandler.Password(TemporaryString? value)
     {
         return default;
     }

@@ -83,7 +83,9 @@ public sealed class GrammarGenerator : IIncrementalGenerator
     {
         var sb = new StringBuilder();
         sb.AppendLine("using System;");
+        sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using System.Xml;");
+        sb.AppendLine("using Unicord.Server.Tools;");
         sb.AppendLine($"namespace {grammarNs};");
         sb.AppendLine("#nullable disable");
         sb.Append("partial class XmppEncoder");
@@ -108,6 +110,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("{");
         {
+            sb.AppendLine("private static partial ValueTask WriteAsync(XmlWriter writer, TemporaryString str);");
             foreach(var type in types)
             {
                 var defaultNs = GetNamespace(type);
@@ -169,11 +172,18 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                             // Write value if specified
                             var valueName = "v_" + valueParam.Name;
                             sb.AppendLine($"if({valueParam.Name} is {{ }} {valueName})");
-                            sb.Append("await writer.WriteStringAsync(");
-                            ParamToString(valueName, valueParam.Type);
-                            sb.AppendLine(");");
+                            if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Tools.TemporaryString")
+                            {
+                                sb.AppendLine($"await WriteAsync(writer, {valueName});");
+                            }
+                            else
+                            {
+                                sb.Append("await writer.WriteStringAsync(");
+                                ParamToString(valueName, valueParam.Type);
+                                sb.AppendLine(");");
+                            }
                         }
-
+                        
                         // Close or leave opened
                         if(returnsHandler)
                         {
@@ -222,6 +232,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using System.Xml;");
+        sb.AppendLine("using Unicord.Server.Tools;");
         sb.AppendLine($"namespace {grammarNs};");
         sb.AppendLine("#nullable disable");
         sb.AppendLine("partial class XmppVocabulary");
@@ -291,7 +302,8 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("partial class XmppDecoder");
         sb.AppendLine("{");
         {
-            sb.AppendLine("private static partial ValueTask<string> ReadElementTextAsync(XmlReader reader);");
+            sb.AppendLine("private static partial ValueTask<string> ReadElementStringAsync(XmlReader reader);");
+            sb.AppendLine("private static partial ValueTask<TemporaryString> ReadElementTemporaryStringAsync(XmlReader reader);");
             sb.AppendLine("private static partial ValueTask EmptyElementTextAsync(XmlReader reader);");
             sb.AppendLine($"public static partial async ValueTask<Result> DecodePayload(XmlReader reader, {baseNs}.Protocol.IPayloadHandler handler)");
             sb.AppendLine("{");
@@ -388,11 +400,18 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                             if(valueParam != null)
                                             {
                                                 // Get value from content
-                                                sb.Append($"var {valueParam.Name} = (await ReadElementTextAsync(reader)) is {{ }} v ? ");
-                                                StringToParam(valueParam.Type, "v");
-                                                sb.Append(" : ");
-                                                DefaultParamValue(valueParam);
-                                                sb.AppendLine(";");
+                                                if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Tools.TemporaryString")
+                                                {
+                                                    sb.AppendLine($"using var {valueParam.Name} = await ReadElementTemporaryStringAsync(reader);");
+                                                }
+                                                else
+                                                {
+                                                    sb.Append($"var {valueParam.Name} = (await ReadElementStringAsync(reader)) is {{ }} v ? ");
+                                                    StringToParam(valueParam.Type, "v");
+                                                    sb.Append(" : ");
+                                                    DefaultParamValue(valueParam);
+                                                    sb.AppendLine(";");
+                                                }
                                             }
                                             else
                                             {

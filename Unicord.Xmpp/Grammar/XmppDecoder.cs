@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Buffers;
+using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Server.Tools;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Grammar;
@@ -24,23 +26,65 @@ internal static partial class XmppDecoder
         }
     }
 
-    private static partial async ValueTask<string?> ReadElementTextAsync(XmlReader reader)
+    static async ValueTask<bool> OpenElement(XmlReader reader)
     {
         if(reader.IsEmptyElement)
         {
             // Known to be empty
-            return null;
+            return false;
         }
 
         await reader.ReadAsync();
         switch(reader.NodeType)
         {
             case XmlNodeType.EndElement:
-                return null;
+                return false;
             case XmlNodeType.Element:
                 throw new XmppException("Element was expected to have textual value.", false);
         }
 
+        return true;
+    }
+
+    private static partial async ValueTask<string?> ReadElementStringAsync(XmlReader reader)
+    {
+        if(!await OpenElement(reader))
+        {
+            return null;
+        }
+
         return await reader.ReadContentAsStringAsync();
+    }
+
+    static readonly ArrayPool<char> arrayPool = ArrayPool<char>.Create();
+
+    static readonly TemporaryString.AsynchronousReader<XmlReader> xmlTemporaryStringReader = static async (buffer, reader) => {
+        return await reader.ReadValueChunkAsync(buffer.Array!, buffer.Offset, buffer.Count);
+    };
+
+    private static partial async ValueTask<TemporaryString?> ReadElementTemporaryStringAsync(XmlReader reader)
+    {
+        if(!await OpenElement(reader))
+        {
+            return null;
+        }
+
+        var str = new TemporaryString(arrayPool: arrayPool);
+        try
+        {
+            await str.ReadFromAsync(xmlTemporaryStringReader, reader);
+            return str;
+        }
+        catch when(Dispose())
+        {
+            // Dispose unreturned data immediately
+            return null;
+        }
+
+        bool Dispose()
+        {
+            str.Dispose();
+            return false;
+        }
     }
 }

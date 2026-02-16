@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Unicord.Server.Tools;
 using Unicord.Xmpp.Grammar;
 
 namespace Unicord.Xmpp.Protocol;
@@ -101,7 +102,7 @@ public interface IAuthQueryHandler : IPayloadHandler
     ValueTask Username(string? value);
 
     [Name("password")]
-    ValueTask Password(string? value);
+    ValueTask Password(TemporaryString? value);
 
     [Name("digest")]
     ValueTask Digest(string? value);
