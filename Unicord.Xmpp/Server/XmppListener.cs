@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,29 +8,29 @@ using System.Xml;
 using System.Xml.Linq;
 using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
 using static XmppVocabulary;
 
-public abstract class XmppListener<TClient, TStream> where TStream : Stream
+public abstract class XmppListener<TClient>
 {
     readonly XmppVocabulary nametable;
-    readonly XmlReaderSettings readerSettings;
-    readonly XmlWriterSettings writerSettings;
 
-    readonly IXmppReceiver receiver;
+    protected XmlReaderSettings ReaderSettings { get; }
+    protected XmlWriterSettings WriterSettings { get; }
+
+    readonly IXmppReceiver<XmppStreamSession> receiver;
 
     const bool prettyOutput = true;
 
-    public XmppListener(IXmppReceiver receiver)
+    public XmppListener(IXmppReceiver<XmppStreamSession> receiver)
     {
         this.receiver = receiver;
 
         nametable = new();
 
-        readerSettings = new()
+        ReaderSettings = new()
         {
             Async = true,
             CheckCharacters = false,
@@ -46,7 +45,7 @@ public abstract class XmppListener<TClient, TStream> where TStream : Stream
             XmlResolver = XmlResolver.ThrowingResolver
         };
 
-        writerSettings = new()
+        WriterSettings = new()
         {
             Async = true,
             CheckCharacters = false,
@@ -65,37 +64,18 @@ public abstract class XmppListener<TClient, TStream> where TStream : Stream
 
     public abstract Task RunAsync(CancellationToken cancellationToken = default);
 
-    protected abstract ValueTask<XmppXmlSession> StartSession(TClient client, TStream transportStream, XmlWriter writer, CancellationToken cancellationToken);
+    protected abstract ValueTask<XmppStreamSession> StartSession(TClient client, CancellationToken cancellationToken);
 
-    protected async ValueTask HandleStream(TClient client, TStream transportStream, CancellationToken cancellationToken)
+    protected async ValueTask HandleStream(TClient client, CancellationToken cancellationToken)
     {
         const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
 
-        // Debug
-        var stream = new ConsoleDebuggingStream(transportStream);
-
-        using Resettable<XmlReader> readerVar = XmlReader.Create(stream, readerSettings);
-        using Resettable<XmlWriter> writerVar = XmlWriter.Create(stream, writerSettings);
-
-        var session = await StartSession(client, transportStream, writerVar, cancellationToken);
-
-        var reader = readerVar.Value;
-        var writer = writerVar.Value;
-
-        session.OnResetStream = async newStream => {
-            // TODO Unify
-            stream = new ConsoleDebuggingStream(newStream);
-            readerVar.Reset(XmlReader.Create(stream, readerSettings));
-            reader = readerVar.Value;
-            writerVar.Reset(XmlWriter.Create(stream, writerSettings));
-            writer = writerVar.Value;
-            session.Reset(writerVar);
-        };
+        var session = await StartSession(client, cancellationToken);
 
         await using var handler = await receiver.Connected(session);
 
         await using PayloadHandlers handlers = new();
-        while(await reader.ReadAsync())
+        while(await Read(out var reader))
         {
             try
             {
@@ -128,6 +108,8 @@ public abstract class XmppListener<TClient, TStream> where TStream : Stream
                                 {
                                     session.RemoteResource = XmppResource.Parse(from);
                                 }
+
+                                var writer = session.Writer;
 
                                 await writer.WriteStartElementAsync(Stream, Stream, StreamsNs);
                                 await writer.WriteAttributeStringAsync(Xmlns, Stream, XmlnsNs, StreamsNs);
@@ -223,8 +205,14 @@ public abstract class XmppListener<TClient, TStream> where TStream : Stream
             }
             finally
             {
-                await writer.FlushAsync();
+                await session.Flush();
             }
+        }
+
+        ValueTask<bool> Read(out XmlReader reader)
+        {
+            reader = session.Reader;
+            return new(reader.ReadAsync());
         }
     }
 
@@ -365,30 +353,6 @@ public abstract class XmppListener<TClient, TStream> where TStream : Stream
             {
                 await top.DisposeAsync();
             }
-        }
-    }
-
-    record struct Resettable<T>(T Value) : IDisposable where T : IDisposable
-    {
-        public static implicit operator Resettable<T>(T value)
-        {
-            return new(value);
-        }
-
-        public static implicit operator T(Resettable<T> resettable)
-        {
-            return resettable.Value;
-        }
-
-        public void Reset(T newValue)
-        {
-            Value.Dispose();
-            Value = newValue;
-        }
-
-        public void Dispose()
-        {
-            Value.Dispose();
         }
     }
 }

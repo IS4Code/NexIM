@@ -1,87 +1,58 @@
 ﻿using System;
-using System.IO;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Server;
 using Unicord.Xmpp.Grammar;
-using Unicord.Xmpp.Server;
+using Unicord.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Protocol;
+namespace Unicord.Xmpp.Server;
 
-public interface IXmppSession : IXmppHandler
-{
-    bool Connected { get; }
-    bool IsSecure { get; }
-    bool CanUpgradeTls { get; }
-    EndPoint? RemoteEndPoint { get; }
-
-    AccountName AccountName { get; }
-    ClientSession? ClientSession { get; set; }
-}
-
-public abstract class XmppXmlSession : IXmppSession
+/// <summary>
+/// Provides an implementation of <see cref="IXmppSession"/> capable of
+/// sending synchronized XMPP commands as XML data.
+/// </summary>
+public abstract class XmppXmlSession : XmppSession
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
-    protected XmlWriter Writer { get; private set; }
     readonly CommandHandler commandHandler;
 
-    public abstract bool Connected { get; }
-    public abstract bool IsSecure { get; }
-    public abstract bool CanUpgradeTls { get; }
-    public string? StreamIdentifier { get; set; }
-    public XmppResource? LocalResource { get; set; }
-    public XmppResource? RemoteResource { get; set; }
-    public abstract EndPoint? RemoteEndPoint { get; }
+    public abstract XmlWriter Writer { get; }
 
-    public abstract CancellationToken CancellationToken { get; }
-
-    public AccountName AccountName => new(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
-    public ClientSession? ClientSession { get; set; }
-
-    public Func<Stream, ValueTask>? OnResetStream { get; set; }
-
-    public XmppXmlSession(XmlWriter writer)
+    public XmppXmlSession()
     {
-        Writer = writer;
         commandHandler = new(this);
     }
 
-    public void Reset(XmlWriter newWriter)
-    {
-        Writer = newWriter;
-    }
-
     protected abstract ValueTask UpgradeTls();
+    protected abstract ValueTask Close();
 
-    public async ValueTask<IFeaturesHandler> Features()
+    protected async sealed override ValueTask<IFeaturesHandler> OnFeatures()
     {
         var handler = new FeaturesHandler(this);
         await handler.Acquire();
         return handler;
     }
 
-    ValueTask<IMessageHandler> IStanzaHandler.Message(in Stanza stanza)
+    protected sealed override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
         var handler = new StanzaHandler(XmppVocabulary.Message, stanza, this);
         return Enter<IMessageHandler>(handler);
     }
 
-    ValueTask<IPresenceHandler> IStanzaHandler.Presence(in Stanza stanza)
+    protected sealed override ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
     {
         var handler = new StanzaHandler(XmppVocabulary.Presence, stanza, this);
         return Enter<IPresenceHandler>(handler);
     }
 
-    ValueTask<IInfoQueryHandler> IStanzaHandler.InfoQuery(in Stanza stanza)
+    protected sealed override ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
         var handler = new StanzaHandler(XmppVocabulary.Iq, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
     }
 
-    async ValueTask IStreamTlsHandler.StartTls()
+    protected async sealed override ValueTask OnStartTls()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -94,12 +65,14 @@ public abstract class XmppXmlSession : IXmppSession
         }
     }
 
-    async ValueTask IStreamTlsHandler.ProceedTls()
+    protected async sealed override ValueTask OnProceedTls()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
         {
             await ((IStreamTlsHandler)commandHandler).ProceedTls();
+
+            // The stream swap to TLS should happen while locked
             await UpgradeTls();
         }
         finally
@@ -108,7 +81,7 @@ public abstract class XmppXmlSession : IXmppSession
         }
     }
 
-    async ValueTask IStreamTlsHandler.FailureTls()
+    protected async sealed override ValueTask OnFailureTls()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -119,7 +92,8 @@ public abstract class XmppXmlSession : IXmppSession
             }
             finally
             {
-                Writer.Close();
+                // No more commands will be sent
+                await Close();
             }
         }
         finally
@@ -134,7 +108,7 @@ public abstract class XmppXmlSession : IXmppSession
         return (THandler)(IPayloadHandler)handler;
     }
 
-    public async ValueTask Other(XElement message)
+    protected async sealed override ValueTask OnOther(XElement message)
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -146,8 +120,6 @@ public abstract class XmppXmlSession : IXmppSession
             semaphore.Release();
         }
     }
-
-    public abstract ValueTask DisposeAsync();
 
     abstract class PayloadHandler : XmppEncoder
     {

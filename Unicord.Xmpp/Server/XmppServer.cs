@@ -5,7 +5,7 @@ using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppServer : IXmppReceiver
+public class XmppServer : IXmppReceiver<IXmppSession>
 {
     internal SessionsManager Sessions { get; }
     internal AccountsManager Accounts { get; }
@@ -16,8 +16,8 @@ public class XmppServer : IXmppReceiver
         Accounts = accounts;
     }
 
-    public ValueTask<IStanzaHandler> Connected(IXmppHandler session)
+    public ValueTask<IStanzaHandler> Connected(IXmppSession session)
     {
-        return new(new StreamHandler(this, (IXmppSession)session));
+        return new(new StreamHandler(this, session));
     }
 }

@@ -1,19 +1,18 @@
 ﻿using System;
-using System.IO;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppTcpListener : XmppListener<TcpClient, NetworkStream>
+public class XmppTcpListener : XmppListener<TcpClient>
 {
     readonly TcpListener listener;
 
-    public XmppTcpListener(IXmppReceiver receiver) : base(receiver)
+    public XmppTcpListener(IXmppReceiver<XmppStreamSession> receiver) : base(receiver)
     {
         listener = new(IPAddress.Any, 5222);
     }
@@ -38,11 +37,9 @@ public class XmppTcpListener : XmppListener<TcpClient, NetworkStream>
     {
         try
         {
-            await using var stream = client.GetStream();
-
-            await HandleStream(client, stream, cancellationToken);
+            await HandleStream(client, cancellationToken);
         }
-        catch(Exception e)
+        catch(Exception e) when(!Debugger.IsAttached)
         {
             Console.WriteLine(e);
         }
@@ -52,8 +49,8 @@ public class XmppTcpListener : XmppListener<TcpClient, NetworkStream>
         }
     }
 
-    protected override ValueTask<XmppXmlSession> StartSession(TcpClient client, NetworkStream transportStream, XmlWriter writer, CancellationToken cancellationToken)
+    protected override ValueTask<XmppStreamSession> StartSession(TcpClient client, CancellationToken cancellationToken)
     {
-        return new(new XmppTcpXmlSession(client, transportStream, writer, cancellationToken));
+        return new(new XmppServerSession(client, ReaderSettings, WriterSettings, cancellationToken));
     }
 }
