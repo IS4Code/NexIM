@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -8,7 +9,7 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppTcpListener : XmppListener<TcpClient>
+public class XmppTcpListener : XmppListener<TcpClient, NetworkStream>
 {
     readonly TcpListener listener;
 
@@ -51,8 +52,8 @@ public class XmppTcpListener : XmppListener<TcpClient>
         }
     }
 
-    protected override ValueTask<XmppXmlSession> StartSession(TcpClient client, XmlWriter writer, CancellationToken cancellationToken)
+    protected override ValueTask<XmppXmlSession> StartSession(TcpClient client, NetworkStream transportStream, XmlWriter writer, CancellationToken cancellationToken)
     {
-        return new(new XmppTcpXmlSession(client, writer, cancellationToken));
+        return new(new XmppTcpXmlSession(client, transportStream, writer, cancellationToken));
     }
 }

@@ -10,9 +10,14 @@ internal sealed class StreamHandler : CommandHandler, IStanzaHandler
 
     }
 
-    ValueTask<IFeaturesHandler> IStreamHandler.Features()
+    async ValueTask IStreamTlsHandler.StartTls()
     {
-        return Program.NotImplemented<IFeaturesHandler>();
+        if(!Session.CanUpgradeTls)
+        {
+            await Session.FailureTls();
+            return;
+        }
+        await Session.ProceedTls();
     }
 
     ValueTask<IMessageHandler> IStanzaHandler.Message(in Stanza stanza)
@@ -41,5 +46,20 @@ internal sealed class StreamHandler : CommandHandler, IStanzaHandler
     public override ValueTask DisposeAsync()
     {
         return default;
+    }
+
+    ValueTask<IFeaturesHandler> IStreamHandler.Features()
+    {
+        return Program.NotImplemented<IFeaturesHandler>();
+    }
+
+    async ValueTask IStreamTlsHandler.ProceedTls()
+    {
+        await Program.NotImplemented<object>();
+    }
+
+    async ValueTask IStreamTlsHandler.FailureTls()
+    {
+        await Program.NotImplemented<object>();
     }
 }

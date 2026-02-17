@@ -15,6 +15,7 @@ static file class Constants
     public const string IqRoster = "jabber:iq:roster";
     public const string IqAuth = "jabber:iq:auth";
     public const string ChatStates = "http://jabber.org/protocol/chatstates";
+    public const string XmppTls = "urn:ietf:params:xml:ns:xmpp-tls";
 }
 
 [StructLayout(LayoutKind.Auto)]
@@ -31,10 +32,47 @@ public interface IPayloadHandler : IAsyncDisposable
 }
 
 [ComplexType]
+public interface IStreamHandler : IPayloadHandler
+{
+    [Name("features", "http://etherx.jabber.org/streams")]
+    ValueTask<IFeaturesHandler> Features();
+}
+
+[ComplexType, Namespace(XmppTls)]
+public interface IStreamTlsHandler : IStreamHandler
+{
+    [Name("starttls")]
+    ValueTask StartTls();
+
+    [Name("proceed")]
+    ValueTask ProceedTls();
+
+    [Name("failure")]
+    ValueTask FailureTls();
+}
+
+public interface IStanzaHandler : IStreamTlsHandler
+{
+    ValueTask<IMessageHandler> Message(in Stanza stanza);
+    ValueTask<IPresenceHandler> Presence(in Stanza stanza);
+    ValueTask<IInfoQueryHandler> InfoQuery(in Stanza stanza);
+}
+
+[ComplexType]
 public interface IFeaturesHandler : IPayloadHandler
 {
     [Name("auth", "http://jabber.org/features/iq-auth")]
     ValueTask IqAuth();
+
+    [Name("starttls", XmppTls)]
+    ValueTask<ITlsFeaturesHandler> StartTls();
+}
+
+[ComplexType, Namespace(XmppTls)]
+public interface ITlsFeaturesHandler : IPayloadHandler
+{
+    [Name("required")]
+    ValueTask Required();
 }
 
 [ComplexType, Namespace(Client)]

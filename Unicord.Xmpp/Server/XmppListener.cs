@@ -15,7 +15,7 @@ namespace Unicord.Xmpp.Server;
 
 using static XmppVocabulary;
 
-public abstract class XmppListener<TClient>
+public abstract class XmppListener<TClient, TStream> where TStream : Stream
 {
     readonly XmppVocabulary nametable;
     readonly XmlReaderSettings readerSettings;
@@ -59,25 +59,38 @@ public abstract class XmppListener<TClient>
             NewLineHandling = NewLineHandling.Entitize,
             OmitXmlDeclaration = true,
             NewLineOnAttributes = prettyOutput,
-            WriteEndDocumentOnClose = true
+            WriteEndDocumentOnClose = false
         };
     }
 
     public abstract Task RunAsync(CancellationToken cancellationToken = default);
 
-    protected abstract ValueTask<XmppXmlSession> StartSession(TClient client, XmlWriter writer, CancellationToken cancellationToken);
+    protected abstract ValueTask<XmppXmlSession> StartSession(TClient client, TStream transportStream, XmlWriter writer, CancellationToken cancellationToken);
 
-    protected async ValueTask HandleStream(TClient client, Stream stream, CancellationToken cancellationToken)
+    protected async ValueTask HandleStream(TClient client, TStream transportStream, CancellationToken cancellationToken)
     {
         const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
 
         // Debug
-        stream = new ConsoleDebuggingStream(stream);
+        var stream = new ConsoleDebuggingStream(transportStream);
 
-        using var reader = XmlReader.Create(stream, readerSettings);
-        using var writer = XmlWriter.Create(stream, writerSettings);
+        using Resettable<XmlReader> readerVar = XmlReader.Create(stream, readerSettings);
+        using Resettable<XmlWriter> writerVar = XmlWriter.Create(stream, writerSettings);
 
-        var session = await StartSession(client, writer, cancellationToken);
+        var session = await StartSession(client, transportStream, writerVar, cancellationToken);
+
+        var reader = readerVar.Value;
+        var writer = writerVar.Value;
+
+        session.OnResetStream = async newStream => {
+            // TODO Unify
+            stream = new ConsoleDebuggingStream(newStream);
+            readerVar.Reset(XmlReader.Create(stream, readerSettings));
+            reader = readerVar.Value;
+            writerVar.Reset(XmlWriter.Create(stream, writerSettings));
+            writer = writerVar.Value;
+            session.Reset(writerVar);
+        };
 
         await using var handler = await receiver.Connected(session);
 
@@ -304,9 +317,20 @@ public abstract class XmppListener<TClient>
         }
     }
 
-    private async ValueTask WriteFeatures(IStanzaHandler session)
+    private async ValueTask WriteFeatures(IXmppSession session)
     {
         await using var features = await session.Features();
+
+        if(session.CanUpgradeTls)
+        {
+            await using var tls = await features.StartTls();
+            if(!session.IsSecure)
+            {
+                await tls.Required();
+                // All other features require secure channel
+                return;
+            }
+        }
 
         await features.IqAuth();
     }
@@ -341,6 +365,30 @@ public abstract class XmppListener<TClient>
             {
                 await top.DisposeAsync();
             }
+        }
+    }
+
+    record struct Resettable<T>(T Value) : IDisposable where T : IDisposable
+    {
+        public static implicit operator Resettable<T>(T value)
+        {
+            return new(value);
+        }
+
+        public static implicit operator T(Resettable<T> resettable)
+        {
+            return resettable.Value;
+        }
+
+        public void Reset(T newValue)
+        {
+            Value.Dispose();
+            Value = newValue;
+        }
+
+        public void Dispose()
+        {
+            Value.Dispose();
         }
     }
 }

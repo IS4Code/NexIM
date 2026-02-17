@@ -274,7 +274,6 @@ internal sealed class ConsoleDebuggingStream : Stream
     {
         readReader?.Close();
         writeReader?.Close();
-        inner.Close();
         base.Close();
     }
 }

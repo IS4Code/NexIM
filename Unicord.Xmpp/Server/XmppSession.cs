@@ -1,6 +1,6 @@
 ﻿using System;
+using System.IO;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -15,6 +15,7 @@ public interface IXmppSession : IXmppHandler
 {
     bool Connected { get; }
     bool IsSecure { get; }
+    bool CanUpgradeTls { get; }
     EndPoint? RemoteEndPoint { get; }
 
     AccountName AccountName { get; }
@@ -24,10 +25,12 @@ public interface IXmppSession : IXmppHandler
 public abstract class XmppXmlSession : IXmppSession
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
-    readonly XmlWriter writer;
+    protected XmlWriter Writer { get; private set; }
+    readonly CommandHandler commandHandler;
 
     public abstract bool Connected { get; }
     public abstract bool IsSecure { get; }
+    public abstract bool CanUpgradeTls { get; }
     public string? StreamIdentifier { get; set; }
     public XmppResource? LocalResource { get; set; }
     public XmppResource? RemoteResource { get; set; }
@@ -38,10 +41,20 @@ public abstract class XmppXmlSession : IXmppSession
     public AccountName AccountName => new(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
     public ClientSession? ClientSession { get; set; }
 
+    public Func<Stream, ValueTask>? OnResetStream { get; set; }
+
     public XmppXmlSession(XmlWriter writer)
     {
-        this.writer = writer;
+        Writer = writer;
+        commandHandler = new(this);
     }
+
+    public void Reset(XmlWriter newWriter)
+    {
+        Writer = newWriter;
+    }
+
+    protected abstract ValueTask UpgradeTls();
 
     public async ValueTask<IFeaturesHandler> Features()
     {
@@ -50,22 +63,69 @@ public abstract class XmppXmlSession : IXmppSession
         return handler;
     }
 
-    public ValueTask<IMessageHandler> Message(in Stanza stanza)
+    ValueTask<IMessageHandler> IStanzaHandler.Message(in Stanza stanza)
     {
         var handler = new StanzaHandler(XmppVocabulary.Message, stanza, this);
         return Enter<IMessageHandler>(handler);
     }
 
-    public ValueTask<IPresenceHandler> Presence(in Stanza stanza)
+    ValueTask<IPresenceHandler> IStanzaHandler.Presence(in Stanza stanza)
     {
         var handler = new StanzaHandler(XmppVocabulary.Presence, stanza, this);
         return Enter<IPresenceHandler>(handler);
     }
 
-    public ValueTask<IInfoQueryHandler> InfoQuery(in Stanza stanza)
+    ValueTask<IInfoQueryHandler> IStanzaHandler.InfoQuery(in Stanza stanza)
     {
         var handler = new StanzaHandler(XmppVocabulary.Iq, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
+    }
+
+    async ValueTask IStreamTlsHandler.StartTls()
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            await ((IStreamTlsHandler)commandHandler).StartTls();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    async ValueTask IStreamTlsHandler.ProceedTls()
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            await ((IStreamTlsHandler)commandHandler).ProceedTls();
+            await UpgradeTls();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    async ValueTask IStreamTlsHandler.FailureTls()
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            try
+            {
+                await ((IStreamTlsHandler)commandHandler).FailureTls();
+            }
+            finally
+            {
+                Writer.Close();
+            }
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     private static async ValueTask<THandler> Enter<THandler>(StanzaHandler handler) where THandler : IPayloadHandler
@@ -79,7 +139,7 @@ public abstract class XmppXmlSession : IXmppSession
         await semaphore.WaitAsync(CancellationToken);
         try
         {
-            await message.WriteToAsync(writer, CancellationToken);
+            await message.WriteToAsync(Writer, CancellationToken);
         }
         finally
         {
@@ -93,7 +153,7 @@ public abstract class XmppXmlSession : IXmppSession
     {
         protected XmppXmlSession Session { get; }
 
-        protected override XmlWriter Writer => Session.writer;
+        protected override XmlWriter Writer => Session.Writer;
         protected override CancellationToken CancellationToken => Session.CancellationToken;
 
         public PayloadHandler(XmppXmlSession session)
@@ -249,28 +309,17 @@ public abstract class XmppXmlSession : IXmppSession
             }
         }
     }
-}
 
-internal class XmppTcpXmlSession : XmppXmlSession
-{
-    readonly TcpClient client;
-
-    public override bool Connected => client.Connected;
-
-    // Loopback connection is considered secure
-    public override bool IsSecure => client.Client.RemoteEndPoint is IPEndPoint { Address: var addr } && IPAddress.IsLoopback(addr);
-
-    public override EndPoint? RemoteEndPoint => client.Client.RemoteEndPoint;
-    public override CancellationToken CancellationToken { get; }
-
-    public XmppTcpXmlSession(TcpClient client, XmlWriter writer, CancellationToken cancellationToken) : base(writer)
+    sealed class CommandHandler : PayloadHandler
     {
-        this.client = client;
-        CancellationToken = cancellationToken;
-    }
+        public CommandHandler(XmppXmlSession session) : base(session)
+        {
 
-    public async override ValueTask DisposeAsync()
-    {
-        client.Dispose();
+        }
+
+        protected async override ValueTask<XmppEncoder> ForkInner()
+        {
+            throw new InvalidOperationException("The command must be empty.");
+        }
     }
 }
