@@ -2,12 +2,12 @@
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Server.Tools;
+using Unicord.Server.Primitives;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Grammar;
 
-internal abstract partial class XmppEncoder : IPayloadHandler
+public abstract partial class XmppEncoder : IPayloadHandler
 {
     protected abstract XmlWriter Writer { get; }
     protected abstract CancellationToken CancellationToken { get; }
@@ -16,7 +16,8 @@ internal abstract partial class XmppEncoder : IPayloadHandler
 
     async ValueTask IPayloadHandler.Other(XElement payload)
     {
-        await payload.WriteToAsync(Writer, CancellationToken);
+        using var reader = payload.CreateReader();
+        await Writer.WriteNodeAsync(reader, false);
     }
 
     private static partial async ValueTask WriteAsync(XmlWriter writer, TemporaryString str)

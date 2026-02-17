@@ -1,12 +1,13 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Server.Tools;
+using Unicord.Server.Primitives;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Grammar;
 
-internal static partial class XmppDecoder
+public static partial class XmppDecoder
 {
     public readonly record struct Result(bool Success, IPayloadHandler? InnerHandler);
 
@@ -63,8 +64,6 @@ internal static partial class XmppDecoder
         }
     }
 
-    static readonly ArrayPool<char> arrayPool = ArrayPool<char>.Create();
-
     static readonly TemporaryString.AsynchronousReader<XmlReader> xmlTemporaryStringReader = static async (buffer, reader) => {
         return await reader.ReadValueChunkAsync(buffer.Array!, buffer.Offset, buffer.Count);
     };
@@ -76,7 +75,7 @@ internal static partial class XmppDecoder
             return null;
         }
 
-        var str = new TemporaryString(arrayPool: arrayPool);
+        var str = new TemporaryString(arraySource: StringSource.Instance);
         try
         {
             await str.ReadFromAsync(xmlTemporaryStringReader, reader);
@@ -108,6 +107,25 @@ internal static partial class XmppDecoder
         if(reader.NodeType != XmlNodeType.EndElement)
         {
             throw new XmppException("Element was expected to have textual value.", false);
+        }
+    }
+
+    sealed class StringSource : TemporaryArraySource<char>
+    {
+        public static readonly StringSource Instance = new();
+
+        private StringSource() : base(ArrayPool<char>.Create())
+        {
+
+        }
+
+        public override void ZeroMemory(Span<char> span)
+        {
+#if NETSTANDARD2_1_OR_GREATER
+            System.Security.Cryptography.CryptographicOperations.ZeroMemory(MemoryMarshal.Cast<char, byte>(span));
+#else
+            base.ZeroMemory(span);
+#endif
         }
     }
 }

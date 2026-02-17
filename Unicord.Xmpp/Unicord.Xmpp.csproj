@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
     <Nullable>enable</Nullable>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -12,7 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Unicord.Server\Unicord.Server.csproj" />
-    <ProjectReference Include="..\Unicord.Xmpp.Generator\Unicord.Xmpp.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    <ProjectReference Include="..\Unicord.Xmpp.Protocol\Unicord.Xmpp.Protocol.csproj" />
   </ItemGroup>
 
 </Project>

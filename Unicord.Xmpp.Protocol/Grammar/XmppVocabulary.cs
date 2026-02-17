@@ -3,7 +3,7 @@ using System.Xml;
 
 namespace Unicord.Xmpp.Grammar;
 
-internal partial class XmppVocabulary : NameTable
+public partial class XmppVocabulary : NameTable
 {
     public static readonly Key Empty = new("");
 

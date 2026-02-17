@@ -14,22 +14,6 @@ public readonly record struct XmppResource(XmppAddress Address, string? Resource
 
     }
 
-    public XmppResource(Unicord.Server.Model.Sender sender) : this(sender.Account, sender.Identifier)
-    {
-
-    }
-
-    public XmppResource(Unicord.Server.AccountName account, string? resourceIdentifier) :
-        this(
-            account.Identifier is XmppAddress addr
-            ? addr
-            : XmppAddress.Parse(account.ToString()),
-            resourceIdentifier
-        )
-    {
-
-    }
-
     public bool IsWiderThan(XmppResource? other)
     {
         if(other is not { } value)

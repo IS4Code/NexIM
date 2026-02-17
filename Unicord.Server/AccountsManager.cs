@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using Unicord.Server.Tools;
+using Unicord.Server.Primitives;
 
 namespace Unicord.Server;
 

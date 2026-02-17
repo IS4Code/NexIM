@@ -34,7 +34,7 @@ public class ClientSession : IClientSession
 
     async ValueTask IClientSession.Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState)
     {
-        var from = new XmppResource(sender);
+        var from = GetResource(sender);
 
         if(message == null)
         {
@@ -119,5 +119,20 @@ public class ClientSession : IClientSession
         {
             return xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
         }
+    }
+
+    public static XmppResource GetResource(AccountName account, string? resourceIdentifier)
+    {
+        return new(
+            account.Identifier is XmppAddress addr
+            ? addr
+            : XmppAddress.Parse(account.ToString()),
+            resourceIdentifier
+        );
+    }
+
+    public static XmppResource GetResource(Sender sender)
+    {
+        return GetResource(sender.Account, sender.Identifier);
     }
 }

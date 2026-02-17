@@ -11,13 +11,10 @@ using Unicord.Xmpp.Server;
 
 namespace Unicord.Xmpp.Protocol;
 
-public interface IXmppSession : IStanzaHandler
+public interface IXmppSession : IXmppHandler
 {
     bool Connected { get; }
     bool IsSecure { get; }
-    string? StreamIdentifier { get; }
-    XmppResource? LocalResource { get; }
-    XmppResource? RemoteResource { get; set; }
     EndPoint? RemoteEndPoint { get; }
 
     AccountName AccountName { get; }
@@ -219,6 +216,8 @@ public abstract class XmppXmlSession : IXmppSession
 
     sealed class FeaturesHandler : SynchronizedHandler
     {
+        bool acquiring;
+
         public FeaturesHandler(XmppXmlSession session) : base(session)
         {
 
@@ -226,8 +225,28 @@ public abstract class XmppXmlSession : IXmppSession
 
         protected async override ValueTask AcquireImpl()
         {
-            var writer = Writer;
-            await writer.WriteStartElementAsync(null, XmppVocabulary.Features, XmppVocabulary.StreamsNs);
+            acquiring = true;
+            try
+            {
+                await ((IStreamHandler)this).Features();
+            }
+            finally
+            {
+                acquiring = false;
+            }
+        }
+
+        protected override ValueTask<XmppEncoder> ForkInner()
+        {
+            if(acquiring)
+            {
+                // Called from within Acquire, unused.
+                return default;
+            }
+            else
+            {
+                return base.ForkInner();
+            }
         }
     }
 }

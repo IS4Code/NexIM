@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 
-namespace Unicord.Server.Tools;
+namespace Unicord.Server.Primitives;
 
 /// <summary>
 /// Provides a mutable array implementation whose contents can be determinstically
@@ -17,7 +15,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
     public delegate int SynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
     public delegate ValueTask<int> AsynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
 
-    readonly ArrayPool<T> pool;
+    readonly ITemporaryArraySource<T> source;
 
     readonly object syncRoot = new();
 
@@ -43,11 +41,11 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
         }
     }
 
-    public TemporaryArray(int capacity = 1, ArrayPool<T>? arrayPool = null)
+    public TemporaryArray(int capacity = 1, ITemporaryArraySource<T>? arraySource = null)
     {
-        pool = arrayPool ?? ArrayPool<T>.Shared;
+        source = arraySource ?? TemporaryArraySource<T>.Shared;
 
-        storage = pool.Rent(capacity);
+        storage = source.RentArray(capacity);
         handle = GCHandle.Alloc(storage, GCHandleType.Pinned);
     }
 
@@ -55,13 +53,13 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
     {
         lock(original.syncRoot)
         {
-            pool = original.pool;
+            source = original.source;
             Length = original.Length;
             storage = original.storage;
             handle = original.handle;
 
             original.Length = 0;
-            original.storage = pool.Rent(1);
+            original.storage = source.RentArray(1);
             original.handle = GCHandle.Alloc(original.storage, GCHandleType.Pinned);
         }
     }
@@ -73,7 +71,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
 
     public void Clear()
     {
-        Zero(Data);
+        source.ZeroMemory(Data);
         Length = 0;
     }
 
@@ -88,7 +86,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
         lock(syncRoot)
         {
             // Rent a bigger array
-            var newStorage = pool.Rent(newLength);
+            var newStorage = source.RentArray(newLength);
             var newHandle = GCHandle.Alloc(newStorage, GCHandleType.Pinned);
             try
             {
@@ -97,11 +95,11 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
                 data.CopyTo(newStorage.AsSpan());
 
                 // Cleanup
-                Zero(data);
+                source.ZeroMemory(data);
                 handle.Free();
                 if(storage.Length > 0)
                 {
-                    pool.Return(storage);
+                    source.ReturnArray(storage);
                 }
 
                 storage = newStorage;
@@ -114,9 +112,9 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
 
             bool Cleanup()
             {
-                Zero(newStorage.AsSpan(0, Length));
+                source.ZeroMemory(newStorage.AsSpan(0, Length));
                 newHandle.Free();
-                pool.Return(newStorage);
+                source.ReturnArray(newStorage);
                 return false;
             }
         }
@@ -176,7 +174,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
             // Fill the gap
             data.Slice(index + 1).CopyTo(data.Slice(index));
         }
-        Zero(data.Slice(Length - 1));
+        source.ZeroMemory(data.Slice(Length - 1));
 
         Length--;
     }
@@ -223,19 +221,24 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
         while((read = await reader(new(storage, Length, storage.Length - Length), args)) > 0);
     }
 
-    public ArraySegment<T>.Enumerator GetEnumerator()
+    public Span<T>.Enumerator GetEnumerator()
     {
-        return Value.GetEnumerator();
+        return Data.GetEnumerator();
     }
 
     IEnumerator<T> IEnumerable<T>.GetEnumerator()
     {
-        return GetEnumerator();
+        return GetEnumerator(Value);
     }
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return GetEnumerator();
+        return GetEnumerator(Value);
+    }
+
+    private static IEnumerator<T> GetEnumerator<TSource>(TSource collection) where TSource : struct, IEnumerable<T>
+    {
+        return collection.GetEnumerator();
     }
 
     void ICollection<T>.Add(T item)
@@ -282,16 +285,10 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
             Length = 0;
             this.storage = Array.Empty<T>();
 
-            Zero(storage.AsSpan(0, length));
+            source.ZeroMemory(storage.AsSpan(0, length));
             handle.Free();
-            pool.Return(storage);
+            source.ReturnArray(storage);
         }
-    }
-
-    private static void Zero<TSource>(Span<TSource> data) where TSource : unmanaged
-    {
-        var span = MemoryMarshal.Cast<TSource, byte>(data);
-        CryptographicOperations.ZeroMemory(span);
     }
 
     ~TemporaryArray()
@@ -312,7 +309,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
 /// </summary>
 public class TemporaryString : TemporaryArray<char>
 {
-    public TemporaryString(int capacity = 1, ArrayPool<char>? arrayPool = null) : base(capacity, arrayPool)
+    public TemporaryString(int capacity = 1, ITemporaryArraySource<char>? arraySource = null) : base(capacity, arraySource)
     {
 
     }

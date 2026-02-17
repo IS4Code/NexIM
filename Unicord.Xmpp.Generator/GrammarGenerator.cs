@@ -85,7 +85,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using System.Xml;");
-        sb.AppendLine("using Unicord.Server.Tools;");
+        sb.AppendLine("using Unicord.Server.Primitives;");
         sb.AppendLine($"namespace {grammarNs};");
         sb.AppendLine("#nullable disable");
         sb.Append("partial class XmppEncoder");
@@ -172,7 +172,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                             // Write value if specified
                             var valueName = "v_" + valueParam.Name;
                             sb.AppendLine($"if({valueParam.Name} is {{ }} {valueName})");
-                            if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Tools.TemporaryString")
+                            if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Primitives.TemporaryString")
                             {
                                 sb.AppendLine($"await WriteAsync(writer, {valueName});");
                             }
@@ -232,7 +232,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using System.Xml;");
-        sb.AppendLine("using Unicord.Server.Tools;");
+        sb.AppendLine("using Unicord.Server.Primitives;");
         sb.AppendLine($"namespace {grammarNs};");
         sb.AppendLine("#nullable disable");
         sb.AppendLine("partial class XmppVocabulary");
@@ -281,7 +281,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                 }
                 var encoded = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(GetXmlSimpleName(key)).Replace(" ", "");
                 vocabulary[key] = encoded;
-                sb.AppendLine($"public static readonly Key {encoded} = new({key});");
+                sb.AppendLine($"internal static readonly Key {encoded} = new({key});");
             }
             sb.AppendLine("private partial void AddKey(string key);");
             sb.AppendLine("private partial void AddKeys()");
@@ -400,7 +400,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                             if(valueParam != null)
                                             {
                                                 // Get value from content
-                                                if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Tools.TemporaryString")
+                                                if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Primitives.TemporaryString")
                                                 {
                                                     sb.AppendLine($"using var {valueParam.Name} = await ReadElementTemporaryStringAsync(reader);");
                                                 }
