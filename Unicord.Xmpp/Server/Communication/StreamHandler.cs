@@ -3,11 +3,35 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal sealed class StreamHandler : CommandHandler, IStanzaHandler
+internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
 {
+    public string? StreamIdentifier { get; private set; }
+
     public StreamHandler(XmppServer server, IXmppSession session) : base(server, session, session.StreamIdentifier)
     {
 
+    }
+
+    async ValueTask IXmppReceivingHandler.StreamStarted(string? identifier)
+    {
+        StreamIdentifier = identifier;
+
+        // Send features
+        await using(var features = await Session.Features())
+        {
+            if(Session.CanUpgradeTls)
+            {
+                await using var tls = await features.StartTls();
+                if(!Session.IsSecure)
+                {
+                    await tls.Required();
+                    // All other features require secure channel
+                    return;
+                }
+            }
+
+            await features.IqAuth();
+        }
     }
 
     async ValueTask IStreamTlsHandler.StartTls()
@@ -34,12 +58,12 @@ internal sealed class StreamHandler : CommandHandler, IStanzaHandler
 
     ValueTask<IInfoQueryHandler> IStanzaHandler.InfoQuery(in Stanza stanza)
     {
+        ValidateSender(stanza);
         if(stanza.To is { } to && !to.IsNarrowerThan(Session.LocalResource))
         {
             // Someone else is the receiver
-            Program.NotImplemented<object>().AsTask().GetAwaiter().GetResult();
+            return Program.NotImplemented<IInfoQueryHandler>();
         }
-        ValidateSender(stanza);
         return new(new InfoQuery(Server, Session, stanza));
     }
 

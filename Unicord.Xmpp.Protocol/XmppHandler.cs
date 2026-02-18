@@ -7,25 +7,40 @@ namespace Unicord.Xmpp.Protocol;
 /// Represents an entity capable of accepting incoming
 /// XMPP connections.
 /// </summary>
-public interface IXmppReceiver<in THandler> where THandler : IXmppHandler
+public interface IXmppReceiver<in THandler> where THandler : IXmppSendingHandler
 {
-    ValueTask<IStanzaHandler> Connected(THandler session);
+    ValueTask<IXmppReceivingHandler> Connected(THandler session);
+}
+
+/// <summary>
+/// Represents an XMPP stream.
+/// </summary>
+public interface IXmppHandler : IStanzaHandler
+{
+    string? StreamIdentifier { get; }
+}
+
+/// <summary>
+/// Represents an incoming XMPP stream.
+/// </summary>
+public interface IXmppReceivingHandler : IXmppHandler
+{
+    ValueTask StreamStarted(string? identifier);
 }
 
 /// <summary>
 /// Represents an outgoing XMPP stream.
 /// </summary>
-public interface IXmppHandler : IStanzaHandler
+public interface IXmppSendingHandler : IXmppHandler
 {
-    string? StreamIdentifier { get; }
     XmppResource? LocalResource { get; }
     XmppResource? RemoteResource { get; set; }
 }
 
 /// <summary>
-/// Provides a basic implementation of <see cref="IXmppHandler"/>.
+/// Provides a basic implementation of <see cref="IXmppSendingHandler"/>.
 /// </summary>
-public abstract class XmppHandler : IXmppHandler
+public abstract class XmppSendingHandler : IXmppSendingHandler
 {
     public string? StreamIdentifier { get; set; }
     public XmppResource? LocalResource { get; set; }

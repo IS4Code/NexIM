@@ -109,6 +109,8 @@ public abstract class XmppListener<TClient>
                                     session.RemoteResource = XmppResource.Parse(from);
                                 }
 
+                                var id = reader.GetAttribute("id");
+
                                 var writer = session.Writer;
 
                                 await writer.WriteStartElementAsync(Stream, Stream, StreamsNs);
@@ -121,8 +123,8 @@ public abstract class XmppListener<TClient>
                                 await writer.WriteAttributeStringAsync(null, From, null, session.LocalResource.ToString());
                                 await writer.WriteAttributeStringAsync(null, Id, null, session.StreamIdentifier);
 
-                                // Features
-                                await WriteFeatures(session);
+                                // Stream is ready
+                                await handler.StreamStarted(id);
                                 break;
 
                             case 1:
@@ -303,24 +305,6 @@ public abstract class XmppListener<TClient>
         {
             return new(true, await task);
         }
-    }
-
-    private async ValueTask WriteFeatures(IXmppSession session)
-    {
-        await using var features = await session.Features();
-
-        if(session.CanUpgradeTls)
-        {
-            await using var tls = await features.StartTls();
-            if(!session.IsSecure)
-            {
-                await tls.Required();
-                // All other features require secure channel
-                return;
-            }
-        }
-
-        await features.IqAuth();
     }
 
     private bool GetXmppException(Exception e, [MaybeNullWhen(false)] out XmppException xmppException)

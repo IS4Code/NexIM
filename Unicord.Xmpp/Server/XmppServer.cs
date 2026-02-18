@@ -16,7 +16,7 @@ public class XmppServer : IXmppReceiver<IXmppSession>
         Accounts = accounts;
     }
 
-    public ValueTask<IStanzaHandler> Connected(IXmppSession session)
+    public ValueTask<IXmppReceivingHandler> Connected(IXmppSession session)
     {
         return new(new StreamHandler(this, session));
     }

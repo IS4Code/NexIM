@@ -10,7 +10,7 @@ namespace Unicord.Xmpp.Server;
 /// Represents an outgoing XMPP session, i.e. a channel that supports
 /// sending XMPP commands to a remote entity.
 /// </summary>
-public interface IXmppSession : IXmppHandler
+public interface IXmppSession : IXmppSendingHandler
 {
     bool Connected { get; }
     bool IsSecure { get; }
@@ -24,7 +24,7 @@ public interface IXmppSession : IXmppHandler
 /// <summary>
 /// Provides a basic implementation of <see cref="IXmppSession"/>.
 /// </summary>
-public abstract class XmppSession : XmppHandler, IXmppSession
+public abstract class XmppSession : XmppSendingHandler, IXmppSession
 {
     public abstract bool Connected { get; }
     public abstract bool IsSecure { get; }
