@@ -109,6 +109,11 @@ public abstract class XmppListener<TClient>
                                     session.RemoteResource = XmppResource.Parse(from);
                                 }
 
+                                if(reader.GetAttribute(Lang, XmlNs) is { } lang)
+                                {
+                                    session.Language = lang;
+                                }
+
                                 var id = reader.GetAttribute("id");
 
                                 var writer = session.Writer;
@@ -122,6 +127,7 @@ public abstract class XmppListener<TClient>
                                 await writer.WriteAttributeStringAsync(null, Version, null, "1.0");
                                 await writer.WriteAttributeStringAsync(null, From, null, session.LocalResource.ToString());
                                 await writer.WriteAttributeStringAsync(null, Id, null, session.StreamIdentifier);
+                                await writer.WriteAttributeStringAsync(null, Lang, XmlNs, session.Language);
 
                                 // Stream is ready
                                 await handler.StreamStarted(id);

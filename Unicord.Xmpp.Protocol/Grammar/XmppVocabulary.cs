@@ -13,6 +13,8 @@ public abstract partial class XmppVocabulary : XmlNameTable
 
     public static readonly Key Xmlns = new("xmlns");
     public static readonly Key XmlnsNs = new("http://www.w3.org/2000/xmlns/");
+    public static readonly Key XmlNs = new("http://www.w3.org/XML/1998/namespace");
+    public static readonly Key Lang = new("lang");
 
     public static readonly Key StreamsNs = new("http://etherx.jabber.org/streams");
     public static readonly Key JabberClientNs = new("jabber:client");
@@ -41,6 +43,8 @@ public abstract partial class XmppVocabulary : XmlNameTable
         AddKey(Empty);
         AddKey(Xmlns);
         AddKey(XmlnsNs);
+        AddKey(XmlNs);
+        AddKey(Lang);
 
         AddKeys();
 
@@ -68,9 +72,6 @@ public abstract partial class XmppVocabulary : XmlNameTable
         AddKey("xml");
         AddKey("encoding");
         AddKey("standalone");
-        AddKey("lang");
-        AddKey("en");
-        AddKey("http://www.w3.org/XML/1998/namespace");
     }
 
     private partial void AddKey(string key)

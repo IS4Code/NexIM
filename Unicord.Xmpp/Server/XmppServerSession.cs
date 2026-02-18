@@ -13,6 +13,8 @@ namespace Unicord.Xmpp.Server;
 
 internal sealed class XmppServerSession(TcpClient client, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppTcpSession(client, cancellationToken)
 {
+    protected override string DefaultLanguage => "en";
+
     protected override SslServerAuthenticationOptions ServerAuthenticationOptions => new SslServerAuthenticationOptions()
     {
         EnabledSslProtocols = (SslProtocols)(-1),
