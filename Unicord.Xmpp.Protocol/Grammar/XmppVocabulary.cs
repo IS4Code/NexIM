@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Linq;
 using System.Xml;
 
 namespace Unicord.Xmpp.Grammar;
 
-public partial class XmppVocabulary : NameTable
+/// <summary>
+/// Provides atomized common XMPP vocabulary elements.
+/// </summary>
+public abstract partial class XmppVocabulary : XmlNameTable
 {
     public static readonly Key Empty = new("");
 
@@ -25,12 +29,14 @@ public partial class XmppVocabulary : NameTable
     public static readonly Key To = new("to");
     public static readonly Key Version = new("version");
 
-    bool allowAdding = true;
-    readonly object syncRoot = new();
-
     private partial void AddKeys();
 
     public XmppVocabulary()
+    {
+        Initialize();
+    }
+
+    protected virtual void Initialize()
     {
         AddKey(Empty);
         AddKey(Xmlns);
@@ -53,6 +59,12 @@ public partial class XmppVocabulary : NameTable
         AddKey(To);
         AddKey(Version);
 
+        AddKey("stream:stream");
+        foreach(char c in Enumerable.Range('a', ('z' - 'a') + 1))
+        {
+            AddKey(String.Intern(c.ToString()));
+        }
+
         AddKey("xml");
         AddKey("encoding");
         AddKey("standalone");
@@ -61,56 +73,12 @@ public partial class XmppVocabulary : NameTable
         AddKey("http://www.w3.org/XML/1998/namespace");
     }
 
-    public override string Add(char[] key, int start, int len)
-    {
-        return base.Get(key, start, len) ?? AddSynchronized(key, start, len);
-    }
-
-    public override string Add(string key)
-    {
-        return base.Get(key) ?? AddSynchronized(key);
-    }
-
     private partial void AddKey(string key)
     {
-        if (!ReferenceEquals(key, base.Add(key)))
+        if (!ReferenceEquals(key, Add(key)))
         {
             throw new NotSupportedException("The key reference is invalid.");
         }
-    }
-
-    private string AddSynchronized(char[] key, int start, int len)
-    {
-        if (!allowAdding)
-        {
-            throw new InvalidOperationException($"{new string(key, start, len)} is not found in the table.");
-        }
-        lock (syncRoot)
-        {
-            return base.Add(key, start, len);
-        }
-    }
-
-    private string AddSynchronized(string key)
-    {
-        if (!allowAdding)
-        {
-            throw new InvalidOperationException($"{key} is not found in the table.");
-        }
-        lock (syncRoot)
-        {
-            return base.Add(key);
-        }
-    }
-
-    public override string? Get(char[] key, int start, int len)
-    {
-        return base.Get(key, start, len);
-    }
-
-    public override string? Get(string value)
-    {
-        return base.Get(value);
     }
 
     public readonly record struct Key(string Value)

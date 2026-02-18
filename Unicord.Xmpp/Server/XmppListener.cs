@@ -15,7 +15,7 @@ using static XmppVocabulary;
 
 public abstract class XmppListener<TClient>
 {
-    readonly XmppVocabulary nametable;
+    readonly XmppNameTable nametable;
 
     protected XmlReaderSettings ReaderSettings { get; }
     protected XmlWriterSettings WriterSettings { get; }
