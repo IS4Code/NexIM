@@ -104,17 +104,10 @@ public abstract class XmppListener<TClient>
                                 // TODO Verify that the resource matches exactly the host of the server
                                 session.LocalResource = XmppResource.Parse(to);
 
-                                if(reader.GetAttribute("from") is { } from)
-                                {
-                                    session.RemoteResource = XmppResource.Parse(from);
-                                }
-
                                 if(reader.GetAttribute(Lang, XmlNs) is { } lang)
                                 {
                                     session.Language = lang;
                                 }
-
-                                var id = reader.GetAttribute("id");
 
                                 var writer = session.Writer;
 
@@ -130,7 +123,7 @@ public abstract class XmppListener<TClient>
                                 await writer.WriteAttributeStringAsync(null, Lang, XmlNs, session.Language);
 
                                 // Stream is ready
-                                await handler.StreamStarted(id);
+                                await handler.StreamStarted();
                                 break;
 
                             case 1:

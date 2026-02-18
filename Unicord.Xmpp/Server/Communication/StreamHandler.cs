@@ -5,17 +5,13 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
 {
-    public string? StreamIdentifier { get; private set; }
-
     public StreamHandler(XmppServer server, IXmppSession session) : base(server, session, session.StreamIdentifier)
     {
 
     }
 
-    async ValueTask IXmppReceivingHandler.StreamStarted(string? identifier)
+    async ValueTask IXmppReceivingHandler.StreamStarted()
     {
-        StreamIdentifier = identifier;
-
         // Send features
         await using(var features = await Session.Features())
         {

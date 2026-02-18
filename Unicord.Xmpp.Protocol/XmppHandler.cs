@@ -17,7 +17,7 @@ public interface IXmppReceiver<in THandler> where THandler : IXmppSendingHandler
 /// </summary>
 public interface IXmppHandler : IStanzaHandler
 {
-    string? StreamIdentifier { get; }
+
 }
 
 /// <summary>
@@ -25,7 +25,7 @@ public interface IXmppHandler : IStanzaHandler
 /// </summary>
 public interface IXmppReceivingHandler : IXmppHandler
 {
-    ValueTask StreamStarted(string? identifier);
+    ValueTask StreamStarted();
 }
 
 /// <summary>
@@ -33,6 +33,7 @@ public interface IXmppReceivingHandler : IXmppHandler
 /// </summary>
 public interface IXmppSendingHandler : IXmppHandler
 {
+    string? StreamIdentifier { get; }
     XmppResource? LocalResource { get; }
     XmppResource? RemoteResource { get; set; }
     string Language { get; set; }
