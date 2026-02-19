@@ -11,7 +11,7 @@ using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
-internal sealed class XmppServerSession(TcpClient client, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppTcpSession(client, cancellationToken)
+internal sealed class XmppServerSession(NetworkStream networkStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppNetworkSession(networkStream, cancellationToken)
 {
     protected override string DefaultLanguage => "en";
 

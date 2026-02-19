@@ -51,6 +51,6 @@ public class XmppTcpListener : XmppListener<TcpClient>
 
     protected override ValueTask<XmppStreamSession> StartSession(TcpClient client, CancellationToken cancellationToken)
     {
-        return new(new XmppServerSession(client, ReaderSettings, WriterSettings, cancellationToken));
+        return new(new XmppServerSession(client.GetStream(), ReaderSettings, WriterSettings, cancellationToken));
     }
 }
