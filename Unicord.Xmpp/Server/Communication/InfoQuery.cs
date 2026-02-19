@@ -5,19 +5,24 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class InfoQuery : StanzaHandler, IInfoQueryHandler
 {
+    bool? handled;
+
     public InfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
     {
 
     }
 
-    public override ValueTask DisposeAsync()
+    public async override ValueTask DisposeAsync()
     {
-        // TODO No payload or multiple payloads
-        return default;
+        if(handled != true)
+        {
+            throw XmppStanzaException.FeatureNotImplemented();
+        }
     }
 
     ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
     {
+        SetOnce(ref handled, true);
         return new(
             Type switch
             {
@@ -29,6 +34,7 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
 
     ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery()
     {
+        SetOnce(ref handled, true);
         return new(
             Type switch
             {
