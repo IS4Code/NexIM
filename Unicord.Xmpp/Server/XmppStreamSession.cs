@@ -51,25 +51,32 @@ public abstract class XmppStreamSession : XmppXmlSession
 
     protected async override ValueTask Close()
     {
-        // Stream will be disposed
-        await using var stream = Stream;
-
-        // Close for reading and writing
-        var task = CloseStream();
         try
         {
-            Reader.Dispose();
-        }
-        finally
-        {
-            await task;
-        }
+            // Stream will be disposed
+            await using var stream = Stream;
 
-        async Task CloseStream()
+            // Close for reading and writing
+            var task = CloseStream();
+            try
+            {
+                Reader.Dispose();
+            }
+            finally
+            {
+                await task;
+            }
+
+            async Task CloseStream()
+            {
+                await writer.WriteEndDocumentAsync();
+                await writer.FlushAsync();
+                await writer.DisposeAsync();
+            }
+        }
+        catch(IOException)
         {
-            await writer.WriteEndDocumentAsync();
-            await writer.FlushAsync();
-            await writer.DisposeAsync();
+            // Accessing closed stream
         }
     }
 
