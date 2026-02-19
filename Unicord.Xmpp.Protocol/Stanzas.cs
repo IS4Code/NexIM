@@ -11,11 +11,14 @@ using static Constants;
 
 static file class Constants
 {
+    public const string Xml = "http://www.w3.org/XML/1998/namespace";
     public const string Client = "jabber:client";
     public const string IqRoster = "jabber:iq:roster";
     public const string IqAuth = "jabber:iq:auth";
     public const string ChatStates = "http://jabber.org/protocol/chatstates";
     public const string XmppTls = "urn:ietf:params:xml:ns:xmpp-tls";
+    public const string Streams = "http://etherx.jabber.org/streams";
+    public const string Stanzas = "urn:ietf:params:xml:ns:xmpp-stanzas";
 }
 
 [StructLayout(LayoutKind.Auto)]
@@ -31,15 +34,18 @@ public interface IPayloadHandler : IAsyncDisposable
     ValueTask Other(XElement payload);
 }
 
-[ComplexType]
-public interface IStreamHandler : IPayloadHandler
+[ComplexType, Namespace(Streams)]
+public interface IStreamTransportHandler : IPayloadHandler
 {
-    [Name("features", "http://etherx.jabber.org/streams")]
+    [Name("features")]
     ValueTask<IFeaturesHandler> Features();
+
+    [Name("error")]
+    ValueTask<IStreamErrorHandler> Error();
 }
 
 [ComplexType, Namespace(XmppTls)]
-public interface IStreamTlsHandler : IStreamHandler
+public interface IStreamTlsHandler : IPayloadHandler
 {
     [Name("starttls")]
     ValueTask StartTls();
@@ -51,7 +57,7 @@ public interface IStreamTlsHandler : IStreamHandler
     ValueTask FailureTls();
 }
 
-public interface IStanzaHandler : IStreamTlsHandler
+public interface IStreamHandler : IStreamTransportHandler, IStreamTlsHandler
 {
     ValueTask<IMessageHandler> Message(in Stanza stanza);
     ValueTask<IPresenceHandler> Presence(in Stanza stanza);
@@ -76,7 +82,14 @@ public interface ITlsFeaturesHandler : IPayloadHandler
 }
 
 [ComplexType, Namespace(Client)]
-public interface IMessageHandler : IPayloadHandler
+public interface IStanzaHandler : IPayloadHandler
+{
+    [Name("required")]
+    ValueTask<IStanzaErrorHandler> Error([Name("type")] string? type);
+}
+
+[ComplexType, Namespace(Client)]
+public interface IMessageHandler : IStanzaHandler
 {
     [Name("subject")]
     ValueTask Subject(string? text);
@@ -84,24 +97,15 @@ public interface IMessageHandler : IPayloadHandler
     [Name("body")]
     ValueTask Body(string? text);
 
-    [Name("active", ChatStates)]
-    ValueTask Active();
-
-    [Name("inactive", ChatStates)]
-    ValueTask Inactive();
-
-    [Name("composing", ChatStates)]
-    ValueTask Composing();
-
-    [Name("paused", ChatStates)]
-    ValueTask Paused();
-
-    [Name("gone", ChatStates)]
-    ValueTask Gone();
+    [Name("active", ChatStates)] ValueTask Active();
+    [Name("inactive", ChatStates)] ValueTask Inactive();
+    [Name("composing", ChatStates)] ValueTask Composing();
+    [Name("paused", ChatStates)] ValueTask Paused();
+    [Name("gone", ChatStates)] ValueTask Gone();
 }
 
 [ComplexType, Namespace(Client)]
-public interface IPresenceHandler : IPayloadHandler
+public interface IPresenceHandler : IStanzaHandler
 {
     [Name("show")]
     ValueTask Show(string? text);
@@ -117,7 +121,7 @@ public interface IPresenceHandler : IPayloadHandler
 }
 
 [ComplexType]
-public interface IInfoQueryHandler : IPayloadHandler
+public interface IInfoQueryHandler : IStanzaHandler
 {
     [Name("query", IqRoster)]
     ValueTask<IRosterQueryHandler> RosterQuery();
@@ -147,6 +151,75 @@ public interface IAuthQueryHandler : IPayloadHandler
 
     [Name("resource")]
     ValueTask Resource(string? value);
+}
+
+[ComplexType, Namespace(Streams)]
+public interface IStreamErrorHandler : IPayloadHandler
+{
+    [Name("text")]
+    ValueTask Text(string? text, [Name("lang", Xml)] string? language);
+
+    [Name("bad-format")] ValueTask BadFormat();
+    [Name("bad-namespace-prefix")] ValueTask BadNamespacePrefix();
+    [Name("conflict")] ValueTask Conflict();
+    [Name("connection-timeout")] ValueTask ConnectionTimeout();
+    [Name("host-gone")] ValueTask HostGone();
+    [Name("host-unknown")] ValueTask HostUnknown();
+    [Name("improper-addressing")] ValueTask ImproperAddressing();
+    [Name("internal-server-error")] ValueTask InternalServerError();
+    [Name("invalid-from")] ValueTask InvalidFrom();
+    [Name("invalid-id")] ValueTask InvalidId();
+    [Name("invalid-namespace")] ValueTask InvalidNamespace();
+    [Name("invalid-xml")] ValueTask InvalidXml();
+    [Name("not-authorized")] ValueTask NotAuthorized();
+    [Name("policy-violation")] ValueTask PolicyViolation();
+    [Name("remote-connection-failed")] ValueTask RemoteConnectionFailed();
+    [Name("resource-constraint")] ValueTask ResourceConstraint();
+    [Name("restricted-xml")] ValueTask RestrictedXml();
+    [Name("see-other-host")] ValueTask SeeOtherHost(string? host);
+    [Name("system-shutdown")] ValueTask SystemShutdown();
+    [Name("undefined-condition")] ValueTask UndefinedCondition();
+    [Name("unsupported-encoding")] ValueTask UnsupportedEncoding();
+    [Name("unsupported-stanza-type")] ValueTask UnsupportedStanzaType();
+    [Name("unsupported-version")] ValueTask UnsupportedVersion();
+    [Name("xml-not-well-formed")] ValueTask XmlNotWellFormed();
+}
+
+[ComplexType, Namespace(Stanzas)]
+public interface IStanzaErrorHandler : IPayloadHandler
+{
+    [Name("text")]
+    ValueTask Text(string? text, [Name("lang", Xml)] string? language);
+
+    [Name("bad-request")] ValueTask BadRequest();
+    [Name("conflict")] ValueTask Conflict();
+    [Name("feature-not-implemented")] ValueTask FeatureNotImplemented();
+    [Name("forbidden")] ValueTask Forbidden();
+    [Name("gone")] ValueTask Gone(string? newAddress);
+    [Name("internal-server-error")] ValueTask InternalServerError();
+    [Name("item-not-found")] ValueTask ItemNotFound();
+    [Name("jid-malformed")] ValueTask JidMalformed();
+    [Name("not-acceptable")] ValueTask NotAcceptable();
+    [Name("not-allowed")] ValueTask NotAllowed();
+    [Name("not-authorized")] ValueTask NotAuthorized();
+    [Name("payment-required")] ValueTask PaymentRequired();
+    [Name("recipient-unavailable")] ValueTask RecipientUnavailable();
+    [Name("redirect")] ValueTask Redirect(string? alternateAddress);
+    [Name("registration-required")] ValueTask RegistrationRequired();
+    [Name("remote-server-not-found")] ValueTask RemoteServerNotFound();
+    [Name("remote-server-timeout")] ValueTask RemoteServerTimeout();
+    [Name("resource-constraint")] ValueTask ResourceConstraint();
+    [Name("service-unavailable")] ValueTask ServiceUnavailable();
+    [Name("subscription-required")] ValueTask SubscriptionRequired();
+    [Name("undefined-condition")] ValueTask UndefinedCondition();
+    [Name("unexpected-request")] ValueTask UnexpectedRequest();
+}
+
+public enum StanzaType
+{
+    Message,
+    Presence,
+    InfoQuery
 }
 
 public enum MessageType

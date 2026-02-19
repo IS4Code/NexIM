@@ -120,22 +120,20 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
         {
             if(!await Server.Accounts.Authenticate(username, password))
             {
-                throw new XmppException("Not authenticated.", true);
+                throw XmppStanzaException.NotAuthorized();
             }
 
-            if(Session.LocalResource is { } localResource)
+            if(Session.LocalResource is not { } localResource)
             {
-                var identifier = new XmppResource(username, localResource.Address.Host, resource);
-                Session.RemoteResource = identifier;
+                throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
+            }
 
-                var clientSession = new ClientSession(Session);
-                Server.Sessions.AddSession(Session.AccountName, clientSession);
-                Session.ClientSession = clientSession;
-            }
-            else
-            {
-                throw new XmppException("The remote server is not properly identified.", false);
-            }
+            var identifier = new XmppResource(username, localResource.Address.Host, resource);
+            Session.RemoteResource = identifier;
+
+            var clientSession = new ClientSession(Session);
+            Server.Sessions.AddSession(Session.AccountName, clientSession);
+            Session.ClientSession = clientSession;
         }
         finally
         {

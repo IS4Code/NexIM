@@ -40,19 +40,19 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
         await Session.ProceedTls();
     }
 
-    ValueTask<IMessageHandler> IStanzaHandler.Message(in Stanza stanza)
+    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
     {
         ValidateSender(stanza);
         return new(new Message(Server, Session, stanza));
     }
 
-    ValueTask<IPresenceHandler> IStanzaHandler.Presence(in Stanza stanza)
+    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
     {
         ValidateSender(stanza);
         return new(new Presence(Server, Session, stanza));
     }
 
-    ValueTask<IInfoQueryHandler> IStanzaHandler.InfoQuery(in Stanza stanza)
+    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
     {
         ValidateSender(stanza);
         if(stanza.To is { } to && !to.IsNarrowerThan(Session.LocalResource))
@@ -68,9 +68,14 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
         return default;
     }
 
-    ValueTask<IFeaturesHandler> IStreamHandler.Features()
+    ValueTask<IFeaturesHandler> IStreamTransportHandler.Features()
     {
         return Program.NotImplemented<IFeaturesHandler>();
+    }
+
+    ValueTask<IStreamErrorHandler> IStreamTransportHandler.Error()
+    {
+        return Program.NotImplemented<IStreamErrorHandler>();
     }
 
     async ValueTask IStreamTlsHandler.ProceedTls()

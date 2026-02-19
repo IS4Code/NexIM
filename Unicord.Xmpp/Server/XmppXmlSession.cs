@@ -34,6 +34,13 @@ public abstract class XmppXmlSession : XmppSession
         return handler;
     }
 
+    protected async sealed override ValueTask<IStreamErrorHandler> OnError()
+    {
+        var handler = new ErrorHandler(this);
+        await handler.Acquire();
+        return handler;
+    }
+
     protected sealed override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
         var handler = new StanzaHandler(XmppVocabulary.Message, stanza, this);
@@ -204,7 +211,7 @@ public abstract class XmppXmlSession : XmppSession
 
             if(stanza.Type is { } type)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Type, null, type);
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.TypeAttr, null, type);
             }
             if(stanza.From is { } from)
             {
@@ -246,21 +253,23 @@ public abstract class XmppXmlSession : XmppSession
         }
     }
 
-    sealed class FeaturesHandler : SynchronizedHandler
+    abstract class TopLevelElementHandler<THandler> : SynchronizedHandler where THandler : IPayloadHandler
     {
         bool acquiring;
 
-        public FeaturesHandler(XmppXmlSession session) : base(session)
+        public TopLevelElementHandler(XmppXmlSession session) : base(session)
         {
 
         }
 
-        protected async override ValueTask AcquireImpl()
+        protected abstract ValueTask<THandler> Open();
+
+        protected async sealed override ValueTask AcquireImpl()
         {
             acquiring = true;
             try
             {
-                await ((IStreamHandler)this).Features();
+                await Open();
             }
             finally
             {
@@ -268,7 +277,7 @@ public abstract class XmppXmlSession : XmppSession
             }
         }
 
-        protected override ValueTask<XmppEncoder> ForkInner()
+        protected sealed override ValueTask<XmppEncoder> ForkInner()
         {
             if(acquiring)
             {
@@ -279,6 +288,32 @@ public abstract class XmppXmlSession : XmppSession
             {
                 return base.ForkInner();
             }
+        }
+    }
+
+    sealed class FeaturesHandler : TopLevelElementHandler<IFeaturesHandler>
+    {
+        public FeaturesHandler(XmppXmlSession session) : base(session)
+        {
+
+        }
+
+        protected override ValueTask<IFeaturesHandler> Open()
+        {
+            return ((IStreamTransportHandler)this).Features();
+        }
+    }
+
+    sealed class ErrorHandler : TopLevelElementHandler<IStreamErrorHandler>
+    {
+        public ErrorHandler(XmppXmlSession session) : base(session)
+        {
+
+        }
+
+        protected override ValueTask<IStreamErrorHandler> Open()
+        {
+            return ((IStreamTransportHandler)this).Error();
         }
     }
 

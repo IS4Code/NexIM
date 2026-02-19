@@ -38,7 +38,7 @@ public readonly record struct XmppResource(XmppAddress Address, string? Resource
     {
         if(resourceRegex.Match(text) is not { Success: true } match)
         {
-            throw new ArgumentException("The resource address is invalid.", nameof(text));
+            throw new ArgumentException("The resource address is invalid.", nameof(text), XmppStanzaException.JidMalformed());
         }
         var user = match.Groups[1];
         var resource = match.Groups[3];

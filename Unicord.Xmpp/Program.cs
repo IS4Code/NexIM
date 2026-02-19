@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Server;
 
 namespace Unicord.Xmpp;
@@ -17,6 +18,6 @@ internal class Program
     internal static async ValueTask<TResult> NotImplemented<TResult>()
     {
         Debugger.Break();
-        throw new NotImplementedException();
+        throw new NotImplementedException(null, XmppStanzaException.FeatureNotImplemented());
     }
 }

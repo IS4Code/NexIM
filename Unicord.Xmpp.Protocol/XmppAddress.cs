@@ -30,7 +30,7 @@ public readonly record struct XmppAddress(string? User, string Host)
     {
         if(text == null || addressRegex.Match(text) is not { Success: true } match)
         {
-            throw new ArgumentException("The address is invalid.", nameof(text));
+            throw new ArgumentException("The address is invalid.", nameof(text), XmppStanzaException.JidMalformed());
         }
         var user = match.Groups[1];
         return new(

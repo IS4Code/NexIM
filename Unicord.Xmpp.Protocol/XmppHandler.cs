@@ -15,7 +15,7 @@ public interface IXmppReceiver<in THandler> where THandler : IXmppSendingHandler
 /// <summary>
 /// Represents an XMPP stream.
 /// </summary>
-public interface IXmppHandler : IStanzaHandler
+public interface IXmppHandler : IStreamHandler
 {
 
 }
@@ -59,27 +59,33 @@ public abstract class XmppSendingHandler : IXmppSendingHandler
     public abstract ValueTask DisposeAsync();
 
     protected abstract ValueTask<IMessageHandler> OnMessage(in Stanza stanza);
-    ValueTask<IMessageHandler> IStanzaHandler.Message(in Stanza stanza)
+    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
     {
         return OnMessage(in stanza);
     }
 
     protected abstract ValueTask<IPresenceHandler> OnPresence(in Stanza stanza);
-    ValueTask<IPresenceHandler> IStanzaHandler.Presence(in Stanza stanza)
+    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
     {
         return OnPresence(in stanza);
     }
 
     protected abstract ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza);
-    ValueTask<IInfoQueryHandler> IStanzaHandler.InfoQuery(in Stanza stanza)
+    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
     {
         return OnInfoQuery(in stanza);
     }
 
     protected abstract ValueTask<IFeaturesHandler> OnFeatures();
-    ValueTask<IFeaturesHandler> IStreamHandler.Features()
+    ValueTask<IFeaturesHandler> IStreamTransportHandler.Features()
     {
         return OnFeatures();
+    }
+
+    protected abstract ValueTask<IStreamErrorHandler> OnError();
+    ValueTask<IStreamErrorHandler> IStreamTransportHandler.Error()
+    {
+        return OnError();
     }
 
     protected abstract ValueTask OnStartTls();

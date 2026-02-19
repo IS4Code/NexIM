@@ -23,7 +23,7 @@ public static partial class XmppDecoder
         await reader.ReadAsync();
         if(reader.NodeType != XmlNodeType.EndElement)
         {
-            throw new XmppException("Element was expected to be empty.", false);
+            throw XmppStanzaException.BadRequest("Element was expected to be empty.");
         }
     }
 
@@ -41,7 +41,7 @@ public static partial class XmppDecoder
             case XmlNodeType.EndElement:
                 return false;
             case XmlNodeType.Element:
-                throw new XmppException("Element was expected to have textual value.", false);
+                throw XmppStanzaException.BadRequest("Element was expected to have textual value.");
         }
 
         return true;
@@ -106,7 +106,7 @@ public static partial class XmppDecoder
     {
         if(reader.NodeType != XmlNodeType.EndElement)
         {
-            throw new XmppException("Element was expected to have textual value.", false);
+            throw XmppStanzaException.BadRequest("Element was expected to have textual value.");
         }
     }
 

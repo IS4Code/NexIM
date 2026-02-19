@@ -22,7 +22,7 @@ internal class Message : StanzaHandler, IMessageHandler
             "groupchat" => ConversationType.GroupChat,
             "headline" => ConversationType.Headline,
             "error" => ConversationType.Error,
-            _ => throw new XmppException("Invalid message type.", false)
+            _ => throw XmppStanzaException.BadRequest("Invalid message type.")
         };
     }
 
@@ -65,12 +65,12 @@ internal class Message : StanzaHandler, IMessageHandler
     {
         if(To is not { } to)
         {
-            throw new XmppException("Receiver of a message is empty.", false);
+            throw XmppStanzaException.BadRequest("Receiver of a message is empty.");
         }
         var targetAccount = GetAccount(to, out var targetIdentifier);
         if(Server.Sessions.GetSessions(targetAccount, targetIdentifier).FirstOrDefault() is not { } target)
         {
-            throw new XmppException("Receiver of a message is not connected.", false);
+            throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");
         }
         var sender = new Sender(targetAccount, targetIdentifier);
 

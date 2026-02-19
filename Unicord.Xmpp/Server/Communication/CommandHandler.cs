@@ -28,7 +28,7 @@ internal abstract class CommandHandler : IPayloadHandler
     {
         if(storage != null)
         {
-            throw new XmppException("Property set multiple times.", false);
+            throw XmppStanzaException.BadRequest("Property set multiple times.");
         }
         storage = value;
     }
@@ -37,7 +37,7 @@ internal abstract class CommandHandler : IPayloadHandler
     {
         if(stanza.From is { } from && !from.IsNarrowerThan(Session.RemoteResource))
         {
-            throw new XmppException("Command is comming from an unauthorized sender.", false);
+            throw XmppStreamException.InvalidFrom();
         }
     }
 
@@ -49,7 +49,7 @@ internal abstract class CommandHandler : IPayloadHandler
 
     protected async ValueTask Unexpected()
     {
-        throw new XmppException("Element was not expected.", false);
+        throw XmppStanzaException.BadRequest("Element was not expected.");
     }
 
     public virtual ValueTask Other(XElement payload)
