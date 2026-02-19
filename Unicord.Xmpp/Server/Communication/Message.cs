@@ -72,7 +72,7 @@ internal class Message : StanzaHandler, IMessageHandler
         {
             throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");
         }
-        var sender = new Sender(targetAccount, targetIdentifier);
+        var sender = new Sender(Session.AccountName, Session.RemoteResource?.ResourceIdentifier);
 
         var message =
             (subject != null || body != null)
