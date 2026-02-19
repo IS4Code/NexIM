@@ -84,7 +84,7 @@ public interface ITlsFeaturesHandler : IPayloadHandler
 [ComplexType, Namespace(Client)]
 public interface IStanzaHandler : IPayloadHandler
 {
-    [Name("required")]
+    [Name("error")]
     ValueTask<IStanzaErrorHandler> Error([Name("type")] string? type);
 }
 
