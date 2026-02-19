@@ -37,6 +37,13 @@ public abstract class XmppStreamSession : XmppXmlSession
         OpenXmlStream(stream, out reader, out writer);
     }
 
+    static readonly byte[] buffer = new byte[1];
+
+    public async ValueTask<bool> CheckMoreData()
+    {
+        return await Stream.ReadAsync(buffer, 0, 1, CancellationToken) > 0;
+    }
+
     public ValueTask Flush()
     {
         return new(writer.FlushAsync());
@@ -44,9 +51,26 @@ public abstract class XmppStreamSession : XmppXmlSession
 
     protected async override ValueTask Close()
     {
-        writer.Close();
-        Reader.Close();
-        await Stream.DisposeAsync();
+        // Stream will be disposed
+        await using var stream = Stream;
+
+        // Close for reading and writing
+        var task = CloseStream();
+        try
+        {
+            Reader.Dispose();
+        }
+        finally
+        {
+            await task;
+        }
+
+        async Task CloseStream()
+        {
+            await writer.WriteEndDocumentAsync();
+            await writer.FlushAsync();
+            await writer.DisposeAsync();
+        }
     }
 
     public sealed override ValueTask DisposeAsync()

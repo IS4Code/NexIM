@@ -38,7 +38,7 @@ public abstract class XmppTcpSession : XmppStreamSession
     protected async sealed override ValueTask UpgradeTls()
     {
         // Flush all remaining commands (STARTTLS)
-        await Writer.FlushAsync();
+        await Flush();
 
         var sslStream = new SslStream(Stream);
         await sslStream.AuthenticateAsServerAsync(ServerAuthenticationOptions, CancellationToken);

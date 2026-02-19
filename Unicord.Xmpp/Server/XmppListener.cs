@@ -68,18 +68,18 @@ public abstract class XmppListener<TClient>
 
     protected async ValueTask HandleStream(TClient client, CancellationToken cancellationToken)
     {
-        const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
+        // Initialize outgoing session
+        await using var session = await StartSession(client, cancellationToken);
 
-        var session = await StartSession(client, cancellationToken);
-
+        // Receive the session and prepare handler for incoming commands
         await using var handler = await receiver.Connected(session);
 
         (StanzaType type, string? id)? lastStanza = null;
 
         await using PayloadHandlers handlers = new();
-        while(await Read(out var reader))
+        try
         {
-            try
+            while(await Read(out var reader))
             {
                 try
                 {
@@ -90,6 +90,7 @@ public abstract class XmppListener<TClient>
                             continue;
 
                         case XmlNodeType.Element:
+                            const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
                             bool isEmpty = reader.IsEmptyElement;
                             switch(depth)
                             {
@@ -225,23 +226,44 @@ public abstract class XmppListener<TClient>
                         await command.DisposeAsync();
                     }
                 }
+                finally
+                {
+                    await session.Flush();
+                }
             }
-            catch(Exception e) when(GetXmppException<XmppStreamException>(e, out var xe))
+        }
+        catch(XmlException)
+        {
+            var reader = session.Reader;
+            if(reader.Depth <= 1 && (session.Reader.EOF || !await session.CheckMoreData()))
             {
-                IStreamTransportHandler errorHandler = session;
-                await OnError(xe, _ => errorHandler.Error());
-                throw;
+                // Terminated at the top level
+                return;
             }
-            finally
-            {
-                await session.Flush();
-            }
+
+            await OnStreamError(XmppStreamException.XmlNotWellFormed());
+        }
+        catch(Exception e) when(GetXmppException<XmppStreamException>(e, out var xe))
+        {
+            await OnStreamError(xe);
+            throw;
+        }
+        catch
+        {
+            await OnStreamError(XmppStreamException.InternalServerError());
+            throw;
         }
 
         ValueTask<bool> Read(out XmlReader reader)
         {
             reader = session.Reader;
             return new(reader.ReadAsync());
+        }
+
+        ValueTask OnStreamError(XmppStreamException exception)
+        {
+            IStreamTransportHandler errorHandler = session;
+            return OnError(exception, _ => errorHandler.Error());
         }
 
         async ValueTask OnError<TException, THandler>(TException exception, Func<TException, ValueTask<THandler>> errorHandler) where TException : XmppException<THandler> where THandler : IPayloadHandler
@@ -268,6 +290,7 @@ public abstract class XmppListener<TClient>
                 await using var err = await errorHandler(exc);
                 await exc.Output(err);
             }
+            await writer.FlushAsync();
         }
     }
 
