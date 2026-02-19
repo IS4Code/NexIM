@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Globalization;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using Unicord.Xmpp.Grammar;
 
 namespace Unicord.Xmpp.Protocol;
 
@@ -17,19 +21,22 @@ public abstract class XmppException : ApplicationException
         }
     }
 
+    // May be absent if no error message was provide during construction.
+    public override string? Message { get; }
+
     internal XmppException()
     {
 
     }
 
-    public XmppException(string message) : base(message)
+    public XmppException(string? message) : base(message)
     {
-
+        Message = message;
     }
 
-    public XmppException(string message, Exception? innerException) : base(message, innerException)
+    public XmppException(string? message, Exception? innerException) : base(message, innerException)
     {
-
+        Message = message;
     }
 }
 
@@ -42,17 +49,74 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
         this.details = details;
     }
 
-    public XmppException(string message, Func<THandler, ValueTask> details) : base(message)
+    public XmppException(string? message, Func<THandler, ValueTask> details) : base(message)
     {
         this.details = details;
     }
 
-    public XmppException(string message, Func<THandler, ValueTask> details, Exception? innerException) : base(message, innerException)
+    public XmppException(string? message, Func<THandler, ValueTask> details, Exception? innerException) : base(message, innerException)
     {
         this.details = details;
+    }
+
+    public override string ToString()
+    {
+        var output = new StringBuilder();
+        var encoder = new Encoder(output);
+        if(encoder is not THandler handler)
+        {
+            return base.ToString();
+        }
+        var task = Output(handler);
+        if(!task.IsCompletedSuccessfully)
+        {
+            task.AsTask().GetAwaiter().GetResult();
+        }
+        encoder.Close();
+        return output.ToString();
     }
 
     public virtual ValueTask Output(THandler handler) => details(handler);
+
+    sealed class Encoder : XmppEncoder
+    {
+        static readonly XmlWriterSettings settings = new()
+        {
+            Async = true,
+            CheckCharacters = false,
+            CloseOutput = true,
+            ConformanceLevel = ConformanceLevel.Fragment,
+            Indent = false,
+            NamespaceHandling = NamespaceHandling.OmitDuplicates,
+            NewLineHandling = NewLineHandling.Entitize,
+            NewLineOnAttributes = false,
+            OmitXmlDeclaration = true
+        };
+
+        protected override XmlWriter Writer { get; }
+
+        protected override CancellationToken CancellationToken => default;
+
+        public Encoder(StringBuilder output)
+        {
+            Writer = XmlWriter.Create(output, settings);
+        }
+
+        public void Close()
+        {
+            Writer.Dispose();
+        }
+
+        protected override ValueTask<XmppEncoder> ForkInner()
+        {
+            return new(this);
+        }
+
+        public override ValueTask DisposeAsync()
+        {
+            return default;
+        }
+    }
 }
 
 public class XmppStreamException : XmppException<IStreamErrorHandler>
@@ -62,7 +126,7 @@ public class XmppStreamException : XmppException<IStreamErrorHandler>
 
     }
 
-    public XmppStreamException(string message, Func<IStreamErrorHandler, ValueTask> details) : base(message, details)
+    public XmppStreamException(string? message, Func<IStreamErrorHandler, ValueTask> details) : base(message, details)
     {
 
     }
@@ -76,30 +140,35 @@ public class XmppStreamException : XmppException<IStreamErrorHandler>
         }
     }
 
-    public static XmppStreamException BadFormat(string? message = null) => message != null ? new(message, static h => h.BadFormat()) : new(static h => h.BadFormat());
-    public static XmppStreamException BadNamespacePrefix(string? message = null) => message != null ? new(message, static h => h.BadNamespacePrefix()) : new(static h => h.BadNamespacePrefix());
-    public static XmppStreamException Conflict(string? message = null) => message != null ? new(message, static h => h.Conflict()) : new(static h => h.Conflict());
-    public static XmppStreamException ConnectionTimeout(string? message = null) => message != null ? new(message, static h => h.ConnectionTimeout()) : new(static h => h.ConnectionTimeout());
-    public static XmppStreamException HostGone(string? message = null) => message != null ? new(message, static h => h.HostGone()) : new(static h => h.HostGone());
-    public static XmppStreamException HostUnknown(string? message = null) => message != null ? new(message, static h => h.HostUnknown()) : new(static h => h.HostUnknown());
-    public static XmppStreamException ImproperAddressing(string? message = null) => message != null ? new(message, static h => h.ImproperAddressing()) : new(static h => h.ImproperAddressing());
-    public static XmppStreamException InternalServerError(string? message = null) => message != null ? new(message, static h => h.InternalServerError()) : new(static h => h.InternalServerError());
-    public static XmppStreamException InvalidFrom(string? message = null) => message != null ? new(message, static h => h.InvalidFrom()) : new(static h => h.InvalidFrom());
-    public static XmppStreamException InvalidId(string? message = null) => message != null ? new(message, static h => h.InvalidId()) : new(static h => h.InvalidId());
-    public static XmppStreamException InvalidNamespace(string? message = null) => message != null ? new(message, static h => h.InvalidNamespace()) : new(static h => h.InvalidNamespace());
-    public static XmppStreamException InvalidXml(string? message = null) => message != null ? new(message, static h => h.InvalidXml()) : new(static h => h.InvalidXml());
-    public static XmppStreamException NotAuthorized(string? message = null) => message != null ? new(message, static h => h.NotAuthorized()) : new(static h => h.NotAuthorized());
-    public static XmppStreamException PolicyViolation(string? message = null) => message != null ? new(message, static h => h.PolicyViolation()) : new(static h => h.PolicyViolation());
-    public static XmppStreamException RemoteConnectionFailed(string? message = null) => message != null ? new(message, static h => h.RemoteConnectionFailed()) : new(static h => h.RemoteConnectionFailed());
-    public static XmppStreamException ResourceConstraint(string? message = null) => message != null ? new(message, static h => h.ResourceConstraint()) : new(static h => h.ResourceConstraint());
-    public static XmppStreamException RestrictedXml(string? message = null) => message != null ? new(message, static h => h.RestrictedXml()) : new(static h => h.RestrictedXml());
-    public static XmppStreamException SeeOtherHost(string? host, string? message = null) => message != null ? new(message, h => h.SeeOtherHost(host)) : new(h => h.SeeOtherHost(host));
-    public static XmppStreamException SystemShutdown(string? message = null) => message != null ? new(message, static h => h.SystemShutdown()) : new(static h => h.SystemShutdown());
-    public static XmppStreamException UndefinedCondition(string? message = null) => message != null ? new(message, static h => h.UndefinedCondition()) : new(static h => h.UndefinedCondition());
-    public static XmppStreamException UnsupportedEncoding(string? message = null) => message != null ? new(message, static h => h.UnsupportedEncoding()) : new(static h => h.UnsupportedEncoding());
-    public static XmppStreamException UnsupportedStanzaType(string? message = null) => message != null ? new(message, static h => h.UnsupportedStanzaType()) : new(static h => h.UnsupportedStanzaType());
-    public static XmppStreamException UnsupportedVersion(string? message = null) => message != null ? new(message, static h => h.UnsupportedVersion()) : new(static h => h.UnsupportedVersion());
-    public static XmppStreamException XmlNotWellFormed(string? message = null) => message != null ? new(message, static h => h.XmlNotWellFormed()) : new(static h => h.XmlNotWellFormed());
+    public static XmppStreamException BadFormat(string? message = null) => Create(message, static h => h.BadFormat());
+    public static XmppStreamException BadNamespacePrefix(string? message = null) => Create(message, static h => h.BadNamespacePrefix());
+    public static XmppStreamException Conflict(string? message = null) => Create(message, static h => h.Conflict());
+    public static XmppStreamException ConnectionTimeout(string? message = null) => Create(message, static h => h.ConnectionTimeout());
+    public static XmppStreamException HostGone(string? message = null) => Create(message, static h => h.HostGone());
+    public static XmppStreamException HostUnknown(string? message = null) => Create(message, static h => h.HostUnknown());
+    public static XmppStreamException ImproperAddressing(string? message = null) => Create(message, static h => h.ImproperAddressing());
+    public static XmppStreamException InternalServerError(string? message = null) => Create(message, static h => h.InternalServerError());
+    public static XmppStreamException InvalidFrom(string? message = null) => Create(message, static h => h.InvalidFrom());
+    public static XmppStreamException InvalidId(string? message = null) => Create(message, static h => h.InvalidId());
+    public static XmppStreamException InvalidNamespace(string? message = null) => Create(message, static h => h.InvalidNamespace());
+    public static XmppStreamException InvalidXml(string? message = null) => Create(message, static h => h.InvalidXml());
+    public static XmppStreamException NotAuthorized(string? message = null) => Create(message, static h => h.NotAuthorized());
+    public static XmppStreamException PolicyViolation(string? message = null) => Create(message, static h => h.PolicyViolation());
+    public static XmppStreamException RemoteConnectionFailed(string? message = null) => Create(message, static h => h.RemoteConnectionFailed());
+    public static XmppStreamException ResourceConstraint(string? message = null) => Create(message, static h => h.ResourceConstraint());
+    public static XmppStreamException RestrictedXml(string? message = null) => Create(message, static h => h.RestrictedXml());
+    public static XmppStreamException SeeOtherHost(string? host, string? message = null) => Create(message, h => h.SeeOtherHost(host));
+    public static XmppStreamException SystemShutdown(string? message = null) => Create(message, static h => h.SystemShutdown());
+    public static XmppStreamException UndefinedCondition(string? message = null) => Create(message, static h => h.UndefinedCondition());
+    public static XmppStreamException UnsupportedEncoding(string? message = null) => Create(message, static h => h.UnsupportedEncoding());
+    public static XmppStreamException UnsupportedStanzaType(string? message = null) => Create(message, static h => h.UnsupportedStanzaType());
+    public static XmppStreamException UnsupportedVersion(string? message = null) => Create(message, static h => h.UnsupportedVersion());
+    public static XmppStreamException XmlNotWellFormed(string? message = null) => Create(message, static h => h.XmlNotWellFormed());
+
+    private static XmppStreamException Create(string? message, Func<IStreamErrorHandler, ValueTask> details)
+    {
+        return message != null ? new(message, details) : new(details);
+    }
 }
 
 public class XmppStanzaException : XmppException<IStanzaErrorHandler>
@@ -111,7 +180,7 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
         Type = type;
     }
 
-    public XmppStanzaException(string? type, string message, Func<IStanzaErrorHandler, ValueTask> details) : base(message, details)
+    public XmppStanzaException(string? type, string? message, Func<IStanzaErrorHandler, ValueTask> details) : base(message, details)
     {
         Type = type;
     }
@@ -125,26 +194,31 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
         }
     }
 
-    public static XmppStanzaException BadRequest(string? message = null) => message != null ? new("modify", message, static h => h.BadRequest()) : new("modify", static h => h.BadRequest());
-    public static XmppStanzaException Conflict(string? message = null) => message != null ? new("cancel", message, static h => h.Conflict()) : new("cancel", static h => h.Conflict());
-    public static XmppStanzaException FeatureNotImplemented(string? message = null) => message != null ? new("cancel", message, static h => h.FeatureNotImplemented()) : new("cancel", static h => h.FeatureNotImplemented());
-    public static XmppStanzaException Forbidden(string? message = null) => message != null ? new("auth", message, static h => h.Forbidden()) : new("auth", static h => h.Forbidden());
-    public static XmppStanzaException Gone(string? newAddress, string? message = null) => message != null ? new("modify", message, h => h.Gone(newAddress)) : new("modify", h => h.Gone(newAddress));
-    public static XmppStanzaException InternalServerError(string? message = null) => message != null ? new("wait", message, static h => h.InternalServerError()) : new("wait", static h => h.InternalServerError());
-    public static XmppStanzaException ItemNotFound(string? message = null) => message != null ? new("cancel", message, static h => h.ItemNotFound()) : new("cancel", static h => h.ItemNotFound());
-    public static XmppStanzaException JidMalformed(string? message = null) => message != null ? new("modify", message, static h => h.JidMalformed()) : new("modify", static h => h.JidMalformed());
-    public static XmppStanzaException NotAcceptable(string? message = null) => message != null ? new("modify", message, static h => h.NotAcceptable()) : new("modify", static h => h.NotAcceptable());
-    public static XmppStanzaException NotAllowed(string? message = null) => message != null ? new("cancel", message, static h => h.NotAllowed()) : new("cancel", static h => h.NotAllowed());
-    public static XmppStanzaException NotAuthorized(string? message = null) => message != null ? new("auth", message, static h => h.NotAuthorized()) : new("auth", static h => h.NotAuthorized());
-    public static XmppStanzaException PaymentRequired(string? message = null) => message != null ? new("auth", message, static h => h.PaymentRequired()) : new("auth", static h => h.PaymentRequired());
-    public static XmppStanzaException RecipientUnavailable(string? message = null) => message != null ? new("wait", message, static h => h.RecipientUnavailable()) : new("wait", static h => h.RecipientUnavailable());
-    public static XmppStanzaException Redirect(string? alternateAddress, string? message = null) => message != null ? new("modify", message, h => h.Redirect(alternateAddress)) : new("modify", h => h.Redirect(alternateAddress));
-    public static XmppStanzaException RegistrationRequired(string? message = null) => message != null ? new("auth", message, static h => h.RegistrationRequired()) : new("auth", static h => h.RegistrationRequired());
-    public static XmppStanzaException RemoteServerNotFound(string? message = null) => message != null ? new("cancel", message, static h => h.RemoteServerNotFound()) : new("cancel", static h => h.RemoteServerNotFound());
-    public static XmppStanzaException RemoteServerTimeout(string? message = null) => message != null ? new("wait", message, static h => h.RemoteServerTimeout()) : new("wait", static h => h.RemoteServerTimeout());
-    public static XmppStanzaException ResourceConstraint(string? message = null) => message != null ? new("wait", message, static h => h.ResourceConstraint()) : new("wait", static h => h.ResourceConstraint());
-    public static XmppStanzaException ServiceUnavailable(string? message = null) => message != null ? new("cancel", message, static h => h.ServiceUnavailable()) : new("cancel", static h => h.ServiceUnavailable());
-    public static XmppStanzaException SubscriptionRequired(string? message = null) => message != null ? new("auth", message, static h => h.SubscriptionRequired()) : new("auth", static h => h.SubscriptionRequired());
-    public static XmppStanzaException UndefinedCondition(string? type, string? message = null) => message != null ? new(type, message, static h => h.UndefinedCondition()) : new(type, static h => h.UndefinedCondition());
-    public static XmppStanzaException UnexpectedRequest(string? message = null) => message != null ? new("wait", message, static h => h.UnexpectedRequest()) : new("wait", static h => h.UnexpectedRequest());
+    public static XmppStanzaException BadRequest(string? message = null) => Create("modify", message, static h => h.BadRequest());
+    public static XmppStanzaException Conflict(string? message = null) => Create("cancel", message, static h => h.Conflict());
+    public static XmppStanzaException FeatureNotImplemented(string? message = null) => Create("cancel", message, static h => h.FeatureNotImplemented());
+    public static XmppStanzaException Forbidden(string? message = null) => Create("auth", message, static h => h.Forbidden());
+    public static XmppStanzaException Gone(string? newAddress, string? message = null) => Create("modify", message, h => h.Gone(newAddress));
+    public static XmppStanzaException InternalServerError(string? message = null) => Create("wait", message, static h => h.InternalServerError());
+    public static XmppStanzaException ItemNotFound(string? message = null) => Create("cancel", message, static h => h.ItemNotFound());
+    public static XmppStanzaException JidMalformed(string? message = null) => Create("modify", message, static h => h.JidMalformed());
+    public static XmppStanzaException NotAcceptable(string? message = null) => Create("modify", message, static h => h.NotAcceptable());
+    public static XmppStanzaException NotAllowed(string? message = null) => Create("cancel", message, static h => h.NotAllowed());
+    public static XmppStanzaException NotAuthorized(string? message = null) => Create("auth", message, static h => h.NotAuthorized());
+    public static XmppStanzaException PaymentRequired(string? message = null) => Create("auth", message, static h => h.PaymentRequired());
+    public static XmppStanzaException RecipientUnavailable(string? message = null) => Create("wait", message, static h => h.RecipientUnavailable());
+    public static XmppStanzaException Redirect(string? alternateAddress, string? message = null) => Create("modify", message, h => h.Redirect(alternateAddress));
+    public static XmppStanzaException RegistrationRequired(string? message = null) => Create("auth", message, static h => h.RegistrationRequired());
+    public static XmppStanzaException RemoteServerNotFound(string? message = null) => Create("cancel", message, static h => h.RemoteServerNotFound());
+    public static XmppStanzaException RemoteServerTimeout(string? message = null) => Create("wait", message, static h => h.RemoteServerTimeout());
+    public static XmppStanzaException ResourceConstraint(string? message = null) => Create("wait", message, static h => h.ResourceConstraint());
+    public static XmppStanzaException ServiceUnavailable(string? message = null) => Create("cancel", message, static h => h.ServiceUnavailable());
+    public static XmppStanzaException SubscriptionRequired(string? message = null) => Create("auth", message, static h => h.SubscriptionRequired());
+    public static XmppStanzaException UndefinedCondition(string? type, string? message = null) => Create(type, message, static h => h.UndefinedCondition());
+    public static XmppStanzaException UnexpectedRequest(string? message = null) => Create("wait", message, static h => h.UnexpectedRequest());
+
+    private static XmppStanzaException Create(string type, string? message, Func<IStanzaErrorHandler, ValueTask> details)
+    {
+        return message != null ? new(type, message, details) : new(type, details);
+    }
 }
