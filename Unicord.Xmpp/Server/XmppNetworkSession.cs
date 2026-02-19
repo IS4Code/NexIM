@@ -40,9 +40,6 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
 
     protected async sealed override ValueTask UpgradeTls()
     {
-        // Flush <starttls/>
-        await Flush();
-
         var stream = new SslStream(Stream, leaveInnerStreamOpen: false);
         await stream.AuthenticateAsServerAsync(ServerAuthenticationOptions, CancellationToken);
 
@@ -52,9 +49,6 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
 
     protected async sealed override ValueTask EnableCompression()
     {
-        // Flush <compressed/>
-        await Flush();
-
         var decompress = new ZLibStream(Stream, CompressionMode.Decompress, leaveOpen: true);
         var compress = new ZLibStream(Stream, CompressionMode.Compress, leaveOpen: false);
 

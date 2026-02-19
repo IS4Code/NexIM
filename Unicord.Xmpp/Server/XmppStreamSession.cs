@@ -44,7 +44,7 @@ public abstract class XmppStreamSession : XmppXmlSession
         return await Stream.ReadAsync(buffer, 0, 1, CancellationToken) > 0;
     }
 
-    public ValueTask Flush()
+    public override ValueTask Flush()
     {
         return new(writer.FlushAsync());
     }

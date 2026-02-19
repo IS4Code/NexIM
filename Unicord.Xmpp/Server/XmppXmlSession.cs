@@ -28,6 +28,8 @@ public abstract class XmppXmlSession : XmppSession
     protected abstract ValueTask EnableCompression();
     protected abstract ValueTask Close();
 
+    public abstract ValueTask Flush();
+
     protected async sealed override ValueTask<IFeaturesHandler> OnFeatures()
     {
         var handler = new FeaturesHandler(this);
@@ -67,6 +69,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.StartTls();
+            await Flush();
         }
         finally
         {
@@ -81,6 +84,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.ProceedTls();
+            await Flush();
 
             // Swap to TLS while locked
             await UpgradeTls();
@@ -100,6 +104,7 @@ public abstract class XmppXmlSession : XmppSession
             {
                 ITransportHandler handler = commandHandler;
                 await handler.FailureTls();
+                await Flush();
             }
             finally
             {
@@ -134,6 +139,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.Compressed();
+            await Flush();
 
             // Enable compression while locked
             await EnableCompression();
@@ -156,6 +162,7 @@ public abstract class XmppXmlSession : XmppSession
         try
         {
             await message.WriteToAsync(Writer, CancellationToken);
+            await Flush();
         }
         finally
         {
@@ -220,6 +227,7 @@ public abstract class XmppXmlSession : XmppSession
             try
             {
                 await base.DisposeAsync();
+                await Session.Flush();
             }
             finally
             {
