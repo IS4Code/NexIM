@@ -162,7 +162,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                             var attrParam = pair.Value;
                             var attrName = "v_" + attrParam.Name;
                             sb.AppendLine($"if({attrParam.Name} is {{ }} {attrName})");
-                            sb.Append($"await writer.WriteAttributeStringAsync(null, {localName}, {ns}, ");
+                            sb.Append($"await writer.WriteAttributeStringAsync(null, {attrLocalName}, {attrNs ?? "null"}, ");
                             ParamToString(attrName, attrParam.Type);
                             sb.AppendLine(");");
                         }
@@ -309,7 +309,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
             sb.AppendLine("{");
             {
                 // Group by first character to decrease number of checks
-                sb.AppendLine("var elementName = reader.Name;");
+                sb.AppendLine("var elementName = reader.LocalName;");
                 sb.AppendLine("var elementNs = reader.NamespaceURI;");
                 sb.AppendLine("switch(elementName[0])");
                 sb.AppendLine("{");
@@ -367,6 +367,9 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                     sb.AppendLine("{");
                                     {
                                         // Can be handled
+
+                                        int varCounter = 0;
+
                                         AnalyzeMethod(method, out var returnsHandler, out var valueParam, out var attributeParams);
                                         foreach(var pair2 in attributeParams)
                                         {
@@ -381,8 +384,8 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                                 sb.Append(", XmppVocabulary.");
                                                 sb.Append(vocabulary[attrNs]);
                                             }
-                                            sb.Append(") is { } v ? ");
-                                            StringToParam(param.Type, "v");
+                                            sb.Append($") is {{ }} v{++varCounter} ? ");
+                                            StringToParam(param.Type, $"v{varCounter}");
                                             sb.Append(" : ");
                                             DefaultParamValue(param);
                                             sb.AppendLine(";");
@@ -406,8 +409,8 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                                 }
                                                 else
                                                 {
-                                                    sb.Append($"var {valueParam.Name} = (await ReadElementStringAsync(reader)) is {{ }} v ? ");
-                                                    StringToParam(valueParam.Type, "v");
+                                                    sb.Append($"var {valueParam.Name} = (await ReadElementStringAsync(reader)) is {{ }} v{++varCounter} ? ");
+                                                    StringToParam(valueParam.Type, "v" + varCounter);
                                                     sb.Append(" : ");
                                                     DefaultParamValue(valueParam);
                                                     sb.AppendLine(";");

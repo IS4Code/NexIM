@@ -99,7 +99,7 @@ public abstract class XmppListener<TClient>
                                     {
                                         throw XmppStreamException.BadNamespacePrefix();
                                     }
-                                    if(reader.Name != Stream)
+                                    if(reader.LocalName != Stream)
                                     {
                                         throw XmppStreamException.BadFormat();
                                     }
@@ -278,7 +278,7 @@ public abstract class XmppListener<TClient>
         {
             do
             {
-                var attrName = reader.Name;
+                var attrName = reader.LocalName;
                 if(reader.NamespaceURI == Empty)
                 {
                     switch(attrName[0])
@@ -321,7 +321,7 @@ public abstract class XmppListener<TClient>
 
     private ValueTask<XmppDecoder.Result> EnterCommand(XmlReader reader, IStreamHandler handler, out (StanzaType, string?)? info)
     {
-        var elementName = reader.Name;
+        var elementName = reader.LocalName;
         var elementNs = reader.NamespaceURI;
         if(elementNs == JabberClientNs)
         {
