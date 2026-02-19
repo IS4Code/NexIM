@@ -15,6 +15,7 @@ public interface IXmppSession : IXmppSendingHandler
     bool Connected { get; }
     bool IsSecure { get; }
     bool CanUpgradeTls { get; }
+    bool CanCompress { get; }
     EndPoint? RemoteEndPoint { get; }
 
     AccountName AccountName { get; }
@@ -29,6 +30,7 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract bool Connected { get; }
     public abstract bool IsSecure { get; }
     public abstract bool CanUpgradeTls { get; }
+    public abstract bool CanCompress { get; }
     public abstract EndPoint? RemoteEndPoint { get; }
     public abstract CancellationToken CancellationToken { get; }
 

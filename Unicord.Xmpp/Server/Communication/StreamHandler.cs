@@ -25,12 +25,18 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
                     return;
                 }
             }
+            
+            if(Session.CanCompress)
+            {
+                await using var comp = await features.Compression();
+                await comp.Method("zlib");
+            }
 
             await features.IqAuth();
         }
     }
 
-    async ValueTask IStreamTlsHandler.StartTls()
+    async ValueTask ITransportHandler.StartTls()
     {
         if(!Session.CanUpgradeTls)
         {
@@ -38,6 +44,11 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
             return;
         }
         await Session.ProceedTls();
+    }
+
+    async ValueTask<ICompressionHandler> ITransportHandler.Compress()
+    {
+        return new Compression(Server, Session, null);
     }
 
     ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
@@ -68,22 +79,32 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
         return default;
     }
 
-    ValueTask<IFeaturesHandler> IStreamTransportHandler.Features()
+    ValueTask<IFeaturesHandler> ITransportHandler.Features()
     {
         return Program.NotImplemented<IFeaturesHandler>();
     }
 
-    ValueTask<IStreamErrorHandler> IStreamTransportHandler.Error()
+    ValueTask<IStreamErrorHandler> ITransportHandler.Error()
     {
         return Program.NotImplemented<IStreamErrorHandler>();
     }
 
-    async ValueTask IStreamTlsHandler.ProceedTls()
+    async ValueTask ITransportHandler.ProceedTls()
     {
         await Program.NotImplemented<object>();
     }
 
-    async ValueTask IStreamTlsHandler.FailureTls()
+    async ValueTask ITransportHandler.FailureTls()
+    {
+        await Program.NotImplemented<object>();
+    }
+
+    ValueTask<ICompressionFailureHandler> ITransportHandler.CompressionFailure()
+    {
+        return Program.NotImplemented<ICompressionFailureHandler>();
+    }
+
+    async ValueTask ITransportHandler.Compressed()
     {
         await Program.NotImplemented<object>();
     }

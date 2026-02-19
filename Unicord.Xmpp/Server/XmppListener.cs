@@ -262,7 +262,7 @@ public abstract class XmppListener<TClient>
 
         ValueTask OnStreamError(XmppStreamException exception)
         {
-            IStreamTransportHandler errorHandler = session;
+            ITransportHandler errorHandler = session;
             return OnError(exception, _ => errorHandler.Error());
         }
 

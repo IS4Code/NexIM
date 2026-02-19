@@ -77,31 +77,31 @@ public abstract class XmppSendingHandler : IXmppSendingHandler
     }
 
     protected abstract ValueTask<IFeaturesHandler> OnFeatures();
-    ValueTask<IFeaturesHandler> IStreamTransportHandler.Features()
+    ValueTask<IFeaturesHandler> ITransportHandler.Features()
     {
         return OnFeatures();
     }
 
     protected abstract ValueTask<IStreamErrorHandler> OnError();
-    ValueTask<IStreamErrorHandler> IStreamTransportHandler.Error()
+    ValueTask<IStreamErrorHandler> ITransportHandler.Error()
     {
         return OnError();
     }
 
     protected abstract ValueTask OnStartTls();
-    ValueTask IStreamTlsHandler.StartTls()
+    ValueTask ITransportHandler.StartTls()
     {
         return OnStartTls();
     }
 
     protected abstract ValueTask OnProceedTls();
-    ValueTask IStreamTlsHandler.ProceedTls()
+    ValueTask ITransportHandler.ProceedTls()
     {
         return OnProceedTls();
     }
 
     protected abstract ValueTask OnFailureTls();
-    ValueTask IStreamTlsHandler.FailureTls()
+    ValueTask ITransportHandler.FailureTls()
     {
         return OnFailureTls();
     }
@@ -110,5 +110,23 @@ public abstract class XmppSendingHandler : IXmppSendingHandler
     ValueTask IPayloadHandler.Other(XElement payload)
     {
         return OnOther(payload);
+    }
+
+    protected abstract ValueTask<ICompressionHandler> OnCompress();
+    ValueTask<ICompressionHandler> ITransportHandler.Compress()
+    {
+        return OnCompress();
+    }
+
+    protected abstract ValueTask<ICompressionFailureHandler> OnCompressionFailure();
+    ValueTask<ICompressionFailureHandler> ITransportHandler.CompressionFailure()
+    {
+        return OnCompressionFailure();
+    }
+
+    protected abstract ValueTask OnCompressed();
+    ValueTask ITransportHandler.Compressed()
+    {
+        return OnCompressed();
     }
 }

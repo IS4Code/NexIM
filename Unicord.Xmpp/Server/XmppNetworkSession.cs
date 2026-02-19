@@ -1,9 +1,11 @@
-﻿using System.Net;
+﻿using System.IO.Compression;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
@@ -15,6 +17,8 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
 {
     SslStream? sslStream;
 
+    bool isCompressed;
+
     public sealed override bool Connected => networkStream.Socket.Connected;
 
     public sealed override bool IsSecure =>
@@ -24,6 +28,10 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
 
     public sealed override bool CanUpgradeTls => sslStream == null;
 
+    public sealed override bool CanCompress =>
+        // Do not compress when TLS is a possibility
+        !isCompressed && !CanUpgradeTls;
+
     public X509Certificate? RemoteCertificate => sslStream?.RemoteCertificate;
     public sealed override EndPoint? RemoteEndPoint => networkStream.Socket.RemoteEndPoint;
     public sealed override CancellationToken CancellationToken => cancellationToken;
@@ -32,7 +40,7 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
 
     protected async sealed override ValueTask UpgradeTls()
     {
-        // Flush all remaining commands (STARTTLS)
+        // Flush <starttls/>
         await Flush();
 
         var stream = new SslStream(Stream, leaveInnerStreamOpen: false);
@@ -40,6 +48,24 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
 
         Initialize(stream);
         sslStream = stream;
+    }
+
+    protected async sealed override ValueTask EnableCompression()
+    {
+        // Flush <compressed/>
+        await Flush();
+
+        var decompress = new ZLibStream(Stream, CompressionMode.Decompress, leaveOpen: true);
+        var compress = new ZLibStream(Stream, CompressionMode.Compress, leaveOpen: false);
+
+        // Send the header
+        await compress.FlushAsync(CancellationToken);
+
+        // Tie the streams back together
+        var stream = new BidirectionalStream(decompress, compress);
+
+        Initialize(stream);
+        isCompressed = true;
     }
 
     protected async override ValueTask Close()

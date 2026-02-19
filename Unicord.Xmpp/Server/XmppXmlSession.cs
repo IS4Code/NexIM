@@ -25,6 +25,7 @@ public abstract class XmppXmlSession : XmppSession
     }
 
     protected abstract ValueTask UpgradeTls();
+    protected abstract ValueTask EnableCompression();
     protected abstract ValueTask Close();
 
     protected async sealed override ValueTask<IFeaturesHandler> OnFeatures()
@@ -64,7 +65,8 @@ public abstract class XmppXmlSession : XmppSession
         await semaphore.WaitAsync(CancellationToken);
         try
         {
-            await ((IStreamTlsHandler)commandHandler).StartTls();
+            ITransportHandler handler = commandHandler;
+            await handler.StartTls();
         }
         finally
         {
@@ -77,9 +79,10 @@ public abstract class XmppXmlSession : XmppSession
         await semaphore.WaitAsync(CancellationToken);
         try
         {
-            await ((IStreamTlsHandler)commandHandler).ProceedTls();
+            ITransportHandler handler = commandHandler;
+            await handler.ProceedTls();
 
-            // The stream swap to TLS should happen while locked
+            // Swap to TLS while locked
             await UpgradeTls();
         }
         finally
@@ -95,13 +98,45 @@ public abstract class XmppXmlSession : XmppSession
         {
             try
             {
-                await ((IStreamTlsHandler)commandHandler).FailureTls();
+                ITransportHandler handler = commandHandler;
+                await handler.FailureTls();
             }
             finally
             {
                 // No more commands will be sent
                 await Close();
             }
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    protected async sealed override ValueTask<ICompressionHandler> OnCompress()
+    {
+        var handler = new CompressionHandler(this);
+        await handler.Acquire();
+        return handler;
+    }
+
+    protected async sealed override ValueTask<ICompressionFailureHandler> OnCompressionFailure()
+    {
+        var handler = new CompressionFailureHandler(this);
+        await handler.Acquire();
+        return handler;
+    }
+
+    protected async sealed override ValueTask OnCompressed()
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            ITransportHandler handler = commandHandler;
+            await handler.Compressed();
+
+            // Enable compression while locked
+            await EnableCompression();
         }
         finally
         {
@@ -257,6 +292,8 @@ public abstract class XmppXmlSession : XmppSession
     {
         bool acquiring;
 
+        protected ITransportHandler Handler => this;
+
         public TopLevelElementHandler(XmppXmlSession session) : base(session)
         {
 
@@ -300,7 +337,7 @@ public abstract class XmppXmlSession : XmppSession
 
         protected override ValueTask<IFeaturesHandler> Open()
         {
-            return ((IStreamTransportHandler)this).Features();
+            return Handler.Features();
         }
     }
 
@@ -313,7 +350,33 @@ public abstract class XmppXmlSession : XmppSession
 
         protected override ValueTask<IStreamErrorHandler> Open()
         {
-            return ((IStreamTransportHandler)this).Error();
+            return Handler.Error();
+        }
+    }
+
+    sealed class CompressionFailureHandler : TopLevelElementHandler<ICompressionFailureHandler>
+    {
+        public CompressionFailureHandler(XmppXmlSession session) : base(session)
+        {
+
+        }
+
+        protected override ValueTask<ICompressionFailureHandler> Open()
+        {
+            return Handler.CompressionFailure();
+        }
+    }
+
+    sealed class CompressionHandler : TopLevelElementHandler<ICompressionHandler>
+    {
+        public CompressionHandler(XmppXmlSession session) : base(session)
+        {
+
+        }
+
+        protected override ValueTask<ICompressionHandler> Open()
+        {
+            return Handler.Compress();
         }
     }
 

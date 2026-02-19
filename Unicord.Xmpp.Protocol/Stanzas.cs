@@ -19,6 +19,8 @@ static file class Constants
     public const string XmppTls = "urn:ietf:params:xml:ns:xmpp-tls";
     public const string Streams = "http://etherx.jabber.org/streams";
     public const string Stanzas = "urn:ietf:params:xml:ns:xmpp-stanzas";
+    public const string FeaturesCompress = "http://jabber.org/features/compress";
+    public const string Compression = "http://jabber.org/protocol/compress";
 }
 
 [StructLayout(LayoutKind.Auto)]
@@ -35,29 +37,34 @@ public interface IPayloadHandler : IAsyncDisposable
 }
 
 [ComplexType, Namespace(Streams)]
-public interface IStreamTransportHandler : IPayloadHandler
+public interface ITransportHandler : IPayloadHandler
 {
     [Name("features")]
     ValueTask<IFeaturesHandler> Features();
 
     [Name("error")]
     ValueTask<IStreamErrorHandler> Error();
-}
 
-[ComplexType, Namespace(XmppTls)]
-public interface IStreamTlsHandler : IPayloadHandler
-{
-    [Name("starttls")]
+    [Name("starttls", XmppTls)]
     ValueTask StartTls();
 
-    [Name("proceed")]
+    [Name("proceed", XmppTls)]
     ValueTask ProceedTls();
 
-    [Name("failure")]
+    [Name("failure", XmppTls)]
     ValueTask FailureTls();
+
+    [Name("compress", Compression)]
+    ValueTask<ICompressionHandler> Compress();
+
+    [Name("failure", Compression)]
+    ValueTask<ICompressionFailureHandler> CompressionFailure();
+
+    [Name("compressed", Compression)]
+    ValueTask Compressed();
 }
 
-public interface IStreamHandler : IStreamTransportHandler, IStreamTlsHandler
+public interface IStreamHandler : ITransportHandler
 {
     ValueTask<IMessageHandler> Message(in Stanza stanza);
     ValueTask<IPresenceHandler> Presence(in Stanza stanza);
@@ -72,6 +79,9 @@ public interface IFeaturesHandler : IPayloadHandler
 
     [Name("starttls", XmppTls)]
     ValueTask<ITlsFeaturesHandler> StartTls();
+
+    [Name("compression", FeaturesCompress)]
+    ValueTask<ICompressionFeaturesHandler> Compression();
 }
 
 [ComplexType, Namespace(XmppTls)]
@@ -79,6 +89,33 @@ public interface ITlsFeaturesHandler : IPayloadHandler
 {
     [Name("required")]
     ValueTask Required();
+}
+
+[ComplexType, Namespace(FeaturesCompress)]
+public interface ICompressionFeaturesHandler : IPayloadHandler
+{
+    [Name("method")]
+    ValueTask Method(string? name);
+}
+
+[ComplexType, Namespace(Compression)]
+public interface ICompressionHandler : IPayloadHandler
+{
+    [Name("method")]
+    ValueTask Method(string? name);
+}
+
+[ComplexType, Namespace(Compression)]
+public interface ICompressionFailureHandler : IPayloadHandler, IStanzaErrorHandler
+{
+    [Name("unsupported-method")]
+    ValueTask UnsupportedMethod();
+
+    [Name("setup-failed")]
+    ValueTask SetupFailed();
+
+    [Name("processing-failed")]
+    ValueTask ProcessingFailed();
 }
 
 [ComplexType, Namespace(Client)]
