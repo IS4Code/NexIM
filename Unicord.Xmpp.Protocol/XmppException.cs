@@ -6,6 +6,17 @@ namespace Unicord.Xmpp.Protocol;
 
 public abstract class XmppException : ApplicationException
 {
+    protected string DefaultLanguage {
+        get {
+            var culture = CultureInfo.CurrentUICulture;
+            if(culture == CultureInfo.InvariantCulture)
+            {
+                return "en";
+            }
+            return culture.TwoLetterISOLanguageName;
+        }
+    }
+
     internal XmppException()
     {
 
@@ -61,7 +72,7 @@ public class XmppStreamException : XmppException<IStreamErrorHandler>
         await base.Output(handler);
         if(!String.IsNullOrWhiteSpace(Message))
         {
-            await handler.Text(Message, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+            await handler.Text(Message, DefaultLanguage);
         }
     }
 
@@ -110,7 +121,7 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
         await base.Output(handler);
         if(!String.IsNullOrWhiteSpace(Message))
         {
-            await handler.Text(Message, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+            await handler.Text(Message, DefaultLanguage);
         }
     }
 
