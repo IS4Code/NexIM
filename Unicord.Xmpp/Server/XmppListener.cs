@@ -22,6 +22,8 @@ public abstract class XmppListener<TClient>
 
     readonly IXmppReceiver<XmppStreamSession> receiver;
 
+    readonly XmppDecoder decoder = new();
+
     const bool prettyOutput = true;
 
     public XmppListener(IXmppReceiver<XmppStreamSession> receiver)
@@ -153,7 +155,7 @@ public abstract class XmppListener<TClient>
 
                                 default:
                                     // Payload of a known command
-                                    if(await XmppDecoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
+                                    if(await decoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
                                     {
                                         // Recognized payload type
                                         await EnterHandler(payloadHandler);
@@ -379,7 +381,7 @@ public abstract class XmppListener<TClient>
 
         // Not a stanza - decode normally
         info = null;
-        return XmppDecoder.DecodePayload(reader, handler);
+        return decoder.DecodePayload(reader, handler);
 
         static async ValueTask<XmppDecoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
         {

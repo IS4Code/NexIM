@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -85,7 +86,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using System.Xml;");
-        sb.AppendLine("using Unicord.Server.Primitives;");
+        sb.AppendLine("using Unicord.Server.Primitives.Xml;");
         sb.AppendLine($"namespace {grammarNs};");
         sb.AppendLine("#nullable disable");
         sb.Append("partial class XmppEncoder");
@@ -110,7 +111,6 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("{");
         {
-            sb.AppendLine("private static partial ValueTask WriteAsync(XmlWriter writer, TemporaryString str);");
             foreach(var type in types)
             {
                 var defaultNs = GetNamespace(type);
@@ -159,29 +159,52 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                         {
                             // Extract attribute if specified
                             var (attrLocalName, attrNs) = pair.Key;
-                            var attrParam = pair.Value;
-                            var attrName = "v_" + attrParam.Name;
-                            sb.AppendLine($"if({attrParam.Name} is {{ }} {attrName})");
-                            sb.Append($"await writer.WriteAttributeStringAsync(null, {attrLocalName}, {attrNs ?? "null"}, ");
-                            ParamToString(attrName, attrParam.Type);
-                            sb.AppendLine(");");
+                            var param = pair.Value;
+                            var paramVar = "v_" + param.Name;
+
+                            var paramType = GetUnderlyingType(param.Type);
+                            var typeName = GetQualifiedName(paramType);
+
+                            sb.AppendLine($"if({param.Name} is {{ }} {paramVar})");
+                            sb.AppendLine("{");
+                            if(typeName.StartsWith("System."))
+                            {
+                                sb.Append($"await writer.WriteAttributeStringAsync(null, {attrLocalName}, {attrNs ?? "null"}, ");
+                                ParamToString(paramVar, param.Type);
+                                sb.AppendLine(");");
+                            }
+                            else
+                            {
+                                // Use encoder
+                                sb.AppendLine($"await this.WriteStartAttributeAsync(writer, null, {attrLocalName}, {attrNs ?? "null"});");
+                                sb.AppendLine($"await TypedEncoder<{Format(paramType)}>.Encode(this.TypedEncoder, {paramVar});");
+                                sb.AppendLine($"await this.WriteEndAttributeAsync(writer);");
+                            }
+                            sb.AppendLine("}");
                         }
 
                         if(valueParam != null)
                         {
                             // Write value if specified
-                            var valueName = "v_" + valueParam.Name;
-                            sb.AppendLine($"if({valueParam.Name} is {{ }} {valueName})");
-                            if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Primitives.TemporaryString")
+                            var paramVar = "v_" + valueParam.Name;
+
+                            var paramType = GetUnderlyingType(valueParam.Type);
+                            var typeName = GetQualifiedName(paramType);
+
+                            sb.AppendLine($"if({valueParam.Name} is {{ }} {paramVar})");
+                            sb.AppendLine("{");
+                            if(typeName.StartsWith("System."))
                             {
-                                sb.AppendLine($"await WriteAsync(writer, {valueName});");
+                                sb.Append("await writer.WriteStringAsync(");
+                                ParamToString(paramVar, valueParam.Type);
+                                sb.AppendLine(");");
                             }
                             else
                             {
-                                sb.Append("await writer.WriteStringAsync(");
-                                ParamToString(valueName, valueParam.Type);
-                                sb.AppendLine(");");
+                                // Use encoder
+                                sb.AppendLine($"await TypedEncoder<{Format(paramType)}>.Encode(this.TypedEncoder, {paramVar}, writer);");
                             }
+                            sb.AppendLine("}");
                         }
                         
                         // Close or leave opened
@@ -232,7 +255,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using System.Xml;");
-        sb.AppendLine("using Unicord.Server.Primitives;");
+        sb.AppendLine("using Unicord.Server.Primitives.Xml;");
         sb.AppendLine($"namespace {grammarNs};");
         sb.AppendLine("#nullable disable");
         sb.AppendLine("partial class XmppVocabulary");
@@ -299,13 +322,19 @@ public sealed class GrammarGenerator : IIncrementalGenerator
 
         // Generate decoder
 
+        string Key(string? key)
+        {
+            if(key == null)
+            {
+                return "\"\"";
+            }
+            return $"XmppVocabulary.{vocabulary[key]}";
+        }
+
         sb.AppendLine("partial class XmppDecoder");
         sb.AppendLine("{");
         {
-            sb.AppendLine("private static partial ValueTask<string> ReadElementStringAsync(XmlReader reader);");
-            sb.AppendLine("private static partial ValueTask<TemporaryString> ReadElementTemporaryStringAsync(XmlReader reader);");
-            sb.AppendLine("private static partial ValueTask EmptyElementTextAsync(XmlReader reader);");
-            sb.AppendLine($"public static partial async ValueTask<Result> DecodePayload(XmlReader reader, {baseNs}.Protocol.IPayloadHandler handler)");
+            sb.AppendLine($"public partial async ValueTask<Result> DecodePayload(XmlReader reader, {baseNs}.Protocol.IPayloadHandler handler)");
             sb.AppendLine("{");
             {
                 // Group by first character to decrease number of checks
@@ -338,7 +367,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                 sb.Append("else ");
                             }
 
-                            sb.AppendLine($"if(elementName == XmppVocabulary.{vocabulary[elementName]})");
+                            sb.AppendLine($"if(elementName == {Key(elementName)})");
                             sb.AppendLine("{");
                             {
                                 bool firstNamespaceCheck = true;
@@ -352,7 +381,8 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                         continue;
                                     }
 
-                                    ns ??= GetNamespace(method.ContainingType) ?? throw new ApplicationException($"Element method '{method.Name}' is missing namespace and no default namespace is configured for the complex type.");
+                                    // If no namespace, use the type's attribute
+                                    ns ??= GetNamespace(method.ContainingType);
 
                                     if(firstNamespaceCheck)
                                     {
@@ -363,7 +393,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                         sb.Append("else ");
                                     }
 
-                                    sb.AppendLine($"if(elementNs == XmppVocabulary.{vocabulary[ns]} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
+                                    sb.AppendLine($"if(elementNs == {Key(ns)} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
                                     sb.AppendLine("{");
                                     {
                                         // Can be handled
@@ -376,17 +406,45 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                             var (attrName, attrNs) = pair2.Key;
                                             var param = pair2.Value;
 
+                                            var paramType = GetUnderlyingType(param.Type);
+                                            var typeName = GetQualifiedName(paramType);
+
                                             // Get value from attribute
-                                            sb.Append($"var {param.Name} = reader.GetAttribute(XmppVocabulary.");
-                                            sb.Append(vocabulary[attrName]);
-                                            if(attrNs != null)
+
+                                            UsingIfDisposable(paramType);
+                                            sb.Append($"var {param.Name} = ");
+                                            if(typeName == typeof(string).FullName)
                                             {
-                                                sb.Append(", XmppVocabulary.");
-                                                sb.Append(vocabulary[attrNs]);
+                                                // Just use the default as fallback
+                                                sb.Append($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) ?? ");
                                             }
-                                            sb.Append($") is {{ }} v{++varCounter} ? ");
-                                            StringToParam(param.Type, $"v{varCounter}");
-                                            sb.Append(" : ");
+                                            else if(typeName.StartsWith("System.", StringComparison.Ordinal))
+                                            {
+                                                // Standard support
+                                                var readerMethod = $"ReadContentAs{paramType.Name switch
+                                                {
+                                                    // XmlReader names
+                                                    "Int64" => "Long",
+                                                    "Single" => "Float",
+                                                    var n => n
+                                                }}";
+                                                if(typeof(XmlReader).GetMethod(readerMethod) != null)
+                                                {
+                                                    // Read directly
+                                                    sb.Append($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? reader.{readerMethod}() : ");
+                                                }
+                                                else
+                                                {
+                                                    // Through converter
+                                                    var varName = $"v{++varCounter}";
+                                                    sb.Append($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) is {{ }} {varName} ? XmlConvert.To{paramType.Name}({varName}) : ");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // Go through decoder
+                                                sb.Append($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? TypedEncoder<{Format(paramType)}>.Decode(this.TypedEncoder, reader) : ");
+                                            }
                                             DefaultParamValue(param);
                                             sb.AppendLine(";");
                                         }
@@ -400,26 +458,41 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                         }
                                         else
                                         {
-                                            if(valueParam != null)
+                                            if(valueParam is { } param)
                                             {
+                                                var paramType = GetUnderlyingType(param.Type);
+                                                var typeName = GetQualifiedName(paramType);
+
                                                 // Get value from content
-                                                if(valueParam.Type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "Unicord.Server.Primitives.TemporaryString")
+
+                                                UsingIfDisposable(paramType);
+                                                sb.Append($"var {param.Name} = await this.OpenElement(reader) ? this.CloseElement(reader, ");
+                                                if(typeName == typeof(string).FullName)
                                                 {
-                                                    sb.AppendLine($"using var {valueParam.Name} = await ReadElementTemporaryStringAsync(reader);");
+                                                    sb.Append($"await reader.ReadContentAsStringAsync()");
+                                                }
+                                                else if(typeName == typeof(object).FullName)
+                                                {
+                                                    sb.Append($"await reader.ReadContentAsObjectAsync()");
+                                                }
+                                                else if(typeName.StartsWith("System.", StringComparison.Ordinal))
+                                                {
+                                                    // Always through converter
+                                                    sb.Append($"XmlConvert.To{paramType.Name}(await reader.ReadContentAsStringAsync())");
                                                 }
                                                 else
                                                 {
-                                                    sb.Append($"var {valueParam.Name} = (await ReadElementStringAsync(reader)) is {{ }} v{++varCounter} ? ");
-                                                    StringToParam(valueParam.Type, "v" + varCounter);
-                                                    sb.Append(" : ");
-                                                    DefaultParamValue(valueParam);
-                                                    sb.AppendLine(";");
+                                                    // Go through decoder
+                                                    sb.Append($"await TypedEncoder<{Format(paramType)}>.Decode(this.TypedEncoder, reader)");
                                                 }
+                                                sb.Append(") : ");
+                                                DefaultParamValue(param);
+                                                sb.AppendLine(";");
                                             }
                                             else
                                             {
                                                 // Expect empty content
-                                                sb.AppendLine("await EmptyElementTextAsync(reader);");
+                                                sb.AppendLine("await this.EmptyElement(reader);");
                                             }
                                             // Call and return
                                             Call();
@@ -462,22 +535,11 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         sb.AppendLine("}");
         return sb.ToString();
 
-        void StringToParam(ITypeSymbol type, string name)
+        void UsingIfDisposable(ITypeSymbol type)
         {
-            if(GetQualifiedName(type) != typeof(string).FullName)
+            if(GetQualifiedName(type).StartsWith("Unicord.Server.Primitives.Temporary") || type.Interfaces.Any(i => GetQualifiedName(i) == typeof(IDisposable).FullName))
             {
-                // Needs conversion from string
-
-                if(type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "System.Nullable")
-                {
-                    type = namedType.TypeArguments[0];
-                }
-
-                sb.Append($"XmlConvert.To{type.Name}({name})");
-            }
-            else
-            {
-                sb.Append(name);
+                sb.Append("using ");
             }
         }
 
@@ -533,6 +595,15 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         return null;
     }
 
+    private static ITypeSymbol GetUnderlyingType(ITypeSymbol type)
+    {
+        if(type is INamedTypeSymbol namedType && GetQualifiedName(namedType) == "System.Nullable")
+        {
+            return namedType.TypeArguments[0];
+        }
+        return type;
+    }
+
     private static bool IsPlainValueTask(ITypeSymbol type)
     {
         return GetQualifiedName(type) == typeof(ValueTask).FullName && type is not INamedTypeSymbol { IsGenericType: true };
@@ -574,11 +645,11 @@ public sealed class GrammarGenerator : IIncrementalGenerator
         };
     }
 
-    private static string? GetQualifiedName(ISymbol? symbol)
+    private static string GetQualifiedName(ISymbol? symbol)
     {
         if(symbol == null)
         {
-            return null;
+            return "";
         }
         var name = symbol.Name;
         if(symbol.ContainingType is { } containingType)
