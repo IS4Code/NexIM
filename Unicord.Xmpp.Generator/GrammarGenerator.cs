@@ -184,7 +184,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                             {
                                 // Use encoder
                                 writer.WriteLine($"await this.WriteStartAttributeAsync(writer, null, {attrLocalName}, {attrNs ?? "null"});");
-                                writer.WriteLine($"await TypedEncoder<{Format(paramType)}>.Encode(this.TypedEncoder, {paramVar});");
+                                writer.WriteLine($"await this.Encode<{Format(paramType)}, XmppEncoder>(writer, {paramVar}, this);");
                                 writer.WriteLine($"await this.WriteEndAttributeAsync(writer);");
                             }
                             writer.Indent--;
@@ -211,7 +211,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                             else
                             {
                                 // Use encoder
-                                writer.WriteLine($"await TypedEncoder<{Format(paramType)}>.Encode(this.TypedEncoder, {paramVar}, writer);");
+                                writer.WriteLine($"await this.Encode<{Format(paramType)}, XmppEncoder>(writer, {paramVar}, this);");
                             }
                             writer.Indent--;
                             writer.WriteLine("}");
@@ -521,7 +521,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                         else
                                         {
                                             // Go through decoder
-                                            writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? TypedEncoder<{Format(paramType)}>.Decode(this.TypedEncoder, reader) : ");
+                                            writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this) : ");
                                         }
                                         DefaultParamValue(param);
                                         writer.WriteLine(";");
@@ -561,7 +561,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                                             else
                                             {
                                                 // Go through decoder
-                                                writer.Write($"await TypedEncoder<{Format(paramType)}>.Decode(this.TypedEncoder, reader)");
+                                                writer.Write($"await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this)");
                                             }
                                             writer.Write(") : ");
                                             DefaultParamValue(param);
