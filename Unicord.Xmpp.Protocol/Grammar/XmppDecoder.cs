@@ -5,7 +5,7 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Grammar;
 
-public partial class XmppDecoder : XmlDecoder
+public partial class XmppDecoder : XmlDecoder, IValueXmlDecoder<XmppAddress>, IValueXmlDecoder<XmppResource>
 {
     public readonly record struct Result(bool Success, IPayloadHandler? InnerHandler);
 
@@ -19,5 +19,15 @@ public partial class XmppDecoder : XmlDecoder
     protected override void ThrowElementNotSimple()
     {
         throw XmppStanzaException.BadRequest("Element was expected to have textual value.");
+    }
+
+    async ValueTask<XmppAddress> IValueXmlDecoder<XmppAddress>.Decode(XmlReader reader)
+    {
+        return XmppAddress.Parse(await reader.ReadContentAsStringAsync());
+    }
+
+    async ValueTask<XmppResource> IValueXmlDecoder<XmppResource>.Decode(XmlReader reader)
+    {
+        return XmppResource.Parse(await reader.ReadContentAsStringAsync());
     }
 }
