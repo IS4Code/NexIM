@@ -5,15 +5,11 @@ using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppServer : IXmppReceiver<IXmppSession>
+public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
 {
-    internal SessionsManager Sessions { get; }
-    internal AccountsManager Accounts { get; }
-
-    public XmppServer(SessionsManager sessions, AccountsManager accounts)
+    public XmppServer(SessionsManager sessions, AccountsManager accounts) : base(sessions, accounts)
     {
-        Sessions = sessions;
-        Accounts = accounts;
+
     }
 
     public ValueTask<IXmppReceivingHandler> Connected(IXmppSession session)

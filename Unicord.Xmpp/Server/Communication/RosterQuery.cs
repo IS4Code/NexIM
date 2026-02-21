@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -45,6 +46,7 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
 internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
 {
     (XmppAddress id, string? name, bool remove)? item;
+    string? group;
 
     public SetRosterQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
     {
@@ -58,7 +60,7 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
             throw XmppStanzaException.BadRequest("JID is missing.");
         }
         SetOnce(ref item, (id, name, subscription == "remove"));
-        return new ItemHandler(Server, Session, null);
+        return new ItemHandler(this, Server, Session, null);
     }
 
     public async override ValueTask DisposeAsync()
@@ -73,22 +75,16 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
         var target = ClientSession.GetAccount(id);
         if(remove)
         {
-            if(account.RemoveContact(target) is { } contact)
+            if(!await Server.RemoveContact(account, target))
             {
-                foreach(var session in Server.Sessions.GetSessions(account.Name, null))
-                {
-                    await session.ContactRemoved(contact);
-                }
+                throw XmppStanzaException.ItemNotFound();
             }
         }
         else
         {
-            if(account.SetContact(target, name, null) is { } contact)
+            if(!await Server.SetContact(account, new Contact(target, name, group)))
             {
-                foreach(var session in Server.Sessions.GetSessions(account.Name, null))
-                {
-                    await session.ContactAdded(contact);
-                }
+                throw XmppStanzaException.ItemNotFound();
             }
         }
 
@@ -97,14 +93,16 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
 
     class ItemHandler : CommandHandler, IRosterItemHandler
     {
-        public ItemHandler(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-        {
+        readonly SetRosterQuery parent;
 
+        public ItemHandler(SetRosterQuery parent, XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
+        {
+            this.parent = parent;
         }
 
-        ValueTask IRosterItemHandler.Group(string? name)
+        async ValueTask IRosterItemHandler.Group(string? name)
         {
-            return default;
+            SetOnce(ref parent.group, name);
         }
 
         public override ValueTask DisposeAsync()

@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Unicord.Server.Model;
@@ -17,9 +18,16 @@ public class Account
         PasswordHash = passwordHash;
     }
 
-    public Contact? SetContact(AccountName target, string? name, string? group)
+    static readonly Func<AccountName, Contact, Contact> addContactFactory = (key, added) => added;
+    static readonly Func<AccountName, Contact, Contact, Contact> updateContactFactory = (key, existing, added) => added with
     {
-        return contacts[target] = new Contact(target, name, group);
+        SubscribedTo = existing.SubscribedTo,
+        SubscribedFrom = existing.SubscribedFrom
+    };
+
+    public Contact? SetContact(Contact info)
+    {
+        return contacts.AddOrUpdate(info.Account, addContactFactory, updateContactFactory, info);
     }
 
     public Contact? RemoveContact(AccountName target)

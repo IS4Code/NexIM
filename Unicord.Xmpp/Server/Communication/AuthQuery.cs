@@ -120,15 +120,15 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
         {
             var identifier = new XmppResource(username, LocalResource.Address.Host, resource);
 
-            if(!await Server.Accounts.Authenticate(ClientSession.GetAccount(identifier, out _), password))
+            var accountName = ClientSession.GetAccount(identifier, out _);
+
+            var clientSession = new ClientSession(Session);
+            if(!await Server.Authenticate(accountName, password, clientSession))
             {
                 throw XmppStanzaException.NotAuthorized();
             }
 
             Session.RemoteResource = identifier;
-
-            var clientSession = new ClientSession(Session);
-            Server.Sessions.AddSession(Session.AccountName, clientSession);
             Session.ClientSession = clientSession;
         }
         finally
