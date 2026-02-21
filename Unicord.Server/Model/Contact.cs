@@ -4,6 +4,13 @@ public record Contact(
     AccountName Account,
     string? Name = null,
     string? Group = null,
-    bool SubscribedTo = false,
-    bool SubscribedFrom = false
+    SubscriptionState SubscriptionState = SubscriptionState.None
 );
+
+public enum SubscriptionState
+{
+    None,
+    To,
+    From,
+    Both
+}

@@ -33,6 +33,7 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
             }
 
             await features.IqAuth();
+            await features.RosterVersion();
         }
     }
 

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Unicord.Server.Model;
 
@@ -8,9 +8,9 @@ public class Account
 {
     public AccountName Name { get; }
     internal byte[] PasswordHash { get; }
-    readonly ConcurrentDictionary<AccountName, Contact> contacts = new();
+    ImmutableDictionary<AccountName, Contact> contacts = ImmutableDictionary<AccountName, Contact>.Empty;
 
-    public ICollection<Contact> Contacts => contacts.Values;
+    public ICollection<Contact> Contacts => ((IDictionary<AccountName, Contact>)contacts).Values;
 
     public Account(AccountName name, byte[] passwordHash)
     {
@@ -21,17 +21,20 @@ public class Account
     static readonly Func<AccountName, Contact, Contact> addContactFactory = (key, added) => added;
     static readonly Func<AccountName, Contact, Contact, Contact> updateContactFactory = (key, existing, added) => added with
     {
-        SubscribedTo = existing.SubscribedTo,
-        SubscribedFrom = existing.SubscribedFrom
+        SubscriptionState = existing.SubscriptionState
     };
 
-    public Contact? SetContact(Contact info)
+    public Contact SetContact(Contact info, out ICollection<Contact> finalContacts)
     {
-        return contacts.AddOrUpdate(info.Account, addContactFactory, updateContactFactory, info);
+        var result = Immutable.AddOrUpdate(ref contacts, info.Account, addContactFactory, updateContactFactory, out var final, info);
+        finalContacts = ((IDictionary<AccountName, Contact>)final).Values;
+        return result;
     }
 
-    public Contact? RemoveContact(AccountName target)
+    public Contact? RemoveContact(AccountName target, out ICollection<Contact> finalContacts)
     {
-        return contacts.TryRemove(target, out var contact) ? contact : null;
+        var result = Immutable.TryRemove(ref contacts, target, out var contact, out var final) ? contact : null;
+        finalContacts = ((IDictionary<AccountName, Contact>)final).Values;
+        return result;
     }
 }

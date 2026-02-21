@@ -7,9 +7,13 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
 {
-    public GetRosterQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
+    readonly string? cachedVersion;
+
+    public GetRosterQuery(XmppServer server, IXmppSession session, string? identifier, string? version) : base(server, session, identifier)
     {
         Session.ClientSession?.SubscribeToRosterUpdates();
+
+        cachedVersion = version;
     }
 
     async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppAddress? identifier, string? name, string? subscription)
@@ -22,19 +26,26 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
         var contacts = Account.Contacts;
 
         // Compute the version
-        var hashCode = new HashCode();
-        foreach(var contact in contacts)
-        {
-            hashCode.Add(contact);
-        }
-        var version = unchecked((uint)hashCode.ToHashCode()).ToString("x");
+        var newVersion = ClientSession.GetContactsVersion(contacts);
 
         await using var iq = await Session.InfoQuery(NewResponse());
-        await using var roster = await iq.RosterQuery(version: version);
+
+        if(newVersion == cachedVersion)
+        {
+            // No changes
+            return;
+        }
+
+        await using var roster = await iq.RosterQuery(version: newVersion);
 
         foreach(var contact in contacts)
         {
-            await using var item = await roster.Item(ClientSession.GetAddress(contact.Account), contact.Name, null);
+            await using var item = await roster.Item(ClientSession.GetAddress(contact.Account), contact.Name, contact.SubscriptionState switch {
+                SubscriptionState.To => "to",
+                SubscriptionState.From => "from",
+                SubscriptionState.Both => "both",
+                _ => "none"
+            });
             if(contact.Group is { } group)
             {
                 await item.Group(group);

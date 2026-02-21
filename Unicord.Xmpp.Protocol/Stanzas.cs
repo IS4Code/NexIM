@@ -82,6 +82,9 @@ public interface IFeaturesHandler : IPayloadHandler
 
     [Name("compression", FeaturesCompress)]
     ValueTask<ICompressionFeaturesHandler> Compression();
+
+    [Name("ver", "urn:xmpp:features:rosterver")]
+    ValueTask RosterVersion();
 }
 
 [ComplexType, Namespace(XmppTls)]

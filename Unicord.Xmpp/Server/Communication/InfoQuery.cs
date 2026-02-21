@@ -46,7 +46,7 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
         switch(Type)
         {
             case "get":
-                return new GetRosterQuery(Server, Session, Identifier);
+                return new GetRosterQuery(Server, Session, Identifier, version);
             case "set":
                 return new SetRosterQuery(Server, Session, Identifier);
             default:

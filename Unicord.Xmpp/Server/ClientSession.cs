@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server;
 using Unicord.Server.Model;
@@ -128,20 +129,13 @@ public class ClientSession : IClientSession
         }
     }
 
-    async ValueTask IClientSession.ContactAdded(Contact contact)
+    public static string GetContactsVersion(ICollection<Contact> contacts)
     {
-        if(!receivesRosterUpdates)
-        {
-            return;
-        }
-
-        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
-
-        await using var roster = await iq.RosterQuery(null);
-        await using var item = await roster.Item(GetAddress(contact.Account), contact.Name, null);
+        // New immutable instance each time
+        return unchecked((uint)contacts.GetHashCode()).ToString("x");
     }
 
-    async ValueTask IClientSession.ContactRemoved(Contact contact)
+    async ValueTask IClientSession.ContactAdded(Contact contact, ICollection<Contact> current)
     {
         if(!receivesRosterUpdates)
         {
@@ -150,7 +144,26 @@ public class ClientSession : IClientSession
 
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
 
-        await using var roster = await iq.RosterQuery(null);
+        await using var roster = await iq.RosterQuery(GetContactsVersion(current));
+        await using var item = await roster.Item(GetAddress(contact.Account), contact.Name, contact.SubscriptionState switch
+        {
+            SubscriptionState.To => "to",
+            SubscriptionState.From => "from",
+            SubscriptionState.Both => "both",
+            _ => "none"
+        });
+    }
+
+    async ValueTask IClientSession.ContactRemoved(Contact contact, ICollection<Contact> current)
+    {
+        if(!receivesRosterUpdates)
+        {
+            return;
+        }
+
+        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
+
+        await using var roster = await iq.RosterQuery(GetContactsVersion(current));
         await using var item = await roster.Item(GetAddress(contact.Account), contact.Name, "remove");
     }
 

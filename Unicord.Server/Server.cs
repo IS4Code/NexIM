@@ -28,14 +28,14 @@ public class Server
 
     public async ValueTask<bool> RemoveContact(Account account, AccountName target)
     {
-        if(account.RemoveContact(target) is not { } contact)
+        if(account.RemoveContact(target, out var contacts) is not { } contact)
         {
             return false;
         }
 
         foreach(var session in Sessions.GetSessions(account.Name, null))
         {
-            await session.ContactRemoved(contact);
+            await session.ContactRemoved(contact, contacts);
         }
 
         return true;
@@ -43,14 +43,14 @@ public class Server
 
     public async ValueTask<bool> SetContact(Account account, Contact info)
     {
-        if(account.SetContact(info) is not { } contact)
+        if(account.SetContact(info, out var contacts) is not { } contact)
         {
             return false;
         }
 
         foreach(var session in Sessions.GetSessions(account.Name, null))
         {
-            await session.ContactAdded(contact);
+            await session.ContactAdded(contact, contacts);
         }
 
         return true;
