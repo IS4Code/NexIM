@@ -67,7 +67,7 @@ internal class Message : StanzaHandler, IMessageHandler
         {
             throw XmppStanzaException.BadRequest("Receiver of a message is empty.");
         }
-        var targetAccount = GetAccount(to, out var targetIdentifier);
+        var targetAccount = ClientSession.GetAccount(to, out var targetIdentifier);
         if(Server.Sessions.GetSessions(targetAccount, targetIdentifier).FirstOrDefault() is not { } target)
         {
             throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");

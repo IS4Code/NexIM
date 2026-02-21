@@ -66,11 +66,6 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
     ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
     {
         ValidateSender(stanza);
-        if(stanza.To is { } to && !to.IsNarrowerThan(Session.LocalResource))
-        {
-            // Someone else is the receiver
-            return Program.NotImplemented<IInfoQueryHandler>();
-        }
         return new(new InfoQuery(Server, Session, stanza));
     }
 

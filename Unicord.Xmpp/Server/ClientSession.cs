@@ -121,18 +121,48 @@ public class ClientSession : IClientSession
         }
     }
 
-    public static XmppResource GetResource(AccountName account, string? resourceIdentifier)
+    async ValueTask IClientSession.ContactAdded(Contact contact)
+    {
+        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
+
+        await using var roster = await iq.RosterQuery(null);
+        await using var item = await roster.Item(GetAddress(contact.Account), contact.Name, null);
+    }
+
+    async ValueTask IClientSession.ContactRemoved(Contact contact)
+    {
+        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
+
+        await using var roster = await iq.RosterQuery(null);
+        await using var item = await roster.Item(GetAddress(contact.Account), contact.Name, "remove");
+    }
+
+    internal static XmppAddress GetAddress(AccountName account)
+    {
+        return account.Identifier is XmppAddress addr ? addr : XmppAddress.Parse(account.ToString());
+    }
+
+    internal static XmppResource GetResource(AccountName account, string? resourceIdentifier)
     {
         return new(
-            account.Identifier is XmppAddress addr
-            ? addr
-            : XmppAddress.Parse(account.ToString()),
+            GetAddress(account),
             resourceIdentifier
         );
     }
 
-    public static XmppResource GetResource(Sender sender)
+    internal static XmppResource GetResource(Sender sender)
     {
         return GetResource(sender.Account, sender.Identifier);
+    }
+
+    internal static AccountName GetAccount(XmppAddress address)
+    {
+        return AccountName.Get(address);
+    }
+
+    internal static AccountName GetAccount(XmppResource resource, out string? identifier)
+    {
+        identifier = resource.ResourceIdentifier;
+        return AccountName.Get(resource.Address);
     }
 }

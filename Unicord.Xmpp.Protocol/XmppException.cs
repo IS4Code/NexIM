@@ -214,7 +214,7 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
     public static XmppStanzaException ResourceConstraint(string? message = null) => Create("wait", message, static h => h.ResourceConstraint());
     public static XmppStanzaException ServiceUnavailable(string? message = null) => Create("cancel", message, static h => h.ServiceUnavailable());
     public static XmppStanzaException SubscriptionRequired(string? message = null) => Create("auth", message, static h => h.SubscriptionRequired());
-    public static XmppStanzaException UndefinedCondition(string? type, string? message = null) => Create(type, message, static h => h.UndefinedCondition());
+    public static XmppStanzaException UndefinedCondition(string type, string? message = null) => Create(type, message, static h => h.UndefinedCondition());
     public static XmppStanzaException UnexpectedRequest(string? message = null) => Create("wait", message, static h => h.UnexpectedRequest());
 
     private static XmppStanzaException Create(string type, string? message, Func<IStanzaErrorHandler, ValueTask> details)

@@ -9,6 +9,8 @@ public readonly record struct XmppResource(XmppAddress Address, string? Resource
 {
     static readonly Regex resourceRegex = new("^(?:(.{1,1023})@)?([^@/]{1,1023})(?:/(.{1,1023}))?$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Singleline);
 
+    public XmppResource Bare => new(Address, null);
+
     public XmppResource(string? user, string host, string? resourceIdentifier) : this(new XmppAddress(user, host), resourceIdentifier)
     {
 

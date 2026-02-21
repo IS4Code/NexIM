@@ -34,6 +34,6 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract EndPoint? RemoteEndPoint { get; }
     public abstract CancellationToken CancellationToken { get; }
 
-    public AccountName AccountName => new(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
+    public AccountName AccountName => ClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
     public ClientSession? ClientSession { get; set; }
 }

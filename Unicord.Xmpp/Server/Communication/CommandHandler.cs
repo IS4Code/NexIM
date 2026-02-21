@@ -1,8 +1,7 @@
-﻿using System.Threading.Tasks;
-using System;
-using Unicord.Xmpp.Protocol;
+﻿using System;
+using System.Threading.Tasks;
 using System.Xml.Linq;
-using Unicord.Server;
+using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
 
@@ -39,12 +38,6 @@ internal abstract class CommandHandler : IPayloadHandler
         {
             throw XmppStreamException.InvalidFrom();
         }
-    }
-
-    protected AccountName GetAccount(XmppResource resource, out string? identifier)
-    {
-        identifier = resource.ResourceIdentifier;
-        return new(resource.Address);
     }
 
     protected async ValueTask Unexpected()

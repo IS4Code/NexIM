@@ -14,33 +14,43 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
 
     public async override ValueTask DisposeAsync()
     {
-        if(handled != true)
+        if(handled != true && Type is not ("result" or "error"))
         {
             throw XmppStanzaException.FeatureNotImplemented();
         }
     }
 
-    ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
+    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
     {
         SetOnce(ref handled, true);
-        return new(
-            Type switch
-            {
-                "get" => new GetAuthQuery(Server, Session, Identifier),
-                "set" => new SetAuthQuery(Server, Session, Identifier)
-            }
-        );
+
+        // Do not pass to other entities
+        EnsureReceiverIsServer();
+        switch(Type)
+        {
+            case "get":
+                return new GetAuthQuery(Server, Session, Identifier);
+            case "set":
+                return new SetAuthQuery(Server, Session, Identifier);
+            default:
+                return NullHandler.Instance;
+        }
     }
 
-    ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery()
+    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
     {
         SetOnce(ref handled, true);
-        return new(
-            Type switch
-            {
-                "get" => new GetRosterQuery(Server, Session, Identifier)
-                //"set" => new SetAuthQuery(Server, Session, Identifier)
-            }
-        );
+
+        // Only the client's account can be the target
+        EnsureReceiverIsAccount();
+        switch(Type)
+        {
+            case "get":
+                return new GetRosterQuery(Server, Session, Identifier);
+            case "set":
+                return new SetRosterQuery(Server, Session, Identifier);
+            default:
+                return NullHandler.Instance;
+        }
     }
 }

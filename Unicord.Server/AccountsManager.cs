@@ -3,25 +3,31 @@ using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Unicord.Server.Model;
 using Unicord.Server.Primitives;
 
 namespace Unicord.Server;
 
 public class AccountsManager
 {
-    // TODO Normal password hashing algorithm
-    readonly ConcurrentDictionary<string, byte[]> hashes = new(StringComparer.OrdinalIgnoreCase);
+    readonly ConcurrentDictionary<AccountName, Account> accounts = new();
 
-    public async ValueTask<bool> Authenticate(string? username, TemporaryString? password)
+    public AccountsManager()
     {
-        if(username == null || password == null)
+
+    }
+
+    public async ValueTask<bool> Authenticate(AccountName accountName, TemporaryString? password)
+    {
+        if(!accountName.IsValid || password == null)
         {
             return false;
         }
 
+        // TODO Normal password hashing algorithm
         var hash = GetHash();
 
-        var existing = hashes.GetOrAdd(username, hash);
+        var existing = accounts.GetOrAdd(accountName, _ => new Account(accountName, hash)).PasswordHash;
         if(existing == hash)
         {
             // Newly added
@@ -40,7 +46,7 @@ public class AccountsManager
 
                 Span<byte> data = stackalloc byte[SHA256.HashSizeInBytes * 2];
 
-                SHA256.HashData(MemoryMarshal.Cast<char, byte>(username), data);
+                SHA256.HashData(MemoryMarshal.Cast<char, byte>(accountName.ToString()), data);
                 SHA256.HashData(MemoryMarshal.Cast<char, byte>(password.Value), data.Slice(SHA256.HashSizeInBytes));
                 SHA256.HashData(data, buffer);
 
@@ -52,5 +58,10 @@ public class AccountsManager
                 password.Dispose();
             }
         }
+    }
+
+    public Account? GetAccount(AccountName name)
+    {
+        return accounts.TryGetValue(name, out var account) ? account : null;
     }
 }

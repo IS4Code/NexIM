@@ -161,7 +161,7 @@ public interface IPresenceHandler : IStanzaHandler
 public interface IInfoQueryHandler : IStanzaHandler
 {
     [Name("query", IqRoster)]
-    ValueTask<IRosterQueryHandler> RosterQuery();
+    ValueTask<IRosterQueryHandler> RosterQuery([Name("ver")] string? version);
 
     [Name("query", IqAuth)]
     ValueTask<IAuthQueryHandler> AuthQuery();
@@ -171,7 +171,14 @@ public interface IInfoQueryHandler : IStanzaHandler
 public interface IRosterQueryHandler : IPayloadHandler
 {
     [Name("item")]
-    ValueTask Item(string? identifier);
+    ValueTask<IRosterItemHandler> Item([Name("jid")] XmppAddress? identifier, [Name("name")] string? name, [Name("subscription")] string? subscription);
+}
+
+[ComplexType, Namespace(IqRoster)]
+public interface IRosterItemHandler : IPayloadHandler
+{
+    [Name("group")]
+    ValueTask Group(string? name);
 }
 
 [ComplexType, Namespace(IqAuth)]

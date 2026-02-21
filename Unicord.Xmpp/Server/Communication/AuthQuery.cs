@@ -118,17 +118,18 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
     {
         try
         {
-            if(!await Server.Accounts.Authenticate(username, password))
-            {
-                throw XmppStanzaException.NotAuthorized();
-            }
-
             if(Session.LocalResource is not { } localResource)
             {
                 throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
             }
 
             var identifier = new XmppResource(username, localResource.Address.Host, resource);
+
+            if(!await Server.Accounts.Authenticate(ClientSession.GetAccount(identifier, out _), password))
+            {
+                throw XmppStanzaException.NotAuthorized();
+            }
+
             Session.RemoteResource = identifier;
 
             var clientSession = new ClientSession(Session);
