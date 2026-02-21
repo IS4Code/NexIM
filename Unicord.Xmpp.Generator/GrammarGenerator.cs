@@ -16,10 +16,11 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Unicord.Xmpp.Generator;
 
 [Generator]
-public sealed class GrammarGenerator : IIncrementalGenerator
+public sealed partial class GrammarGenerator : IIncrementalGenerator
 {
     const string baseNs = nameof(Unicord) + "." + nameof(Xmpp);
     const string grammarNs = baseNs + ".Grammar";
+    const string protocolNs = baseNs + ".Protocol";
     const string complexTypeAttributeSimpleName = "ComplexType";
     const string complexTypeAttributeFullName = grammarNs + "." + complexTypeAttributeSimpleName + "Attribute";
     const string namespaceAttributeFullName = grammarNs + "." + "NamespaceAttribute";
@@ -80,6 +81,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
 
         context.AddSource("XmppEncoder.Generated.cs", GenerateEncoder(realTypes!));
         context.AddSource("XmppDecoder.Generated.cs", GenerateDecoder(realTypes!));
+        context.AddSource("NullHandler.Generated.cs", GenerateNullHandler(realTypes!));
     }
 
     private string GenerateEncoder(IEnumerable<ITypeSymbol> types)
@@ -128,7 +130,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    ns ??= defaultNs ?? throw new ApplicationException($"Element method '{method.Name}' is missing namespace and no default namespace is configured for the complex type.");
+                    ns ??= defaultNs;
 
                     // Explicit implementation
                     var returnType = method.ReturnType;
@@ -159,7 +161,7 @@ public sealed class GrammarGenerator : IIncrementalGenerator
                         writer.WriteLine("var writer = this.Writer;");
 
                         // Element start
-                        writer.WriteLine($"await writer.WriteStartElementAsync(null, {localName}, {ns});");
+                        writer.WriteLine($"await writer.WriteStartElementAsync(null, {localName}, {ns ?? "null"});");
 
                         foreach(var pair in attributeParams)
                         {
