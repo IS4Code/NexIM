@@ -18,7 +18,7 @@ internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
     {
         if(To is { } to && to == Session.LocalResource)
         {
-            XmppStanzaException.NotAuthorized("The receiving entity must be the server.");
+            XmppStanzaException.Forbidden("The receiving entity must be the server.");
         }
     }
 
@@ -26,7 +26,7 @@ internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
     {
         if(To is { } to && to == Session.RemoteResource?.Bare)
         {
-            XmppStanzaException.NotAuthorized("The receiving entity must be the user's account.");
+            XmppStanzaException.Forbidden("The receiving entity must be the user's account.");
         }
     }
 

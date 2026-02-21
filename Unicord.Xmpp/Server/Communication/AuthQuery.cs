@@ -22,24 +22,24 @@ internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
 
     // Other elements are not expected
 
-    ValueTask IAuthQueryHandler.Password(TemporaryString? value)
+    async ValueTask IAuthQueryHandler.Password(TemporaryString? value)
     {
-        return Unexpected();
+        throw Unexpected();
     }
 
-    ValueTask IAuthQueryHandler.Digest(string? value)
+    async ValueTask IAuthQueryHandler.Digest(string? value)
     {
-        return Unexpected();
+        throw Unexpected();
     }
 
-    ValueTask IAuthQueryHandler.Resource(string? value)
+    async ValueTask IAuthQueryHandler.Resource(string? value)
     {
-        return Unexpected();
+        throw Unexpected();
     }
 
-    public override ValueTask Other(XElement payload)
+    public async override ValueTask Other(XElement payload)
     {
-        return Unexpected();
+        throw Unexpected();
     }
 
     public async override ValueTask DisposeAsync()
@@ -118,12 +118,7 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
     {
         try
         {
-            if(Session.LocalResource is not { } localResource)
-            {
-                throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
-            }
-
-            var identifier = new XmppResource(username, localResource.Address.Host, resource);
+            var identifier = new XmppResource(username, LocalResource.Address.Host, resource);
 
             if(!await Server.Accounts.Authenticate(ClientSession.GetAccount(identifier, out _), password))
             {

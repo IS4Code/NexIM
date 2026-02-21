@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Unicord.Server;
+using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -10,6 +12,11 @@ internal abstract class CommandHandler : IPayloadHandler
     public XmppServer Server { get; }
     public IXmppSession Session { get; }
     public string? Identifier { get; }
+
+    protected XmppResource LocalResource => Session.LocalResource ?? throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
+    protected XmppResource RemoteResource => Session.RemoteResource ?? throw XmppStanzaException.NotAuthorized();
+    protected AccountName AccountName => ClientSession.GetAccount(RemoteResource, out _);
+    protected Account Account => Server.Accounts.GetAccount(AccountName) ?? throw XmppStanzaException.NotAuthorized();
 
     public CommandHandler(XmppServer server, IXmppSession session, string? identifier)
     {
@@ -40,9 +47,9 @@ internal abstract class CommandHandler : IPayloadHandler
         }
     }
 
-    protected async ValueTask Unexpected()
+    protected XmppStanzaException Unexpected()
     {
-        throw XmppStanzaException.BadRequest("Element was not expected.");
+        return XmppStanzaException.BadRequest("Element was not expected.");
     }
 
     public virtual ValueTask Other(XElement payload)

@@ -13,35 +13,31 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
 
     async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppAddress? identifier, string? name, string? subscription)
     {
-        throw XmppStanzaException.BadRequest();
+        throw Unexpected();
     }
 
     public async override ValueTask DisposeAsync()
     {
-        if(Session.RemoteResource is not { } identifier)
-        {
-            throw XmppStanzaException.NotAuthorized();
-        }
+        var contacts = Account.Contacts;
 
-        if(Server.Accounts.GetAccount(ClientSession.GetAccount(identifier, out _)) is not { } account)
-        {
-            throw XmppStanzaException.NotAuthorized();
-        }
-
-        var contacts = account.Contacts;
-
+        // Compute the version
         var hashCode = new HashCode();
         foreach(var contact in contacts)
         {
             hashCode.Add(contact);
         }
+        var version = unchecked((uint)hashCode.ToHashCode()).ToString("x");
 
         await using var iq = await Session.InfoQuery(NewResponse());
-        await using var roster = await iq.RosterQuery(version: unchecked((uint)hashCode.ToHashCode()).ToString("x"));
+        await using var roster = await iq.RosterQuery(version: version);
 
         foreach(var contact in contacts)
         {
-            await roster.Item(ClientSession.GetAddress(contact.Account), contact.Name, null);
+            await using var item = await roster.Item(ClientSession.GetAddress(contact.Account), contact.Name, null);
+            if(contact.Group is { } group)
+            {
+                await item.Group(group);
+            }
         }
     }
 }
@@ -72,15 +68,7 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
             throw XmppStanzaException.BadRequest("Item is missing.");
         }
 
-        if(Session.RemoteResource is not { } identifier)
-        {
-            throw XmppStanzaException.NotAuthorized();
-        }
-
-        if(Server.Accounts.GetAccount(ClientSession.GetAccount(identifier, out _)) is not { } account)
-        {
-            throw XmppStanzaException.NotAuthorized();
-        }
+        var account = Account;
 
         var target = ClientSession.GetAccount(id);
         if(remove)
