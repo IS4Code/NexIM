@@ -15,11 +15,12 @@ public class ClientSession : IClientSession
 
     bool receivesRosterUpdates;
 
-    string IClientSession.Identifier => xmpp.RemoteResource?.ResourceIdentifier ?? throw new InvalidOperationException();
+    public string Identifier { get; }
 
-    public ClientSession(IXmppSession xmpp)
+    public ClientSession(IXmppSession xmpp, string identifier)
     {
         this.xmpp = xmpp;
+        Identifier = identifier;
     }
 
     private string? MessageType(ConversationType? type)

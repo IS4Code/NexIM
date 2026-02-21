@@ -118,11 +118,16 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
     {
         try
         {
+            if(username == null || resource == null || password == null)
+            {
+                throw XmppStanzaException.BadRequest();
+            }
+
             var identifier = new XmppResource(username, LocalResource.Address.Host, resource);
 
             var accountName = ClientSession.GetAccount(identifier, out _);
 
-            var clientSession = new ClientSession(Session);
+            var clientSession = new ClientSession(Session, resource);
             if(!await Server.Authenticate(accountName, password, clientSession))
             {
                 throw XmppStanzaException.NotAuthorized();
