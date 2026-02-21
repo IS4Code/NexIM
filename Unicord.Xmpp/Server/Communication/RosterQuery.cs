@@ -8,7 +8,7 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
 {
     public GetRosterQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
     {
-
+        Session.ClientSession?.SubscribeToRosterUpdates();
     }
 
     async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppAddress? identifier, string? name, string? subscription)

@@ -12,6 +12,8 @@ public class ClientSession : IClientSession
 
     public sbyte Priority { get; set; }
 
+    bool receivesRosterUpdates;
+
     string IClientSession.Identifier => xmpp.RemoteResource?.ResourceIdentifier ?? throw new InvalidOperationException();
 
     public ClientSession(IXmppSession xmpp)
@@ -30,6 +32,11 @@ public class ClientSession : IClientSession
             ConversationType.Error => "error",
             _ => null
         };
+    }
+
+    public void SubscribeToRosterUpdates()
+    {
+        receivesRosterUpdates = true;
     }
 
     async ValueTask IClientSession.Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState)
@@ -123,6 +130,11 @@ public class ClientSession : IClientSession
 
     async ValueTask IClientSession.ContactAdded(Contact contact)
     {
+        if(!receivesRosterUpdates)
+        {
+            return;
+        }
+
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
 
         await using var roster = await iq.RosterQuery(null);
@@ -131,6 +143,11 @@ public class ClientSession : IClientSession
 
     async ValueTask IClientSession.ContactRemoved(Contact contact)
     {
+        if(!receivesRosterUpdates)
+        {
+            return;
+        }
+
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
 
         await using var roster = await iq.RosterQuery(null);
