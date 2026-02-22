@@ -128,8 +128,15 @@ public interface IStanzaHandler : IPayloadHandler
     ValueTask<IStanzaErrorHandler> Error([Name("type")] string? type);
 }
 
+[ComplexType]
+public interface ISenderDetails : IPayloadHandler
+{
+    [Name("nick", "http://jabber.org/protocol/nick")]
+    ValueTask Nickname(string? text);
+}
+
 [ComplexType, Namespace(Client)]
-public interface IMessageHandler : IStanzaHandler
+public interface IMessageHandler : IStanzaHandler, ISenderDetails
 {
     [Name("subject")]
     ValueTask Subject(string? text);
@@ -145,7 +152,7 @@ public interface IMessageHandler : IStanzaHandler
 }
 
 [ComplexType, Namespace(Client)]
-public interface IPresenceHandler : IStanzaHandler
+public interface IPresenceHandler : IStanzaHandler, ISenderDetails
 {
     [Name("show")]
     ValueTask Show(string? text);

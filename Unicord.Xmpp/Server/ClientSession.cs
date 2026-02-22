@@ -54,6 +54,10 @@ public class ClientSession : IClientSession
 
         await using var msg = await xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
         
+        if(sender.Nickname is { } nick)
+        {
+            await msg.Nickname(nick);
+        }
         if(message.Subject is { } subject)
         {
             await msg.Subject(subject);
@@ -133,7 +137,7 @@ public class ClientSession : IClientSession
     public static string GetContactsVersion(ICollection<Contact> contacts)
     {
         // New immutable instance each time
-        return unchecked((uint)contacts.GetHashCode()).ToString("x");
+        return unchecked((uint)contacts.GetHashCode()).ToString("x08");
     }
 
     async ValueTask IClientSession.ContactAdded(Contact contact, ICollection<Contact> current)

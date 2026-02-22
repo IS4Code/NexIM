@@ -6,7 +6,7 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class Presence : StanzaHandler, IPresenceHandler
 {
-    string? show, status;
+    string? show, status, nick;
     sbyte? priority;
 
     public Presence(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
@@ -22,6 +22,11 @@ internal class Presence : StanzaHandler, IPresenceHandler
     async ValueTask IPresenceHandler.Status(string? text)
     {
         SetOnce(ref status, text);
+    }
+
+    async ValueTask ISenderDetails.Nickname(string? text)
+    {
+        SetOnce(ref nick, text);
     }
 
     async ValueTask IPresenceHandler.Priority(sbyte? value)

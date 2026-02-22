@@ -9,7 +9,7 @@ internal class Message : StanzaHandler, IMessageHandler
 {
     ConversationType? type;
 
-    string? subject, body;
+    string? subject, body, nick;
     ChatState? state;
 
     public Message(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
@@ -34,6 +34,11 @@ internal class Message : StanzaHandler, IMessageHandler
     async ValueTask IMessageHandler.Subject(string? text)
     {
         SetOnce(ref subject, text);
+    }
+
+    async ValueTask ISenderDetails.Nickname(string? text)
+    {
+        SetOnce(ref nick, text);
     }
 
     async ValueTask IMessageHandler.Active()
@@ -72,7 +77,12 @@ internal class Message : StanzaHandler, IMessageHandler
         {
             throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");
         }
-        var sender = new Sender(Session.AccountName, Session.RemoteResource?.ResourceIdentifier);
+
+        var sender = new Sender(
+            Account: AccountName,
+            Identifier: RemoteResource.ResourceIdentifier,
+            Nickname: nick
+        );
 
         var message =
             (subject != null || body != null)
