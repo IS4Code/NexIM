@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 namespace Unicord.Xmpp.Protocol;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct XmppResource(XmppAddress Address, string? ResourceIdentifier)
 {
-    static readonly Regex resourceRegex = new("^(?:(.{1,1023})@)?([^@/]{1,1023})(?:/(.{1,1023}))?$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Singleline);
+    bool Validated { get; init; }
+
+    public const int MaxLength = XmppAddress.MaxComponentLength * 3 + 2;
 
     public XmppResource Bare => new(Address, null);
 
@@ -36,27 +37,53 @@ public readonly record struct XmppResource(XmppAddress Address, string? Resource
         return value.IsWiderThan(this);
     }
 
+    public static XmppResource Parse(ReadOnlySpan<char> span)
+    {
+        int resourceStart = span.IndexOf('/');
+        if(resourceStart == -1)
+        {
+            return new(XmppAddress.Parse(span), null);
+        }
+        else
+        {
+            var resourcePart = span.Slice(resourceStart + 1);
+            XmppAddress.ValidateResourceComponent(resourcePart);
+            return new(XmppAddress.Parse(span.Slice(0, resourceStart)), resourcePart.ToString())
+            {
+                Validated = true
+            };
+        }
+    }
+
     public static XmppResource Parse(string text)
     {
-        if(resourceRegex.Match(text) is not { Success: true } match)
+        int resourceStart = text.IndexOf('/');
+        if(resourceStart == -1)
         {
-            throw new ArgumentException("The resource address is invalid.", nameof(text), XmppStanzaException.JidMalformed());
+            return new(XmppAddress.Parse(text), null);
         }
-        var user = match.Groups[1];
-        var resource = match.Groups[3];
-        return new(
-            user.Success ? user.Value : null,
-            match.Groups[2].Value,
-            resource.Success ? resource.Value : null
-        );
+        else
+        {
+            var resourcePart = text.AsSpan(resourceStart + 1);
+            XmppAddress.ValidateResourceComponent(resourcePart);
+            return new(XmppAddress.Parse(text.AsSpan(0, resourceStart)), resourcePart.ToString())
+            {
+                Validated = true
+            };
+        }
     }
 
     public override string ToString()
     {
+        bool validate = !Validated;
         if(ResourceIdentifier == null)
         {
-            return Address.ToString();
+            return Address.ToString(validate);
         }
-        return $"{Address}/{ResourceIdentifier}";
+        if(validate)
+        {
+            XmppAddress.ValidateResourceComponent(ResourceIdentifier.AsSpan());
+        }
+        return $"{Address.ToString(validate)}/{ResourceIdentifier}";
     }
 }
