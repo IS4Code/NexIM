@@ -26,7 +26,7 @@ static file class Constants
 
 [StructLayout(LayoutKind.Auto)]
 public record struct Stanza(
-    Token? Type = null,
+    Token<StanzaType>? Type = null,
     XmppResource? From = null,
     XmppResource? To = null,
     string? Identifier = null
@@ -102,14 +102,14 @@ public interface ITlsFeaturesHandler : IPayloadHandler
 public interface ICompressionFeaturesHandler : IPayloadHandler
 {
     [Name("method")]
-    ValueTask Method(Token? name);
+    ValueTask Method(Token<CompressionMethod>? name);
 }
 
 [ComplexType, Namespace(Compression)]
 public interface ICompressionHandler : IPayloadHandler
 {
     [Name("method")]
-    ValueTask Method(Token? name);
+    ValueTask Method(Token<CompressionMethod>? name);
 }
 
 [ComplexType, Namespace(Compression)]
@@ -129,7 +129,7 @@ public interface ICompressionFailureHandler : IPayloadHandler, IStanzaErrorHandl
 public interface IStanzaHandler : IPayloadHandler
 {
     [Name("error")]
-    ValueTask<IStanzaErrorHandler> Error([Name("type")] Token? type);
+    ValueTask<IStanzaErrorHandler> Error([Name("type")] Token<ErrorType>? type);
 }
 
 [ComplexType]
@@ -159,7 +159,7 @@ public interface IMessageHandler : IStanzaHandler, ISenderPresentation
 public interface IPresenceHandler : IStanzaHandler, ISenderPresentation
 {
     [Name("show")]
-    ValueTask Show(Token? text);
+    ValueTask Show(Token<StatusType>? text);
 
     [Name("status")]
     ValueTask Status(string? text);
@@ -188,8 +188,8 @@ public interface IRosterQueryHandler : IPayloadHandler
     ValueTask<IRosterItemHandler> Item(
         [Name("jid")] XmppResource? identifier,
         [Name("name")] string? name,
-        [Name("subscription")] Token? subscription,
-        [Name("ask")] Token? pending,
+        [Name("subscription")] Token<RosterSubscriptionDirection>? subscription,
+        [Name("ask")] Token<RosterPendingAction>? pending,
         [Name("approved")] bool? subscriptionApproved
     );
 }
@@ -279,37 +279,67 @@ public interface IStanzaErrorHandler : IPayloadHandler
     [Name("unexpected-request")] ValueTask UnexpectedRequest();
 }
 
+[SimpleType]
 public enum StanzaType
 {
-    Message,
-    Presence,
-    InfoQuery
+    [Name("error")] Error,
+
+    [Name("get")] Get,
+    [Name("set")] Set,
+    [Name("result")] Result,
+
+    [Name("normal")] Normal,
+    [Name("chat")] Chat,
+    [Name("groupchat")] GroupChat,
+    [Name("headline")] Headline,
+
+    [Name("subscribe")] Subscribe,
+    [Name("subscribed")] Subscribed,
+    [Name("unsubscribe")] Unsubscribe,
+    [Name("unsubscribed")] Unsubscribed,
+    [Name("unavailable")] Unavailable,
+    [Name("probe")] Probe
 }
 
-public enum MessageType
-{
-    Normal,
-    Chat,
-    GroupChat,
-    Headline,
-    Error
-}
-
+[SimpleType]
 public enum ErrorType
 {
-    Auth,
-    Cancel,
-    Continue,
-    Modify,
-    Wait
+    [Name("auth")] Auth,
+    [Name("cancel")] Cancel,
+    [Name("continue")] Continue,
+    [Name("modify")] Modify,
+    [Name("wait")] Wait
 }
 
-public enum InfoQueryType
+[SimpleType]
+public enum CompressionMethod
 {
-    Get,
-    Set,
-    Result,
-    Error
+    [Name("zlib")] ZLib
+}
+
+[SimpleType]
+public enum StatusType
+{
+    [Name("chat")] Chat,
+    [Name("away")] Away,
+    [Name("xa")] ExtendedAway,
+    [Name("dnd")] DoNotDisturb
+}
+
+[SimpleType]
+public enum RosterSubscriptionDirection
+{
+    [Name("none")] None,
+    [Name("to")] To,
+    [Name("from")] From,
+    [Name("both")] Both,
+    [Name("remove")] Remove
+}
+
+[SimpleType]
+public enum RosterPendingAction
+{
+    [Name("subscribe")] Subscription
 }
 
 public abstract class PayloadHandler : IPayloadHandler

@@ -13,7 +13,7 @@ internal class Compression : CommandHandler, ICompressionHandler
 
     }
 
-    async ValueTask ICompressionHandler.Method(Token? name)
+    async ValueTask ICompressionHandler.Method(Token<CompressionMethod>? name)
     {
         SetOnce(ref method, name);
     }

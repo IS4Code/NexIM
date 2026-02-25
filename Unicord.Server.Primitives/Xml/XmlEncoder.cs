@@ -7,7 +7,7 @@ namespace Unicord.Server.Primitives.Xml;
 /// <summary>
 /// Provides support for encoding to XML.
 /// </summary>
-public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token>
+public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -43,9 +43,14 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
         await writer.WriteBase64Async(segment.Array!, segment.Offset, segment.Count);
     }
 
-    async ValueTask IValueXmlEncoder<Token>.Encode(XmlWriter writer, Token value)
+    protected async ValueTask EncodeTokenAsync(XmlWriter writer, string tokenValue)
     {
-        await writer.WriteStringAsync(value.Value);
+        await writer.WriteStringAsync(tokenValue);
+    }
+
+    ValueTask IValueXmlEncoder<Token<Enum>>.Encode(XmlWriter writer, Token<Enum> token)
+    {
+        return EncodeTokenAsync(writer, token.Value);
     }
 }
 

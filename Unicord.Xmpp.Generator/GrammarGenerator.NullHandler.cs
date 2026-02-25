@@ -11,7 +11,7 @@ partial class GrammarGenerator
     private string GenerateNullHandler(IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
-        var writer = new IndentedTextWriter(new StringWriter(sb), "    ");
+        var writer = new IndentedTextWriter(new StringWriter(sb), indent);
 
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
@@ -20,9 +20,14 @@ partial class GrammarGenerator
         writer.WriteLine("#nullable disable");
         writer.Write("partial class NullHandler : IPayloadHandler, IStreamHandler");
 
-        // Implement all complex type interfaces
+        // Implement all interfaces
         foreach(var type in types)
         {
+            if(type.TypeKind != TypeKind.Interface)
+            {
+                continue;
+            }
+
             writer.Write(", ");
             writer.Write(GetQualifiedName(type));
         }
@@ -40,6 +45,11 @@ partial class GrammarGenerator
 
             foreach(var type in types)
             {
+                if(type.TypeKind != TypeKind.Interface)
+                {
+                    continue;
+                }
+
                 // Implement all methods having NameAttribute
                 foreach(var method in type.GetMembers().OfType<IMethodSymbol>())
                 {

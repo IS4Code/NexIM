@@ -8,7 +8,7 @@ namespace Unicord.Server.Primitives.Xml;
 /// <summary>
 /// Provides support for decoding from XML.
 /// </summary>
-public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token>
+public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token<Enum>>
 {
     protected abstract void ThrowElementNotEmpty();
     protected abstract void ThrowElementNotSimple();
@@ -148,7 +148,7 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
         }
     }
 
-    async ValueTask<Token> IValueXmlDecoder<Token>.Decode(XmlReader reader)
+    protected async ValueTask<string> DecodeTokenAsync(XmlReader reader)
     {
         var pool = ArrayPool<char>.Instance;
         var array = pool.Rent(16);
@@ -172,12 +172,17 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
                 }
             }
 
-            return new Token(reader.NameTable.Add(array, 0, total));
+            return reader.NameTable.Add(array, 0, total);
         }
         finally
         {
             pool.Return(array);
         }
+    }
+
+    async ValueTask<Token<Enum>> IValueXmlDecoder<Token<Enum>>.Decode(XmlReader reader)
+    {
+        return Token<Enum>.FromAtomized(await DecodeTokenAsync(reader));
     }
 
     static class ArrayPool<T>

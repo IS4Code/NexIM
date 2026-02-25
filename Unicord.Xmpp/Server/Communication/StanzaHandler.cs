@@ -6,7 +6,7 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
 {
-    readonly Token? type;
+    readonly Token<StanzaType>? type;
 
     public string? Type => type?.Value;
     public XmppResource? From { get; }
@@ -33,7 +33,7 @@ internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
         }
     }
 
-    ValueTask<IStanzaErrorHandler> IStanzaHandler.Error(Token? type)
+    ValueTask<IStanzaErrorHandler> IStanzaHandler.Error(Token<ErrorType>? type)
     {
         return Program.NotImplemented<IStanzaErrorHandler>();
     }

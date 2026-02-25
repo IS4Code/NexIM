@@ -10,7 +10,7 @@ public static class XmlExtensions
     public static int ReadContentAsChars(this XmlReader reader, char[] buffer, int index, int count)
     {
         int read = reader.ReadValueChunk(buffer, index, count);
-        if(read == 0 && count == 0)
+        if(read == 0 && count != 0)
         {
             // End of text
             reader.Read();
@@ -21,7 +21,7 @@ public static class XmlExtensions
     public static async ValueTask<int> ReadContentAsCharsAsync(this XmlReader reader, char[] buffer, int index, int count)
     {
         int read = await reader.ReadValueChunkAsync(buffer, index, count);
-        if(read == 0 && count == 0)
+        if(read == 0 && count != 0)
         {
             // End of text
             await reader.ReadAsync();

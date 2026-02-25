@@ -25,9 +25,9 @@ internal abstract class CommandHandler : IPayloadHandler
         Identifier = identifier;
     }
 
-    protected Stanza NewResponse(string? type = "result")
+    protected Stanza NewResponse(StanzaType? type = StanzaType.Result)
     {
-        return new Stanza(Type: type != null ? new(type) : null, Identifier: Identifier);
+        return new Stanza(Type: type?.ToToken(), Identifier: Identifier);
     }
 
     protected void SetOnce<T>(ref T storage, T value)

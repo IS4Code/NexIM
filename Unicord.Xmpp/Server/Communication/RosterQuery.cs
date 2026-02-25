@@ -17,7 +17,7 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
         cachedVersion = version;
     }
 
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token? subscription, Token? pending, bool? subscriptionApproved)
+    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
     {
         throw Unexpected();
     }
@@ -56,7 +56,7 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
 
     }
 
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token? subscription, Token? pending, bool? subscriptionApproved)
+    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
     {
         if(identifier is not { } id)
         {

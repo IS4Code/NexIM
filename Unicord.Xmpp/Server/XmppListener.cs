@@ -6,12 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
-using static XmppVocabulary;
+using static XmppVocabulary.Standard;
 
 public abstract class XmppListener<TClient>
 {
@@ -76,7 +77,7 @@ public abstract class XmppListener<TClient>
         // Receive the session and prepare handler for incoming commands
         await using var handler = await receiver.Connected(session);
 
-        (StanzaType type, string? id)? lastStanza = null;
+        (StanzaKind type, string? id)? lastStanza = null;
 
         await using PayloadHandlers handlers = new();
         try
@@ -115,7 +116,7 @@ public abstract class XmppListener<TClient>
                                     // TODO Verify that the resource matches exactly the host of the server
                                     session.LocalResource = XmppResource.Parse(to);
 
-                                    if(reader.GetAttribute(XmlLang, XmlNs) is { } lang)
+                                    if(reader.GetAttribute(Lang, XmlNs) is { } lang)
                                     {
                                         session.Language = lang;
                                     }
@@ -131,7 +132,7 @@ public abstract class XmppListener<TClient>
                                     await writer.WriteAttributeStringAsync(null, Version, null, "1.0");
                                     await writer.WriteAttributeStringAsync(null, From, null, session.LocalResource.ToString());
                                     await writer.WriteAttributeStringAsync(null, Id, null, session.StreamIdentifier);
-                                    await writer.WriteAttributeStringAsync(null, XmlLang, XmlNs, session.Language);
+                                    await writer.WriteAttributeStringAsync(null, Lang, XmlNs, session.Language);
 
                                     // Stream is ready
                                     await handler.StreamStarted();
@@ -213,15 +214,15 @@ public abstract class XmppListener<TClient>
                     await OnError(xe, async exc => {
                         if(command == null)
                         {
-                            var stanza = new Stanza(Type: new("error"), Identifier: lastStanza?.id);
+                            var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.id);
                             command = lastStanza?.type switch
                             {
-                                StanzaType.InfoQuery => await errorHandler.InfoQuery(stanza),
-                                StanzaType.Presence => await errorHandler.Presence(stanza),
+                                StanzaKind.InfoQuery => await errorHandler.InfoQuery(stanza),
+                                StanzaKind.Presence => await errorHandler.Presence(stanza),
                                 _ => await errorHandler.Message(stanza)
                             };
                         }
-                        return await command.Error(exc.Type != null ? new(exc.Type) : null);
+                        return await command.Error(exc.Type?.ToToken());
                     });
                     if(command != null)
                     {
@@ -309,9 +310,9 @@ public abstract class XmppListener<TClient>
                     switch(attrName[0])
                     {
                         case 't':
-                            if(attrName == TypeAttr)
+                            if(attrName == Type)
                             {
-                                stanza.Type = new(reader.NameTable.Add(reader.Value));
+                                stanza.Type = Token<StanzaType>.FromAtomized(reader.NameTable.Add(reader.Value));
                             }
                             else if(attrName == To)
                             {
@@ -344,7 +345,7 @@ public abstract class XmppListener<TClient>
         return stanza;
     }
 
-    private ValueTask<XmppDecoder.Result> EnterCommand(XmlReader reader, IStreamHandler handler, out (StanzaType, string?)? info)
+    private ValueTask<XmppDecoder.Result> EnterCommand(XmlReader reader, IStreamHandler handler, out (StanzaKind, string?)? info)
     {
         var elementName = reader.LocalName;
         var elementNs = reader.NamespaceURI;
@@ -356,7 +357,7 @@ public abstract class XmppListener<TClient>
                     if(elementName == Iq)
                     {
                         var stanza = ParseStanza(reader);
-                        info = (StanzaType.InfoQuery, stanza.Identifier);
+                        info = (StanzaKind.InfoQuery, stanza.Identifier);
                         return Success(handler.InfoQuery(stanza));
                     }
                     break;
@@ -364,7 +365,7 @@ public abstract class XmppListener<TClient>
                     if(elementName == Message)
                     {
                         var stanza = ParseStanza(reader);
-                        info = (StanzaType.Message, stanza.Identifier);
+                        info = (StanzaKind.Message, stanza.Identifier);
                         return Success(handler.Message(stanza));
                     }
                     break;
@@ -372,7 +373,7 @@ public abstract class XmppListener<TClient>
                     if(elementName == Presence)
                     {
                         var stanza = ParseStanza(reader);
-                        info = (StanzaType.Presence, stanza.Identifier);
+                        info = (StanzaKind.Presence, stanza.Identifier);
                         return Success(handler.Presence(stanza));
                     }
                     break;
@@ -422,5 +423,12 @@ public abstract class XmppListener<TClient>
                 await top.DisposeAsync();
             }
         }
+    }
+
+    private enum StanzaKind
+    {
+        Message,
+        Presence,
+        InfoQuery
     }
 }

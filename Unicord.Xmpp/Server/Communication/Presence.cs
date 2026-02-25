@@ -16,7 +16,7 @@ internal class Presence : StanzaHandler, IPresenceHandler
 
     }
 
-    async ValueTask IPresenceHandler.Show(Token? text)
+    async ValueTask IPresenceHandler.Show(Token<StatusType>? text)
     {
         SetOnce(ref show, text);
     }

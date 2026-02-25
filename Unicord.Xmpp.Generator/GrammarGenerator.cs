@@ -1,5 +1,6 @@
 ﻿using System;
 using System.CodeDom.Compiler;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
@@ -18,11 +19,15 @@ namespace Unicord.Xmpp.Generator;
 [Generator]
 public sealed partial class GrammarGenerator : IIncrementalGenerator
 {
+    const string indent = "    ";
+
     const string baseNs = nameof(Unicord) + "." + nameof(Xmpp);
     const string grammarNs = baseNs + ".Grammar";
     const string protocolNs = baseNs + ".Protocol";
     const string complexTypeAttributeSimpleName = "ComplexType";
+    const string simpleTypeAttributeSimpleName = "SimpleType";
     const string complexTypeAttributeFullName = grammarNs + "." + complexTypeAttributeSimpleName + "Attribute";
+    const string simpleTypeAttributeFullName = grammarNs + "." + simpleTypeAttributeSimpleName + "Attribute";
     const string namespaceAttributeFullName = grammarNs + "." + "NamespaceAttribute";
     const string nameAttributeFullName = grammarNs + "." + "NameAttribute";
 
@@ -38,26 +43,23 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
 
     private bool IsGrammarType(SyntaxNode node)
     {
-        if(node is ClassDeclarationSyntax { Identifier.Text: "XmppDecoder" or "XmppVocabulary" })
-        {
-            // Include these types because their implementation is generated
-            return true;
-        }
-        if(node is not InterfaceDeclarationSyntax declaration)
+        if(node is not (BaseTypeDeclarationSyntax declaration and (InterfaceDeclarationSyntax or EnumDeclarationSyntax)))
         {
             return false;
         }
-        // Has [ComplexType]
+        // Has [ComplexType] or [SimpleType]
         return declaration.AttributeLists.Any(
             list => list.Attributes.Any(
-                attr => GetLocalName(attr.Name) is complexTypeAttributeSimpleName or complexTypeAttributeSimpleName + "Attribute"
+                attr => GetLocalName(attr.Name) is
+                    complexTypeAttributeSimpleName or complexTypeAttributeSimpleName + "Attribute" or
+                    simpleTypeAttributeSimpleName or simpleTypeAttributeSimpleName + "Attribute"
             )
         );
     }
 
     private ITypeSymbol? GetGrammarType(GeneratorSyntaxContext context)
     {
-        if(context.Node is not InterfaceDeclarationSyntax declaration)
+        if(context.Node is not (BaseTypeDeclarationSyntax declaration and (InterfaceDeclarationSyntax or EnumDeclarationSyntax)))
         {
             return null;
         }
@@ -67,7 +69,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
             return null;
         }
 
-        if(!type.GetAttributes().Any(a => GetQualifiedName(a.AttributeClass) == complexTypeAttributeFullName))
+        if(!type.GetAttributes().Any(a => GetQualifiedName(a.AttributeClass) is complexTypeAttributeFullName or simpleTypeAttributeFullName))
         {
             return null;
         }
@@ -77,17 +79,18 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
 
     private void Execute(SourceProductionContext context, ImmutableArray<ITypeSymbol?> types)
     {
-        var realTypes = types.Where(t => t != null);
+        var realTypes = (IEnumerable<ITypeSymbol>)types.Where(t => t != null);
 
-        context.AddSource("XmppEncoder.Generated.cs", GenerateEncoder(realTypes!));
-        context.AddSource("XmppDecoder.Generated.cs", GenerateDecoder(realTypes!));
-        context.AddSource("NullHandler.Generated.cs", GenerateNullHandler(realTypes!));
+        context.AddSource("XmppEncoder.Generated.cs", GenerateEncoder(realTypes));
+        context.AddSource("XmppDecoder.Generated.cs", GenerateDecoder(realTypes));
+        context.AddSource("NullHandler.Generated.cs", GenerateNullHandler(realTypes));
+        context.AddSource("Tokens.Generated.cs", GenerateTokens(realTypes));
     }
 
     private string GenerateEncoder(IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
-        var writer = new IndentedTextWriter(new StringWriter(sb), "    ");
+        var writer = new IndentedTextWriter(new StringWriter(sb), indent);
 
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
@@ -97,7 +100,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         writer.WriteLine("#nullable disable");
         writer.Write("partial class XmppEncoder");
 
-        // Implement all complex type interfaces
+        // Implement all interfaces
         bool firstImplementation = true;
         foreach(var type in types)
         {
@@ -111,7 +114,15 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                 writer.Write(", ");
             }
 
-            writer.Write(GetQualifiedName(type));
+            switch(type.TypeKind)
+            {
+                case TypeKind.Interface:
+                    writer.Write(Format(type));
+                    break;
+                case TypeKind.Enum:
+                    writer.Write($"IValueXmlEncoder<Token<{Format(type)}>>");
+                    break;
+            }
         }
 
         writer.WriteLine();
@@ -120,6 +131,11 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         {
             foreach(var type in types)
             {
+                if(type.TypeKind != TypeKind.Interface)
+                {
+                    continue;
+                }
+
                 var defaultNs = GetNamespace(type);
 
                 // Implement all methods having NameAttribute
@@ -233,6 +249,25 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                     writer.WriteLine("}");
                 }
             }
+
+            foreach(var type in types)
+            {
+                if(type.TypeKind != TypeKind.Enum)
+                {
+                    continue;
+                }
+
+                // Explicit encoder implementation
+
+                var tokenType = $"Token<{Format(type)}>";
+
+                writer.WriteLine($"ValueTask IValueXmlEncoder<{tokenType}>.Encode(XmlWriter writer, {tokenType} token)");
+                writer.WriteLine("{");
+                writer.Indent++;
+                writer.WriteLine($"return this.EncodeTokenAsync(writer, token.Value);");
+                writer.Indent--;
+                writer.WriteLine("}");
+            };
         }
         writer.Indent--;
         writer.WriteLine("}");
@@ -267,7 +302,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     private string GenerateDecoder(IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
-        var writer = new IndentedTextWriter(new StringWriter(sb), "    ");
+        var writer = new IndentedTextWriter(new StringWriter(sb), indent);
 
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
@@ -285,45 +320,77 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         writer.WriteLine("{");
         writer.Indent++;
         {
-            foreach(var type in types)
+            writer.WriteLine("internal static class Generated");
+            writer.WriteLine("{");
+            writer.Indent++;
             {
-                AddKey(GetNamespace(type));
-                foreach(var method in type.GetMembers().OfType<IMethodSymbol>())
+                foreach(var type in types)
                 {
-                    if(GetName(method) is not var (localName, ns))
+                    if(type.TypeKind != TypeKind.Interface)
                     {
                         continue;
                     }
 
-                    // Remember this method by the local name
-                    if(!methods.TryGetValue(localName, out var list))
+                    AddKey(GetNamespace(type), null);
+                    foreach(var method in type.GetMembers().OfType<IMethodSymbol>())
                     {
-                        methods[localName] = list = new();
-                    }
-                    list.Add(method);
-
-                    AddKey(localName);
-                    AddKey(ns);
-                    foreach(var param in method.Parameters)
-                    {
-                        if(GetName(param) is var (attrName, attrNs))
+                        if(GetName(method) is not var (localName, ns))
                         {
-                            AddKey(attrName);
-                            AddKey(attrNs);
+                            continue;
+                        }
+
+                        // Remember this method by the local name
+                        if(!methods.TryGetValue(localName, out var list))
+                        {
+                            methods[localName] = list = new();
+                        }
+                        list.Add(method);
+
+                        AddKey(localName, null);
+                        AddKey(ns, null);
+                        foreach(var param in method.Parameters)
+                        {
+                            if(GetName(param) is var (attrName, attrNs))
+                            {
+                                AddKey(attrName, null);
+                                AddKey(attrNs, null);
+                            }
                         }
                     }
                 }
-            }
-            void AddKey(string? key)
-            {
-                if(key == null || vocabulary.ContainsKey(key))
+                foreach(var type in types)
                 {
-                    return;
+                    if(type.TypeKind != TypeKind.Enum)
+                    {
+                        continue;
+                    }
+
+                    foreach(var field in type.GetMembers().OfType<IFieldSymbol>())
+                    {
+                        if(GetName(field) is not var (localName, ns))
+                        {
+                            continue;
+                        }
+
+                        AddKey(localName, type);
+                        AddKey(ns, null);
+                    }
                 }
-                var encoded = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(GetXmlSimpleName(key)).Replace(" ", "");
-                vocabulary[key] = encoded;
-                writer.WriteLine($"internal static readonly Token {encoded} = new({key});");
+                void AddKey(string? key, ITypeSymbol? tokenType)
+                {
+                    if(key == null || vocabulary.ContainsKey(key))
+                    {
+                        return;
+                    }
+                    var encoded = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(GetXmlSimpleName(key)).Replace(" ", "");
+                    vocabulary[key] = encoded;
+                    var type = $"Token<{Format(tokenType) ?? "Enum"}>";
+                    writer.WriteLine($"internal static readonly {type} {encoded} = {type}.FromAtomized({key});");
+                }
             }
+            writer.Indent--;
+            writer.WriteLine("}");
+
             writer.WriteLine("private partial void AddKey(string key);");
             writer.WriteLine("private partial void AddKeys()");
             writer.WriteLine("{");
@@ -332,7 +399,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                 // Add all cached tokens
                 foreach(var encoded in vocabulary.Values)
                 {
-                    writer.WriteLine($"AddKey({encoded});");
+                    writer.WriteLine($"AddKey(Generated.{encoded});");
                 }
             }
             writer.Indent--;
@@ -351,10 +418,34 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
             {
                 return "\"\"";
             }
-            return $"XmppVocabulary.{vocabulary[key]}";
+            return $"XmppVocabulary.Generated.{vocabulary[key]}";
         }
 
-        writer.WriteLine("partial class XmppDecoder");
+        writer.Write("partial class XmppDecoder");
+
+        // Implement all token encoders
+        bool firstImplementation = true;
+        foreach(var type in types)
+        {
+            if(type.TypeKind != TypeKind.Enum)
+            {
+                continue;
+            }
+
+            if(firstImplementation)
+            {
+                firstImplementation = false;
+                writer.Write(" : ");
+            }
+            else
+            {
+                writer.Write(", ");
+            }
+
+            writer.Write($"IValueXmlDecoder<Token<{Format(type)}>>");
+        }
+        writer.WriteLine();
+
         writer.WriteLine("{");
         writer.Indent++;
         {
@@ -366,251 +457,191 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                 writer.WriteLine("var elementName = reader.LocalName;");
                 writer.WriteLine("var elementNs = reader.NamespaceURI;");
 
-                Switch(names, 0);
+                Switch(names);
             }
             writer.WriteLine("return new(false, null);");
             writer.Indent--;
             writer.WriteLine("}");
+
+            foreach(var type in types)
+            {
+                if(type.TypeKind != TypeKind.Enum)
+                {
+                    continue;
+                }
+
+                // Explicit decoder implementation
+
+                var tokenType = $"Token<{Format(type)}>";
+
+                writer.WriteLine($"async ValueTask<{tokenType}> IValueXmlDecoder<{tokenType}>.Decode(XmlReader reader)");
+                writer.WriteLine("{");
+                writer.Indent++;
+                writer.WriteLine($"return {tokenType}.FromAtomized(await this.DecodeTokenAsync(reader));");
+                writer.Indent--;
+                writer.WriteLine("}");
+            };
         }
         writer.Indent--;
         writer.WriteLine("}");
 
-        void Switch(IEnumerable<(string key, string name, IEnumerable<IMethodSymbol> list)> names, int pos)
+        void Switch(IEnumerable<(string key, string name, IEnumerable<IMethodSymbol> list)> names)
         {
-            writer.WriteLine($"switch(elementName[{pos}])");
-            writer.WriteLine("{");
-            writer.Indent++;
-            {
-                foreach(var group in names.GroupBy(t => t.name[pos]))
+            Partition(writer, "elementName", list => {
+                bool firstNamespaceCheck = true;
+
+                int payloadCounter = 0;
+
+                foreach(var method in list)
                 {
-                    writer.WriteLine($"case '{group.Key}':");
-
-                    // Number of characters needed to do another partitioning
-                    int minLongerLength = pos + 2;
-
-                    // Names that would (not) be partitioned
-                    var longer = group.Where(p => p.name.Length >= minLongerLength);
-                    var shorter = group.Where(p => p.name.Length < minLongerLength);
-
-                    const int minCountToNestedSwitch = 5;
-                    if(longer.Take(minCountToNestedSwitch).Count() >= minCountToNestedSwitch)
+                    if(GetName(method) is not var (_, ns))
                     {
-                        // Too many checks, partition again
+                        continue;
+                    }
 
-                        // Find the prefix from which differences start to occur
-                        var sample = longer.First().name;
-                        var differenceFrom = Enumerable.Range(minLongerLength, sample.Length - minLongerLength + 1).Where(length => {
-                            var prefix = sample.Substring(0, length);
-                            // Not a common prefix
-                            return !longer.All(t => t.name.StartsWith(prefix, StringComparison.Ordinal));
-                        }).Select(l => (int?)l).FirstOrDefault() ?? (sample.Length - 1);
+                    // If no namespace, use the type's attribute
+                    ns ??= GetNamespace(method.ContainingType);
 
-                        if(differenceFrom > minCountToNestedSwitch)
-                        {
-                            // Partition only those that differ after the common prefix
-
-                            longer = group.Where(p => p.name.Length >= differenceFrom);
-                            shorter = group.Where(p => p.name.Length < differenceFrom);
-                        }
-
-                        writer.WriteLine($"if(elementName.Length >= {differenceFrom})");
-                        writer.WriteLine("{");
-                        writer.Indent++;
-                        Switch(longer, differenceFrom - 1);
-                        writer.Indent--;
-                        writer.WriteLine("}");
-
-                        if(shorter.Any())
-                        {
-                            // Check the rest
-                            writer.WriteLine("else");
-                        }
+                    if(firstNamespaceCheck)
+                    {
+                        firstNamespaceCheck = false;
                     }
                     else
                     {
-                        shorter = group;
+                        writer.Write("else ");
                     }
 
-                    bool firstNameCheck = true;
-                    foreach(var (elementName, name, list) in shorter)
+                    writer.WriteLine($"if(elementNs == {Key(ns)} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
+                    writer.WriteLine("{");
+                    writer.Indent++;
                     {
-                        // Matches element name first character
+                        // Can be handled
 
-                        if(firstNameCheck)
+                        int varCounter = 0;
+
+                        AnalyzeMethod(method, out var returnsHandler, out var valueParam, out var attributeParams);
+                        foreach(var pair2 in attributeParams)
                         {
-                            firstNameCheck = false;
-                        }
-                        else
-                        {
-                            writer.Write("else ");
-                        }
+                            var (attrName, attrNs) = pair2.Key;
+                            var param = pair2.Value;
 
-                        writer.WriteLine($"if(elementName == {Key(elementName)})");
-                        writer.WriteLine("{");
-                        writer.Indent++;
-                        {
-                            bool firstNamespaceCheck = true;
+                            var paramType = GetUnderlyingType(param.Type);
+                            var typeName = GetQualifiedName(paramType);
 
-                            int payloadCounter = 0;
+                            // Get value from attribute
 
-                            foreach(var method in list)
+                            UsingIfDisposable(paramType);
+                            writer.Write($"var {param.Name} = ");
+                            if(typeName == typeof(string).FullName)
                             {
-                                if(GetName(method) is not var (_, ns))
+                                // Just use the default as fallback
+                                writer.Write($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) ?? ");
+                            }
+                            else if(typeName.StartsWith("System.", StringComparison.Ordinal))
+                            {
+                                // Standard support
+                                var readerMethod = $"ReadContentAs{paramType.Name switch
                                 {
-                                    continue;
-                                }
-
-                                // If no namespace, use the type's attribute
-                                ns ??= GetNamespace(method.ContainingType);
-
-                                if(firstNamespaceCheck)
+                                    // XmlReader names
+                                    "Int64" => "Long",
+                                    "Single" => "Float",
+                                    var n => n
+                                }}";
+                                if(typeof(XmlReader).GetMethod(readerMethod) != null)
                                 {
-                                    firstNamespaceCheck = false;
+                                    // Read directly
+                                    writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? reader.{readerMethod}() : ");
                                 }
                                 else
                                 {
-                                    writer.Write("else ");
+                                    // Through converter
+                                    var varName = $"v{++varCounter}";
+                                    writer.Write($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) is {{ }} {varName} ? XmlConvert.To{paramType.Name}({varName}) : ");
                                 }
-
-                                writer.WriteLine($"if(elementNs == {Key(ns)} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
-                                writer.WriteLine("{");
-                                writer.Indent++;
-                                {
-                                    // Can be handled
-
-                                    int varCounter = 0;
-
-                                    AnalyzeMethod(method, out var returnsHandler, out var valueParam, out var attributeParams);
-                                    foreach(var pair2 in attributeParams)
-                                    {
-                                        var (attrName, attrNs) = pair2.Key;
-                                        var param = pair2.Value;
-
-                                        var paramType = GetUnderlyingType(param.Type);
-                                        var typeName = GetQualifiedName(paramType);
-
-                                        // Get value from attribute
-
-                                        UsingIfDisposable(paramType);
-                                        writer.Write($"var {param.Name} = ");
-                                        if(typeName == typeof(string).FullName)
-                                        {
-                                            // Just use the default as fallback
-                                            writer.Write($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) ?? ");
-                                        }
-                                        else if(typeName.StartsWith("System.", StringComparison.Ordinal))
-                                        {
-                                            // Standard support
-                                            var readerMethod = $"ReadContentAs{paramType.Name switch
-                                            {
-                                                // XmlReader names
-                                                "Int64" => "Long",
-                                                "Single" => "Float",
-                                                var n => n
-                                            }}";
-                                            if(typeof(XmlReader).GetMethod(readerMethod) != null)
-                                            {
-                                                // Read directly
-                                                writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? reader.{readerMethod}() : ");
-                                            }
-                                            else
-                                            {
-                                                // Through converter
-                                                var varName = $"v{++varCounter}";
-                                                writer.Write($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) is {{ }} {varName} ? XmlConvert.To{paramType.Name}({varName}) : ");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // Go through decoder
-                                            writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this) : ");
-                                        }
-                                        DefaultParamValue(param);
-                                        writer.WriteLine(";");
-                                    }
-
-                                    if(returnsHandler)
-                                    {
-                                        // Open payload
-                                        writer.Write("return new(true, ");
-                                        Call();
-                                        writer.WriteLine(");");
-                                    }
-                                    else
-                                    {
-                                        if(valueParam is { } param)
-                                        {
-                                            var paramType = GetUnderlyingType(param.Type);
-                                            var typeName = GetQualifiedName(paramType);
-
-                                            // Get value from content
-
-                                            UsingIfDisposable(paramType);
-                                            writer.Write($"var {param.Name} = await this.OpenElement(reader) ? this.CloseElement(reader, ");
-                                            if(typeName == typeof(string).FullName)
-                                            {
-                                                writer.Write($"await reader.ReadContentAsStringAsync()");
-                                            }
-                                            else if(typeName == typeof(object).FullName)
-                                            {
-                                                writer.Write($"await reader.ReadContentAsObjectAsync()");
-                                            }
-                                            else if(typeName.StartsWith("System.", StringComparison.Ordinal))
-                                            {
-                                                // Always through converter
-                                                writer.Write($"XmlConvert.To{paramType.Name}(await reader.ReadContentAsStringAsync())");
-                                            }
-                                            else
-                                            {
-                                                // Go through decoder
-                                                writer.Write($"await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this)");
-                                            }
-                                            writer.Write(") : ");
-                                            DefaultParamValue(param);
-                                            writer.WriteLine(";");
-                                        }
-                                        else
-                                        {
-                                            // Expect empty content
-                                            writer.WriteLine("await this.EmptyElement(reader);");
-                                        }
-                                        // Call and return
-                                        Call();
-                                        writer.WriteLine(";");
-                                        writer.WriteLine("return new(true, null);");
-                                    }
-
-                                    void Call()
-                                    {
-                                        writer.Write($"await payloadHandler{payloadCounter}.{method.Name}(");
-                                        bool first = true;
-                                        foreach(var param in method.Parameters)
-                                        {
-                                            if(first)
-                                            {
-                                                first = false;
-                                            }
-                                            else
-                                            {
-                                                writer.Write(", ");
-                                            }
-                                            writer.Write(param.Name);
-                                        }
-                                        writer.Write(')');
-                                    }
-                                }
-                                writer.Indent--;
-                                writer.WriteLine("}");
                             }
+                            else
+                            {
+                                // Go through decoder
+                                writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this) : ");
+                            }
+                            DefaultParamValue(param);
+                            writer.WriteLine(";");
                         }
-                        writer.Indent--;
-                        writer.WriteLine("}");
+
+                        if(returnsHandler)
+                        {
+                            // Open payload
+                            writer.Write("return new(true, ");
+                            Call();
+                            writer.WriteLine(");");
+                        }
+                        else
+                        {
+                            if(valueParam is { } param)
+                            {
+                                var paramType = GetUnderlyingType(param.Type);
+                                var typeName = GetQualifiedName(paramType);
+
+                                // Get value from content
+
+                                UsingIfDisposable(paramType);
+                                writer.Write($"var {param.Name} = await this.OpenElement(reader) ? this.CloseElement(reader, ");
+                                if(typeName == typeof(string).FullName)
+                                {
+                                    writer.Write($"await reader.ReadContentAsStringAsync()");
+                                }
+                                else if(typeName == typeof(object).FullName)
+                                {
+                                    writer.Write($"await reader.ReadContentAsObjectAsync()");
+                                }
+                                else if(typeName.StartsWith("System.", StringComparison.Ordinal))
+                                {
+                                    // Always through converter
+                                    writer.Write($"XmlConvert.To{paramType.Name}(await reader.ReadContentAsStringAsync())");
+                                }
+                                else
+                                {
+                                    // Go through decoder
+                                    writer.Write($"await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this)");
+                                }
+                                writer.Write(") : ");
+                                DefaultParamValue(param);
+                                writer.WriteLine(";");
+                            }
+                            else
+                            {
+                                // Expect empty content
+                                writer.WriteLine("await this.EmptyElement(reader);");
+                            }
+                            // Call and return
+                            Call();
+                            writer.WriteLine(";");
+                            writer.WriteLine("return new(true, null);");
+                        }
+
+                        void Call()
+                        {
+                            writer.Write($"await payloadHandler{payloadCounter}.{method.Name}(");
+                            bool first = true;
+                            foreach(var param in method.Parameters)
+                            {
+                                if(first)
+                                {
+                                    first = false;
+                                }
+                                else
+                                {
+                                    writer.Write(", ");
+                                }
+                                writer.Write(param.Name);
+                            }
+                            writer.Write(')');
+                        }
                     }
-                    writer.WriteLine("break;");
+                    writer.Indent--;
+                    writer.WriteLine("}");
                 }
-            }
-            writer.Indent--;
-            writer.WriteLine("}");
+            }, names.Select(item => (item.name, item.list)), 0);
         }
 
         writer.Dispose();
@@ -635,6 +666,90 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                 writer.Write($"default({Format(param.Type)})");
             }
         }
+    }
+    
+    private static void Partition<TElement>(IndentedTextWriter writer, string nameVariable, Action<TElement> handler, IEnumerable<(string name, TElement element)> names, int pos)
+    {
+        writer.WriteLine($"switch({nameVariable}[{pos}])");
+        writer.WriteLine("{");
+        writer.Indent++;
+        {
+            foreach(var group in names.GroupBy(t => t.name[pos]))
+            {
+                writer.WriteLine($"case {SymbolDisplay.FormatLiteral(group.Key, true)}:");
+
+                // Number of characters needed to do another partitioning
+                int minLongerLength = pos + 2;
+
+                // Names that would (not) be partitioned
+                var longer = group.Where(p => p.name.Length >= minLongerLength);
+                var shorter = group.Where(p => p.name.Length < minLongerLength);
+
+                const int minCountToNestedSwitch = 5;
+                if(longer.Take(minCountToNestedSwitch).Count() >= minCountToNestedSwitch)
+                {
+                    // Too many checks, partition again
+
+                    // Find the prefix from which differences start to occur
+                    var sample = longer.First().name;
+                    var differenceFrom = Enumerable.Range(minLongerLength, sample.Length - minLongerLength + 1).Where(length => {
+                        var prefix = sample.Substring(0, length);
+                        // Not a common prefix
+                        return !longer.All(t => t.name.StartsWith(prefix, StringComparison.Ordinal));
+                    }).Select(l => (int?)l).FirstOrDefault() ?? (sample.Length - 1);
+
+                    if(differenceFrom > minCountToNestedSwitch)
+                    {
+                        // Partition only those that differ after the common prefix
+
+                        longer = group.Where(p => p.name.Length >= differenceFrom);
+                        shorter = group.Where(p => p.name.Length < differenceFrom);
+                    }
+
+                    writer.WriteLine($"if({nameVariable}.Length >= {differenceFrom})");
+                    writer.WriteLine("{");
+                    writer.Indent++;
+                    Partition(writer, nameVariable, handler, longer, differenceFrom - 1);
+                    writer.Indent--;
+                    writer.WriteLine("}");
+
+                    if(shorter.Any())
+                    {
+                        // Check the rest
+                        writer.WriteLine("else");
+                    }
+                }
+                else
+                {
+                    shorter = group;
+                }
+
+                bool firstNameCheck = true;
+                foreach(var item in shorter)
+                {
+                    // Matches element name first character
+
+                    if(firstNameCheck)
+                    {
+                        firstNameCheck = false;
+                    }
+                    else
+                    {
+                        writer.Write("else ");
+                    }
+
+                    writer.WriteLine($"if({nameVariable} == (object){SymbolDisplay.FormatLiteral(item.name, true)})");
+                    writer.WriteLine("{");
+                    writer.Indent++;
+                    handler(item.element);
+                    writer.Indent--;
+                    writer.WriteLine("}");
+                }
+                writer.WriteLine("break;");
+            }
+        }
+        writer.Indent--;
+        writer.WriteLine("}");
     }
 
     private static void AnalyzeMethod(IMethodSymbol method, out bool returnsHandler, out IParameterSymbol? valueParam, out Dictionary<(string localName, string? ns), IParameterSymbol> attributeParams)
@@ -711,9 +826,9 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         return (localName, ns);
     }
 
-    private static string Format(ISymbol symbol)
+    private static string? Format(ISymbol? symbol)
     {
-        return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        return symbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
     }
 
     private static string? GetLocalName(NameSyntax name)

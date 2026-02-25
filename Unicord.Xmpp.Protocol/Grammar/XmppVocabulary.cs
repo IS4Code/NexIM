@@ -10,27 +10,30 @@ namespace Unicord.Xmpp.Grammar;
 /// </summary>
 public abstract partial class XmppVocabulary : XmlNameTable
 {
-    public static readonly Token Empty = new("");
+    public static class Standard
+    {
+        public static readonly Token<Enum> Empty = Token<Enum>.FromAtomized("");
 
-    public static readonly Token Xmlns = new("xmlns");
-    public static readonly Token XmlnsNs = new("http://www.w3.org/2000/xmlns/");
-    public static readonly Token XmlNs = new("http://www.w3.org/XML/1998/namespace");
-    public static readonly Token XmlLang = new("lang");
+        public static readonly Token<Enum> Xmlns = Token<Enum>.FromAtomized("xmlns");
+        public static readonly Token<Enum> XmlnsNs = Token<Enum>.FromAtomized("http://www.w3.org/2000/xmlns/");
+        public static readonly Token<Enum> XmlNs = Token<Enum>.FromAtomized("http://www.w3.org/XML/1998/namespace");
+        public static readonly Token<Enum> Lang = Token<Enum>.FromAtomized("lang");
 
-    public static readonly Token StreamsNs = new("http://etherx.jabber.org/streams");
-    public static readonly Token JabberClientNs = new("jabber:client");
+        public static readonly Token<Enum> StreamsNs = Token<Enum>.FromAtomized("http://etherx.jabber.org/streams");
+        public static readonly Token<Enum> JabberClientNs = Token<Enum>.FromAtomized("jabber:client");
 
-    public static readonly Token Stream = new("stream");
+        public static readonly Token<Enum> Stream = Token<Enum>.FromAtomized("stream");
 
-    public static readonly Token Message = new("message");
-    public static readonly Token Presence = new("presence");
-    public static readonly Token Iq = new("iq");
+        public static readonly Token<Enum> Message = Token<Enum>.FromAtomized("message");
+        public static readonly Token<Enum> Presence = Token<Enum>.FromAtomized("presence");
+        public static readonly Token<Enum> Iq = Token<Enum>.FromAtomized("iq");
 
-    public static readonly Token TypeAttr = new("type");
-    public static readonly Token Id = new("id");
-    public static readonly Token From = new("from");
-    public static readonly Token To = new("to");
-    public static readonly Token Version = new("version");
+        public static readonly Token<Enum> Type = Token<Enum>.FromAtomized("type");
+        public static readonly Token<Enum> Id = Token<Enum>.FromAtomized("id");
+        public static readonly Token<Enum> From = Token<Enum>.FromAtomized("from");
+        public static readonly Token<Enum> To = Token<Enum>.FromAtomized("to");
+        public static readonly Token<Enum> Version = Token<Enum>.FromAtomized("version");
+    }
 
     private partial void AddKeys();
 
@@ -41,28 +44,28 @@ public abstract partial class XmppVocabulary : XmlNameTable
 
     protected virtual void Initialize()
     {
-        AddKey(Empty);
-        AddKey(Xmlns);
-        AddKey(XmlnsNs);
-        AddKey(XmlNs);
-        AddKey(XmlLang);
+        AddKey(Standard.Empty.Value);
+        AddKey(Standard.Xmlns.Value);
+        AddKey(Standard.XmlnsNs.Value);
+        AddKey(Standard.XmlNs.Value);
+        AddKey(Standard.Lang.Value);
 
         AddKeys();
 
-        AddKey(StreamsNs);
-        AddKey(JabberClientNs);
+        AddKey(Standard.StreamsNs.Value);
+        AddKey(Standard.JabberClientNs.Value);
 
-        AddKey(Stream);
+        AddKey(Standard.Stream.Value);
 
-        AddKey(Message);
-        AddKey(Presence);
-        AddKey(Iq);
+        AddKey(Standard.Message.Value);
+        AddKey(Standard.Presence.Value);
+        AddKey(Standard.Iq.Value);
 
-        AddKey(TypeAttr);
-        AddKey(Id);
-        AddKey(From);
-        AddKey(To);
-        AddKey(Version);
+        AddKey(Standard.Type.Value);
+        AddKey(Standard.Id.Value);
+        AddKey(Standard.From.Value);
+        AddKey(Standard.To.Value);
+        AddKey(Standard.Version.Value);
 
         AddKey("stream:stream");
         foreach(char c in Enumerable.Range('a', ('z' - 'a') + 1))
