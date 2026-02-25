@@ -6,15 +6,15 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
 {
-    readonly Token<StanzaType>? type;
-
-    public string? Type => type?.Value;
+    public StanzaType? Type { get; }
     public XmppResource? From { get; }
     public XmppResource? To { get; }
 
     public StanzaHandler(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza.Identifier)
     {
+        Token<StanzaType>? type;
         (type, From, To, _) = stanza;
+        Type = type?.ToEnum();
     }
 
     protected void EnsureReceiverIsServer()

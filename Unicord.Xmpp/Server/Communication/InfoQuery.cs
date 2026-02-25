@@ -14,7 +14,7 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
 
     public async override ValueTask DisposeAsync()
     {
-        if(handled != true && Type is not ("result" or "error"))
+        if(handled != true && Type is not (StanzaType.Result or StanzaType.Error))
         {
             throw XmppStanzaException.FeatureNotImplemented();
         }
@@ -28,9 +28,9 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
         EnsureReceiverIsServer();
         switch(Type)
         {
-            case "get":
+            case StanzaType.Get:
                 return new GetAuthQuery(Server, Session, Identifier);
-            case "set":
+            case StanzaType.Set:
                 return new SetAuthQuery(Server, Session, Identifier);
             default:
                 return NullHandler.Instance;
@@ -45,9 +45,9 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
         EnsureReceiverIsAccount();
         switch(Type)
         {
-            case "get":
+            case StanzaType.Get:
                 return new GetRosterQuery(Server, Session, Identifier, version);
-            case "set":
+            case StanzaType.Set:
                 return new SetRosterQuery(Server, Session, Identifier);
             default:
                 return NullHandler.Instance;

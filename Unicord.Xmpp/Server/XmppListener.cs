@@ -116,23 +116,23 @@ public abstract class XmppListener<TClient>
                                     // TODO Verify that the resource matches exactly the host of the server
                                     session.LocalResource = XmppResource.Parse(to);
 
-                                    if(reader.GetAttribute(Lang, XmlNs) is { } lang)
+                                    if(reader.GetAttribute(Lang.Value, XmlNs.Value) is { } lang)
                                     {
                                         session.Language = lang;
                                     }
 
                                     var writer = session.Writer;
 
-                                    await writer.WriteStartElementAsync(Stream, Stream, StreamsNs);
-                                    await writer.WriteAttributeStringAsync(Xmlns, Stream, XmlnsNs, StreamsNs);
-                                    await writer.WriteAttributeStringAsync(null, Xmlns, null, JabberClientNs);
+                                    await writer.WriteStartElementAsync(Stream.Value, Stream.Value, StreamsNs.Value);
+                                    await writer.WriteAttributeStringAsync(Xmlns.Value, Stream.Value, XmlnsNs.Value, StreamsNs.Value);
+                                    await writer.WriteAttributeStringAsync(null, Xmlns.Value, null, JabberClientNs.Value);
 
                                     session.StreamIdentifier = Guid.NewGuid().ToString("N");
 
-                                    await writer.WriteAttributeStringAsync(null, Version, null, "1.0");
-                                    await writer.WriteAttributeStringAsync(null, From, null, session.LocalResource.ToString());
-                                    await writer.WriteAttributeStringAsync(null, Id, null, session.StreamIdentifier);
-                                    await writer.WriteAttributeStringAsync(null, Lang, XmlNs, session.Language);
+                                    await writer.WriteAttributeStringAsync(null, Version.Value, null, "1.0");
+                                    await writer.WriteAttributeStringAsync(null, From.Value, null, session.LocalResource.ToString());
+                                    await writer.WriteAttributeStringAsync(null, Id.Value, null, session.StreamIdentifier);
+                                    await writer.WriteAttributeStringAsync(null, Lang.Value, XmlNs.Value, session.Language);
 
                                     // Stream is ready
                                     await handler.StreamStarted();

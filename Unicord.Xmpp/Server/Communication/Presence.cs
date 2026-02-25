@@ -8,7 +8,8 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class Presence : StanzaHandler, IPresenceHandler
 {
-    string? show, status, nick;
+    StatusType? show;
+    string? status, nick;
     sbyte? priority;
 
     public Presence(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
@@ -18,7 +19,7 @@ internal class Presence : StanzaHandler, IPresenceHandler
 
     async ValueTask IPresenceHandler.Show(Token<StatusType>? text)
     {
-        SetOnce(ref show, text);
+        SetOnce(ref show, text?.ToEnum());
     }
 
     async ValueTask IPresenceHandler.Status(string? text)
@@ -60,12 +61,11 @@ internal class Presence : StanzaHandler, IPresenceHandler
             // TODO Handle To
             Session.ClientSession?.SubscribeToPresenceUpdates();
             await Server.StatusUpdate(Account, RemoteResource.ResourceIdentifier, sender, new Status(
-                show switch
-                {
-                    "chat" => Availability.Chatting,
-                    "away" => Availability.Away,
-                    "xa" => Availability.Gone,
-                    "dnd" => Availability.Busy,
+                show switch {
+                    StatusType.Chat => Availability.Chatting,
+                    StatusType.Away => Availability.Away,
+                    StatusType.ExtendedAway => Availability.Gone,
+                    StatusType.DoNotDisturb => Availability.Busy,
                     _ => Availability.Available
                 },
                 status
@@ -82,16 +82,16 @@ internal class Presence : StanzaHandler, IPresenceHandler
 
         switch(Type)
         {
-            case "subscribe":
+            case StanzaType.Subscribe:
                 await Server.SendSubscribeRequest(Account, sender, target);
                 break;
-            case "subscribed":
+            case StanzaType.Subscribed:
                 await Server.SendSubscribeResponse(Account, sender, target);
                 break;
-            case "unsubscribe":
+            case StanzaType.Unsubscribe:
                 await Server.SendUnsubscribeNotification(Account, sender, target);
                 break;
-            case "unsubscribed":
+            case StanzaType.Unsubscribed:
                 await Server.SendSubscribeCancellation(Account, sender, target);
                 break;
             default:

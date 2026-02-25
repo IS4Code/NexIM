@@ -46,19 +46,19 @@ public abstract class XmppXmlSession : XmppSession
 
     protected sealed override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
-        var handler = new StanzaHandler(XmppVocabulary.Standard.Message, stanza, this);
+        var handler = new StanzaHandler(XmppVocabulary.Standard.Message.Value, stanza, this);
         return Enter<IMessageHandler>(handler);
     }
 
     protected sealed override ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
     {
-        var handler = new StanzaHandler(XmppVocabulary.Standard.Presence, stanza, this);
+        var handler = new StanzaHandler(XmppVocabulary.Standard.Presence.Value, stanza, this);
         return Enter<IPresenceHandler>(handler);
     }
 
     protected sealed override ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
-        var handler = new StanzaHandler(XmppVocabulary.Standard.Iq, stanza, this);
+        var handler = new StanzaHandler(XmppVocabulary.Standard.Iq.Value, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
     }
 
@@ -250,23 +250,23 @@ public abstract class XmppXmlSession : XmppSession
         protected async override ValueTask AcquireImpl()
         {
             var writer = Writer;
-            await writer.WriteStartElementAsync(null, kind, XmppVocabulary.Standard.JabberClientNs);
+            await writer.WriteStartElementAsync(null, kind, XmppVocabulary.Standard.JabberClientNs.Value);
 
             if(stanza.Type is { } type)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.Type, null, type);
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.Type.Value, null, type.Value);
             }
             if(stanza.From is { } from)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.From, null, from.ToString());
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.From.Value, null, from.ToString());
             }
             if(stanza.To is { } to)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.To, null, to.ToString());
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.To.Value, null, to.ToString());
             }
             if(stanza.Identifier is { } identifier)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.Id, null, identifier);
+                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.Id.Value, null, identifier);
             }
         }
     }

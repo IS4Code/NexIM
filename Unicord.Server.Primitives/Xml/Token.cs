@@ -52,9 +52,4 @@ public readonly record struct Token<TEnum> where TEnum : Enum
     {
         return !ReferenceEquals(a.Value, b);
     }
-
-    public static implicit operator string(Token<TEnum> obj)
-    {
-        return obj.Value;
-    }
 }

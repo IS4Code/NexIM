@@ -6,7 +6,7 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class Compression : CommandHandler, ICompressionHandler
 {
-    string? method;
+    CompressionMethod? method;
 
     public Compression(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
     {
@@ -15,7 +15,7 @@ internal class Compression : CommandHandler, ICompressionHandler
 
     async ValueTask ICompressionHandler.Method(Token<CompressionMethod>? name)
     {
-        SetOnce(ref method, name);
+        SetOnce(ref method, name?.ToEnum());
     }
 
     public async override ValueTask DisposeAsync()
@@ -27,7 +27,7 @@ internal class Compression : CommandHandler, ICompressionHandler
             return;
         }
 
-        if(method != "zlib")
+        if(method != CompressionMethod.ZLib)
         {
             await using var failure = await Session.CompressionFailure();
             await failure.UnsupportedMethod();
