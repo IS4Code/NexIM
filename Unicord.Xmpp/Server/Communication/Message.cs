@@ -14,7 +14,7 @@ internal class Message : StanzaHandler, IMessageHandler
 
     public Message(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
     {
-        type = stanza.Type switch
+        type = stanza.Type?.Value switch
         {
             null => null,
             "normal" => ConversationType.Normal,

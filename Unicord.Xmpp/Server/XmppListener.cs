@@ -213,7 +213,7 @@ public abstract class XmppListener<TClient>
                     await OnError(xe, async exc => {
                         if(command == null)
                         {
-                            var stanza = new Stanza(Type: "error", Identifier: lastStanza?.id);
+                            var stanza = new Stanza(Type: new("error"), Identifier: lastStanza?.id);
                             command = lastStanza?.type switch
                             {
                                 StanzaType.InfoQuery => await errorHandler.InfoQuery(stanza),
@@ -221,7 +221,7 @@ public abstract class XmppListener<TClient>
                                 _ => await errorHandler.Message(stanza)
                             };
                         }
-                        return await command.Error(exc.Type);
+                        return await command.Error(exc.Type != null ? new(exc.Type) : null);
                     });
                     if(command != null)
                     {
@@ -311,7 +311,7 @@ public abstract class XmppListener<TClient>
                         case 't':
                             if(attrName == TypeAttr)
                             {
-                                stanza.Type = reader.Value;
+                                stanza.Type = new(reader.NameTable.Add(reader.Value));
                             }
                             else if(attrName == To)
                             {

@@ -1,17 +1,20 @@
 ﻿using System.Threading.Tasks;
+using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
 
 internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
 {
-    public string? Type { get; }
+    readonly Token? type;
+
+    public string? Type => type?.Value;
     public XmppResource? From { get; }
     public XmppResource? To { get; }
 
     public StanzaHandler(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza.Identifier)
     {
-        (Type, From, To, _) = stanza;
+        (type, From, To, _) = stanza;
     }
 
     protected void EnsureReceiverIsServer()
@@ -30,7 +33,7 @@ internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
         }
     }
 
-    ValueTask<IStanzaErrorHandler> IStanzaHandler.Error(string? type)
+    ValueTask<IStanzaErrorHandler> IStanzaHandler.Error(Token? type)
     {
         return Program.NotImplemented<IStanzaErrorHandler>();
     }

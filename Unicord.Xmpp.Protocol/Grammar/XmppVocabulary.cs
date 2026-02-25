@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Xml;
+using Unicord.Server.Primitives.Xml;
 
 namespace Unicord.Xmpp.Grammar;
 
@@ -9,27 +10,27 @@ namespace Unicord.Xmpp.Grammar;
 /// </summary>
 public abstract partial class XmppVocabulary : XmlNameTable
 {
-    public static readonly Key Empty = new("");
+    public static readonly Token Empty = new("");
 
-    public static readonly Key Xmlns = new("xmlns");
-    public static readonly Key XmlnsNs = new("http://www.w3.org/2000/xmlns/");
-    public static readonly Key XmlNs = new("http://www.w3.org/XML/1998/namespace");
-    public static readonly Key XmlLang = new("lang");
+    public static readonly Token Xmlns = new("xmlns");
+    public static readonly Token XmlnsNs = new("http://www.w3.org/2000/xmlns/");
+    public static readonly Token XmlNs = new("http://www.w3.org/XML/1998/namespace");
+    public static readonly Token XmlLang = new("lang");
 
-    public static readonly Key StreamsNs = new("http://etherx.jabber.org/streams");
-    public static readonly Key JabberClientNs = new("jabber:client");
+    public static readonly Token StreamsNs = new("http://etherx.jabber.org/streams");
+    public static readonly Token JabberClientNs = new("jabber:client");
 
-    public static readonly Key Stream = new("stream");
+    public static readonly Token Stream = new("stream");
 
-    public static readonly Key Message = new("message");
-    public static readonly Key Presence = new("presence");
-    public static readonly Key Iq = new("iq");
+    public static readonly Token Message = new("message");
+    public static readonly Token Presence = new("presence");
+    public static readonly Token Iq = new("iq");
 
-    public static readonly Key TypeAttr = new("type");
-    public static readonly Key Id = new("id");
-    public static readonly Key From = new("from");
-    public static readonly Key To = new("to");
-    public static readonly Key Version = new("version");
+    public static readonly Token TypeAttr = new("type");
+    public static readonly Token Id = new("id");
+    public static readonly Token From = new("from");
+    public static readonly Token To = new("to");
+    public static readonly Token Version = new("version");
 
     private partial void AddKeys();
 
@@ -79,34 +80,6 @@ public abstract partial class XmppVocabulary : XmlNameTable
         if (!ReferenceEquals(key, Add(key)))
         {
             throw new NotSupportedException("The key reference is invalid.");
-        }
-    }
-
-    public readonly record struct Key(string Value)
-    {
-        public static bool operator ==(string a, Key b)
-        {
-            return ReferenceEquals(a, b.Value);
-        }
-
-        public static bool operator !=(string a, Key b)
-        {
-            return !ReferenceEquals(a, b.Value);
-        }
-
-        public static bool operator ==(Key a, string b)
-        {
-            return ReferenceEquals(a.Value, b);
-        }
-
-        public static bool operator !=(Key a, string b)
-        {
-            return !ReferenceEquals(a.Value, b);
-        }
-
-        public static implicit operator string(Key key)
-        {
-            return key.Value;
         }
     }
 }

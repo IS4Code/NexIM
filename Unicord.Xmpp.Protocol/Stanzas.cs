@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Unicord.Server.Primitives;
+using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Grammar;
 
 namespace Unicord.Xmpp.Protocol;
@@ -25,7 +26,7 @@ static file class Constants
 
 [StructLayout(LayoutKind.Auto)]
 public record struct Stanza(
-    string? Type = null,
+    Token? Type = null,
     XmppResource? From = null,
     XmppResource? To = null,
     string? Identifier = null
@@ -101,14 +102,14 @@ public interface ITlsFeaturesHandler : IPayloadHandler
 public interface ICompressionFeaturesHandler : IPayloadHandler
 {
     [Name("method")]
-    ValueTask Method(string? name);
+    ValueTask Method(Token? name);
 }
 
 [ComplexType, Namespace(Compression)]
 public interface ICompressionHandler : IPayloadHandler
 {
     [Name("method")]
-    ValueTask Method(string? name);
+    ValueTask Method(Token? name);
 }
 
 [ComplexType, Namespace(Compression)]
@@ -128,7 +129,7 @@ public interface ICompressionFailureHandler : IPayloadHandler, IStanzaErrorHandl
 public interface IStanzaHandler : IPayloadHandler
 {
     [Name("error")]
-    ValueTask<IStanzaErrorHandler> Error([Name("type")] string? type);
+    ValueTask<IStanzaErrorHandler> Error([Name("type")] Token? type);
 }
 
 [ComplexType]
@@ -158,7 +159,7 @@ public interface IMessageHandler : IStanzaHandler, ISenderPresentation
 public interface IPresenceHandler : IStanzaHandler, ISenderPresentation
 {
     [Name("show")]
-    ValueTask Show(string? text);
+    ValueTask Show(Token? text);
 
     [Name("status")]
     ValueTask Status(string? text);
@@ -187,8 +188,8 @@ public interface IRosterQueryHandler : IPayloadHandler
     ValueTask<IRosterItemHandler> Item(
         [Name("jid")] XmppResource? identifier,
         [Name("name")] string? name,
-        [Name("subscription")] string? subscription,
-        [Name("ask")] string? pending,
+        [Name("subscription")] Token? subscription,
+        [Name("ask")] Token? pending,
         [Name("approved")] bool? subscriptionApproved
     );
 }

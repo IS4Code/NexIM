@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server;
 using Unicord.Server.Model;
+using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
@@ -27,15 +28,15 @@ public class ClientSession : IClientSession
         Identifier = identifier;
     }
 
-    private string? MessageType(ConversationType? type)
+    private Token? MessageType(ConversationType? type)
     {
         return type switch
         {
-            ConversationType.Normal => "normal",
-            ConversationType.Chat => "chat",
-            ConversationType.GroupChat => "groupchat",
-            ConversationType.Headline => "headline",
-            ConversationType.Error => "error",
+            ConversationType.Normal => new("normal"),
+            ConversationType.Chat => new("chat"),
+            ConversationType.GroupChat => new("groupchat"),
+            ConversationType.Headline => new("headline"),
+            ConversationType.Error => new("error"),
             _ => null
         };
     }
@@ -157,16 +158,16 @@ public class ClientSession : IClientSession
 
         var from = GetResource(sender);
 
-        var type = status.Availability == Availability.Unavailable ? "unavailable" : null;
+        var type = status.Availability == Availability.Unavailable ? new Token("unavailable") : (Token?)null;
 
         await using var presence = await xmpp.Presence(new Stanza(From: from, To: xmpp.RemoteResource, Type: type));
 
         if(status.Availability switch {
-            Availability.Chatting => "chat",
-            Availability.Away => "away",
-            Availability.Gone => "xa",
-            Availability.Busy => "dnd",
-            _ => null
+            Availability.Chatting => new Token("chat"),
+            Availability.Away => new Token("away"),
+            Availability.Gone => new Token("xa"),
+            Availability.Busy => new Token("dnd"),
+            _ => (Token?)null
         } is { } show)
         {
             await presence.Show(show);
@@ -184,7 +185,7 @@ public class ClientSession : IClientSession
     {
         var from = GetResource(sender);
 
-        await using var presence = await xmpp.Presence(new Stanza(From: from.Bare, To: xmpp.RemoteResource, Type: type));
+        await using var presence = await xmpp.Presence(new Stanza(From: from.Bare, To: xmpp.RemoteResource, Type: new(type)));
 
         await WriteSender(sender.Presentation, presence);
     }
@@ -247,7 +248,7 @@ public class ClientSession : IClientSession
             return;
         }
 
-        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
+        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: new("set")));
 
         await using var roster = await iq.RosterQuery(GetContactsVersion(current));
         await SendContact(roster, contact);
@@ -260,10 +261,10 @@ public class ClientSession : IClientSession
             return;
         }
 
-        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
+        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: new("set")));
 
         await using var roster = await iq.RosterQuery(GetContactsVersion(current));
-        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, "remove", null, null);
+        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, new("remove"), null, null);
     }
 
     public static async ValueTask SendContact(IRosterQueryHandler roster, Contact contact)
@@ -276,11 +277,11 @@ public class ClientSession : IClientSession
 
         await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, contact.SubscriptionState.Direction switch
         {
-            SubscriptionDirection.To => "to",
-            SubscriptionDirection.From => "from",
-            SubscriptionDirection.Both => "both",
-            _ => "none"
-        }, contact.SubscriptionState.PendingTo ? "subscribe" : null, contact.SubscriptionState.ApprovedFrom);
+            SubscriptionDirection.To => new("to"),
+            SubscriptionDirection.From => new("from"),
+            SubscriptionDirection.Both => new("both"),
+            _ => new("none")
+        }, contact.SubscriptionState.PendingTo ? new("subscribe") : null, contact.SubscriptionState.ApprovedFrom);
 
         if(contact.Group is { } group)
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
+using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -16,7 +17,7 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
         cachedVersion = version;
     }
 
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, string? subscription, string? pending, bool? subscriptionApproved)
+    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token? subscription, Token? pending, bool? subscriptionApproved)
     {
         throw Unexpected();
     }
@@ -55,7 +56,7 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
 
     }
 
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, string? subscription, string? pending, bool? subscriptionApproved)
+    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token? subscription, Token? pending, bool? subscriptionApproved)
     {
         if(identifier is not { } id)
         {
@@ -65,7 +66,7 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
         // TODO verify?
         id = id.Bare;
 
-        SetOnce(ref item, (id, name, subscription == "remove"));
+        SetOnce(ref item, (id, name, subscription?.Value == "remove"));
         return new ItemHandler(this, Server, Session, null);
     }
 

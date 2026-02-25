@@ -8,7 +8,7 @@ namespace Unicord.Server.Primitives.Xml;
 /// <summary>
 /// Provides support for decoding from XML.
 /// </summary>
-public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>
+public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token>
 {
     protected abstract void ThrowElementNotEmpty();
     protected abstract void ThrowElementNotSimple();
@@ -99,7 +99,7 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
     }
 
     static readonly TemporaryString.AsynchronousReader<XmlReader> xmlTemporaryStringReader = static async (buffer, reader) => {
-        return await reader.ReadValueChunkAsync(buffer.Array!, buffer.Offset, buffer.Count);
+        return await reader.ReadContentAsCharsAsync(buffer.Array!, buffer.Offset, buffer.Count);
     };
 
     async ValueTask<TemporaryString> IValueXmlDecoder<TemporaryString>.Decode(XmlReader reader)
@@ -108,7 +108,6 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
         try
         {
             await str.ReadFromAsync(xmlTemporaryStringReader, reader);
-            await reader.ReadAsync();
             return str;
         }
         catch when(Dispose())
@@ -134,7 +133,6 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
         try
         {
             await arr.ReadFromAsync(xmlTemporaryByteArrayReader, reader);
-            await reader.ReadAsync();
             return arr;
         }
         catch when(Dispose())
@@ -147,6 +145,38 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
         {
             arr.Dispose();
             return false;
+        }
+    }
+
+    async ValueTask<Token> IValueXmlDecoder<Token>.Decode(XmlReader reader)
+    {
+        var pool = ArrayPool<char>.Instance;
+        var array = pool.Rent(16);
+        try
+        {
+            int total = 0;
+
+            // Read input chunks into a contiguous array
+
+            int read;
+            while((read = await reader.ReadContentAsCharsAsync(array, total, array.Length - total)) != 0)
+            {
+                total += read;
+                if(total == array.Length)
+                {
+                    // Rent a larger array (will pick an exponentially larger bucket)
+                    var larger = pool.Rent(array.Length + 1);
+                    array.CopyTo(larger, 0);
+                    pool.Return(array);
+                    array = larger;
+                }
+            }
+
+            return new Token(reader.NameTable.Add(array, 0, total));
+        }
+        finally
+        {
+            pool.Return(array);
         }
     }
 

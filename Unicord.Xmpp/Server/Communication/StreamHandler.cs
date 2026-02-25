@@ -29,7 +29,7 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
             if(Session.CanCompress)
             {
                 await using var comp = await features.Compression();
-                await comp.Method("zlib");
+                await comp.Method(new("zlib"));
             }
 
             await features.IqAuth();

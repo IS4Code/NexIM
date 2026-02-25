@@ -322,7 +322,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                 }
                 var encoded = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(GetXmlSimpleName(key)).Replace(" ", "");
                 vocabulary[key] = encoded;
-                writer.WriteLine($"internal static readonly Key {encoded} = new({key});");
+                writer.WriteLine($"internal static readonly Token {encoded} = new({key});");
             }
             writer.WriteLine("private partial void AddKey(string key);");
             writer.WriteLine("private partial void AddKeys()");

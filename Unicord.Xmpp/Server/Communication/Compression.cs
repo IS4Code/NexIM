@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -12,7 +13,7 @@ internal class Compression : CommandHandler, ICompressionHandler
 
     }
 
-    async ValueTask ICompressionHandler.Method(string? name)
+    async ValueTask ICompressionHandler.Method(Token? name)
     {
         SetOnce(ref method, name);
     }
