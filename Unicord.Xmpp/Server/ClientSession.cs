@@ -274,7 +274,7 @@ public class ClientSession : IClientSession
             return;
         }
 
-        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, contact.SubscriptionState.Accepted switch
+        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, contact.SubscriptionState.Direction switch
         {
             SubscriptionDirection.To => "to",
             SubscriptionDirection.From => "from",

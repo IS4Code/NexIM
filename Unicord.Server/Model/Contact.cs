@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Unicord.Server.Model;
 
-using static SubscriptionDirection;
+using static SubscriptionLevel;
 
 public record Contact(
     AccountName Account,
@@ -25,9 +25,8 @@ public record Contact(
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct SubscriptionState(
-    SubscriptionDirection Accepted,
-    SubscriptionDirection Approved,
-    SubscriptionDirection Pending
+    SubscriptionLevel From,
+    SubscriptionLevel To
 )
 {
     public bool AcceptedFrom => (Accepted & From) != 0;
@@ -36,6 +35,15 @@ public readonly record struct SubscriptionState(
     public bool ApprovedTo => (Approved & To) != 0;
     public bool PendingFrom => (Pending & From) != 0;
     public bool PendingTo => (Pending & To) != 0;
+
+    private SubscriptionDirection GetDirection(SubscriptionLevel level)
+    {
+        return
+            ((From & level) != 0 ? SubscriptionDirection.From : 0) |
+            ((To & level) != 0 ? SubscriptionDirection.To : 0);
+    }
+
+    public SubscriptionDirection Direction => GetDirection(Accepted);
 
     /// <summary>
     /// The initial state of a new contact added by the user.
@@ -65,42 +73,51 @@ public readonly record struct SubscriptionState(
     /// <summary>
     /// Clears any "approved/pending from" state and sets the "accepted from" and "approved to" state.
     /// </summary>
-    public SubscriptionState WithAcceptedFrom() => this with { Accepted = Accepted | From, Approved = (Approved & ~From) | To, Pending = Pending & ~From };
+    public SubscriptionState WithAcceptedFrom() => this with { From = Accepted, To = To | Approved };
 
     /// <summary>
     /// Clears the "pending to" state and sets the "accepted/approved to" state.
     /// </summary>
-    public SubscriptionState WithAcceptedTo() => this with { Accepted = Accepted | To, Approved = Approved | To, Pending = Pending & ~To };
+    public SubscriptionState WithAcceptedTo() => this with { To = Accepted | Approved };
 
     /// <summary>
     /// Clears any "accepted/pending from" state and sets the "approved from" and "approved to" state.
     /// </summary>
-    public SubscriptionState WithApprovedFrom() => this with { Accepted = (Accepted & ~From) | To, Approved = Approved | From, Pending = Pending & ~From };
+    public SubscriptionState WithApprovedFrom() => this with { From = Approved, To = To | Approved };
 
     /// <summary>
     /// Sets the "approved to" state.
     /// </summary>
-    public SubscriptionState WithApprovedTo() => this with { Approved = Approved | To };
+    public SubscriptionState WithApprovedTo() => this with { To = To | Approved };
 
     /// <summary>
     /// Clears the "accepted/approved from" and sets the "pending from" state.
     /// </summary>
-    public SubscriptionState WithPendingFrom() => this with { Accepted = Accepted & ~From, Approved = Approved & ~From, Pending = Pending | From };
+    public SubscriptionState WithPendingFrom() => this with { From = Pending };
 
     /// <summary>
     /// Clears the "accepted to" state and sets the "approved/pending to" state.
     /// </summary>
-    public SubscriptionState WithPendingTo() => this with { Accepted = Accepted & ~To, Approved = Approved | To, Pending = Pending | To };
+    public SubscriptionState WithPendingTo() => this with { To = Approved | Pending };
 
     /// <summary>
     /// Clears the "accepted/approved/pending from" state.
     /// </summary>
-    public SubscriptionState WithoutFrom() => this with { Accepted = Accepted & ~From, Approved = Approved & ~From, Pending = Pending & ~From };
+    public SubscriptionState WithoutFrom() => this with { From = 0 };
 
     /// <summary>
     /// Clears the "accepted/pending to" state.
     /// </summary>
-    public SubscriptionState WithoutTo() => this with { Accepted = Accepted & ~To, Pending = Pending & ~To };
+    public SubscriptionState WithoutTo() => this with { To = To & Approved };
+}
+
+[Flags]
+public enum SubscriptionLevel : byte
+{
+    None = 0,
+    Approved = 1,
+    Pending = 2,
+    Accepted = 4
 }
 
 [Flags]
