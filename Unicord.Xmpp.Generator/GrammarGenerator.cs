@@ -1,13 +1,10 @@
 ﻿using System;
 using System.CodeDom.Compiler;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.CodeAnalysis;
@@ -177,7 +174,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                         writer.WriteLine("var writer = this.Writer;");
 
                         // Element start
-                        writer.WriteLine($"await writer.WriteStartElementAsync(null, {localName}, {ns ?? "null"});");
+                        writer.WriteLine($"await writer.WriteStartElementAsync(null, {FormatLiteral(localName)}, {FormatLiteral(ns)});");
 
                         foreach(var pair in attributeParams)
                         {
@@ -194,14 +191,14 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                             writer.Indent++;
                             if(typeName.StartsWith("System."))
                             {
-                                writer.Write($"await writer.WriteAttributeStringAsync(null, {attrLocalName}, {attrNs ?? "null"}, ");
+                                writer.Write($"await writer.WriteAttributeStringAsync(null, {FormatLiteral(attrLocalName)}, {FormatLiteral(attrNs)}, ");
                                 ParamToString(paramVar, param.Type);
                                 writer.WriteLine(");");
                             }
                             else
                             {
                                 // Use encoder
-                                writer.WriteLine($"await this.WriteStartAttributeAsync(writer, null, {attrLocalName}, {attrNs ?? "null"});");
+                                writer.WriteLine($"await this.WriteStartAttributeAsync(writer, null, {FormatLiteral(attrLocalName)}, {FormatLiteral(attrNs)});");
                                 writer.WriteLine($"await this.Encode<{Format(paramType)}, XmppEncoder>(writer, {paramVar}, this);");
                                 writer.WriteLine($"await this.WriteEndAttributeAsync(writer);");
                             }
@@ -291,14 +288,6 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         }
     }
 
-    static readonly Regex nonLetterCharacters = new("[^a-zA-Z]+", RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-    static string GetXmlSimpleName(string text)
-    {
-        // Also replaces trailing "
-        return nonLetterCharacters.Replace(text, " ").Trim();
-    }
-
     private string GenerateDecoder(IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
@@ -312,7 +301,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         writer.WriteLine("#nullable disable");
         writer.WriteLine("partial class XmppVocabulary");
 
-        var vocabulary = new Dictionary<string, string>();
+        var vocabulary = new HashSet<string>();
         var methods = new Dictionary<string, List<IMethodSymbol>>();
 
         // Cache all vocabulary tokens
@@ -320,76 +309,65 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         writer.WriteLine("{");
         writer.Indent++;
         {
-            writer.WriteLine("internal static class Generated");
-            writer.WriteLine("{");
-            writer.Indent++;
+            foreach(var type in types)
             {
-                foreach(var type in types)
+                if(type.TypeKind != TypeKind.Interface)
                 {
-                    if(type.TypeKind != TypeKind.Interface)
+                    continue;
+                }
+
+                AddKey(GetNamespace(type));
+                foreach(var method in type.GetMembers().OfType<IMethodSymbol>())
+                {
+                    if(GetName(method) is not var (localName, ns))
                     {
                         continue;
                     }
 
-                    AddKey(GetNamespace(type), null);
-                    foreach(var method in type.GetMembers().OfType<IMethodSymbol>())
+                    // Remember this method by the local name
+                    if(!methods.TryGetValue(localName, out var list))
                     {
-                        if(GetName(method) is not var (localName, ns))
-                        {
-                            continue;
-                        }
+                        methods[localName] = list = new();
+                    }
+                    list.Add(method);
 
-                        // Remember this method by the local name
-                        if(!methods.TryGetValue(localName, out var list))
+                    AddKey(localName);
+                    AddKey(ns);
+                    foreach(var param in method.Parameters)
+                    {
+                        if(GetName(param) is var (attrName, attrNs))
                         {
-                            methods[localName] = list = new();
-                        }
-                        list.Add(method);
-
-                        AddKey(localName, null);
-                        AddKey(ns, null);
-                        foreach(var param in method.Parameters)
-                        {
-                            if(GetName(param) is var (attrName, attrNs))
-                            {
-                                AddKey(attrName, null);
-                                AddKey(attrNs, null);
-                            }
+                            AddKey(attrName);
+                            AddKey(attrNs);
                         }
                     }
-                }
-                foreach(var type in types)
-                {
-                    if(type.TypeKind != TypeKind.Enum)
-                    {
-                        continue;
-                    }
-
-                    foreach(var field in type.GetMembers().OfType<IFieldSymbol>())
-                    {
-                        if(GetName(field) is not var (localName, ns))
-                        {
-                            continue;
-                        }
-
-                        AddKey(localName, type);
-                        AddKey(ns, null);
-                    }
-                }
-                void AddKey(string? key, ITypeSymbol? tokenType)
-                {
-                    if(key == null || vocabulary.ContainsKey(key))
-                    {
-                        return;
-                    }
-                    var encoded = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(GetXmlSimpleName(key)).Replace(" ", "");
-                    vocabulary[key] = encoded;
-                    var type = $"Token<{Format(tokenType) ?? "Enum"}>";
-                    writer.WriteLine($"internal static readonly {type} {encoded} = {type}.FromAtomized({key});");
                 }
             }
-            writer.Indent--;
-            writer.WriteLine("}");
+            foreach(var type in types)
+            {
+                if(type.TypeKind != TypeKind.Enum)
+                {
+                    continue;
+                }
+
+                foreach(var field in type.GetMembers().OfType<IFieldSymbol>())
+                {
+                    if(GetName(field) is not var (localName, ns))
+                    {
+                        continue;
+                    }
+
+                    AddKey(localName);
+                    AddKey(ns);
+                }
+            }
+            void AddKey(string? key)
+            {
+                if(key != null)
+                {
+                    vocabulary.Add(key);
+                }
+            }
 
             writer.WriteLine("private partial void AddKey(string key);");
             writer.WriteLine("private partial void AddKeys()");
@@ -397,9 +375,9 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
             writer.Indent++;
             {
                 // Add all cached tokens
-                foreach(var encoded in vocabulary.Values)
+                foreach(var name in vocabulary)
                 {
-                    writer.WriteLine($"AddKey(Generated.{encoded});");
+                    writer.WriteLine($"AddKey({FormatLiteral(name)});");
                 }
             }
             writer.Indent--;
@@ -408,18 +386,9 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         writer.Indent--;
         writer.WriteLine("}");
 
-        var names = methods.Select(pair => (key: pair.Key, name: GetXmlSimpleName(pair.Key), list: (IEnumerable<IMethodSymbol>)pair.Value));
+        var names = methods.Select(pair => (name: pair.Key, list: (IEnumerable<IMethodSymbol>)pair.Value));
 
         // Generate decoder
-
-        string Key(string? key)
-        {
-            if(key == null)
-            {
-                return "\"\"";
-            }
-            return $"XmppVocabulary.Generated.{vocabulary[key]}";
-        }
 
         writer.Write("partial class XmppDecoder");
 
@@ -485,7 +454,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         writer.Indent--;
         writer.WriteLine("}");
 
-        void Switch(IEnumerable<(string key, string name, IEnumerable<IMethodSymbol> list)> names)
+        void Switch(IEnumerable<(string name, IEnumerable<IMethodSymbol> list)> names)
         {
             Partition(writer, "elementName", list => {
                 bool firstNamespaceCheck = true;
@@ -511,7 +480,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                         writer.Write("else ");
                     }
 
-                    writer.WriteLine($"if(elementNs == {Key(ns)} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
+                    writer.WriteLine($"if(elementNs == (object){FormatLiteral(ns ?? "")} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
                     writer.WriteLine("{");
                     writer.Indent++;
                     {
@@ -535,7 +504,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                             if(typeName == typeof(string).FullName)
                             {
                                 // Just use the default as fallback
-                                writer.Write($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) ?? ");
+                                writer.Write($"reader.GetAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ?? ");
                             }
                             else if(typeName.StartsWith("System.", StringComparison.Ordinal))
                             {
@@ -550,19 +519,19 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                                 if(typeof(XmlReader).GetMethod(readerMethod) != null)
                                 {
                                     // Read directly
-                                    writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? reader.{readerMethod}() : ");
+                                    writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? reader.{readerMethod}() : ");
                                 }
                                 else
                                 {
                                     // Through converter
                                     var varName = $"v{++varCounter}";
-                                    writer.Write($"reader.GetAttribute({Key(attrName)}, {Key(attrNs)}) is {{ }} {varName} ? XmlConvert.To{paramType.Name}({varName}) : ");
+                                    writer.Write($"reader.GetAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) is {{ }} {varName} ? XmlConvert.To{paramType.Name}({varName}) : ");
                                 }
                             }
                             else
                             {
                                 // Go through decoder
-                                writer.Write($"reader.MoveToAttribute({Key(attrName)}, {Key(attrNs)}) ? await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this) : ");
+                                writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this) : ");
                             }
                             DefaultParamValue(param);
                             writer.WriteLine(";");
@@ -641,7 +610,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                     writer.Indent--;
                     writer.WriteLine("}");
                 }
-            }, names.Select(item => (item.name, item.list)), 0);
+            }, names, 0);
         }
 
         writer.Dispose();
@@ -676,7 +645,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         {
             foreach(var group in names.GroupBy(t => t.name[pos]))
             {
-                writer.WriteLine($"case {SymbolDisplay.FormatLiteral(group.Key, true)}:");
+                writer.WriteLine($"case {FormatLiteral(group.Key)}:");
 
                 // Number of characters needed to do another partitioning
                 int minLongerLength = pos + 2;
@@ -738,7 +707,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                         writer.Write("else ");
                     }
 
-                    writer.WriteLine($"if({nameVariable} == (object){SymbolDisplay.FormatLiteral(item.name, true)})");
+                    writer.WriteLine($"if({nameVariable} == (object){FormatLiteral(item.name)})");
                     writer.WriteLine("{");
                     writer.Indent++;
                     handler(item.element);
@@ -786,7 +755,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         if(type.GetAttributes().FirstOrDefault(attr => GetQualifiedName(attr.AttributeClass) == namespaceAttributeFullName) is { } nsAttr)
         {
             // Default namespace for all elements within
-            return nsAttr.ConstructorArguments[0].ToCSharpString();
+            return nsAttr.ConstructorArguments[0].Value?.ToString();
         }
         return null;
     }
@@ -813,11 +782,12 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         }
 
         var nameArgs = attr.ConstructorArguments;
-        var localName = nameArgs[0].ToCSharpString();
+
+        var localName = nameArgs[0].Value!.ToString();
         string? ns;
         if(nameArgs.Length >= 2 && !nameArgs[1].IsNull)
         {
-            ns = nameArgs[1].ToCSharpString();
+            ns = nameArgs[1].Value?.ToString();
         }
         else
         {
@@ -829,6 +799,17 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     private static string? Format(ISymbol? symbol)
     {
         return symbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+    }
+
+    public static string? FormatLiteral(char literal)
+    {
+        return SymbolDisplay.FormatLiteral(literal, true);
+    }
+
+    public static string? FormatLiteral(string? literal)
+    {
+        if(literal == null) return "null";
+        return SymbolDisplay.FormatLiteral(literal, true);
     }
 
     private static string? GetLocalName(NameSyntax name)

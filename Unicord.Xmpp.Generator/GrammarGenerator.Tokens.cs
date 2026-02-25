@@ -55,9 +55,9 @@ partial class GrammarGenerator
                     var fieldName = Format(field)!;
 
                     // Case label
-                    writer.WriteLine($"{typeName}.{fieldName} => {name},");
+                    writer.WriteLine($"{typeName}.{fieldName} => {FormatLiteral(name)},");
 
-                    list.Add((GetXmlSimpleName(name), fieldName));
+                    list.Add((name, fieldName));
                 }
                 writer.WriteLine($"_ => throw new InvalidEnumArgumentException(null, (int)value, typeof({typeName}))");
                 writer.Indent--;
@@ -80,7 +80,7 @@ partial class GrammarGenerator
                     }
                     writer.Indent--;
                     writer.WriteLine("}");
-                    writer.WriteLine("return null;");
+                    writer.WriteLine($"return ({typeName})(-1);");
                 }
                 writer.Indent--;
                 writer.WriteLine("}");
