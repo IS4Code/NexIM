@@ -26,6 +26,7 @@ public interface IXmppHandler : IStreamHandler
 public interface IXmppReceivingHandler : IXmppHandler
 {
     ValueTask StreamStarted();
+    ValueTask StreamStopped();
 }
 
 /// <summary>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading;
@@ -251,10 +252,17 @@ public abstract class XmppListener<TClient>
             await OnStreamError(xe);
             throw;
         }
-        catch
+        catch when(!Debugger.IsAttached)
         {
             await OnStreamError(XmppStreamException.InternalServerError());
             throw;
+        }
+        finally
+        {
+            if(session.StreamIdentifier != null)
+            {
+                await handler.StreamStopped();
+            }
         }
 
         ValueTask<bool> Read(out XmlReader reader)

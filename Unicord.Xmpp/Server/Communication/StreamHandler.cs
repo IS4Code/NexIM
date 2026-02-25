@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -36,6 +35,14 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
             await features.IqAuth();
             await features.RosterVersion();
             await features.PreApproval();
+        }
+    }
+
+    async ValueTask IXmppReceivingHandler.StreamStopped()
+    {
+        if(Session.ClientSession is { } session)
+        {
+            Server.Sessions.RemoveSession(AccountName, session);
         }
     }
 
