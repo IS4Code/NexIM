@@ -39,6 +39,16 @@ public class Server
             await session.ContactRemoved(contact, contacts);
         }
 
+        var sender = new Sender(account.Name);
+        if(contact.SubscriptionState.AcceptedTo)
+        {
+            await ReceiveUnsubscribeNotification(sender, target);
+        }
+        if(contact.SubscriptionState.AcceptedFrom)
+        {
+            await ReceiveSubscribeCancellation(sender, target);
+        }
+
         return true;
     }
 
