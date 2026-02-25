@@ -7,30 +7,49 @@ namespace Unicord.Server;
 
 internal static class Immutable
 {
-    public static TValue AddOrUpdate<TKey, TValue, TArg>(ref ImmutableDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue> addFactory, Func<TKey, TValue, TArg, TValue> updateFactory, out ImmutableDictionary<TKey, TValue> finalState, TArg arg) where TKey : notnull
+    public static bool AddOrUpdate<TKey, TValue, TArg>(ref ImmutableDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue?> addFactory, Func<TKey, TValue, TArg, TValue?> updateFactory, out TValue? previous, out TValue? updated, out ImmutableDictionary<TKey, TValue> finalState, TArg arg) where TKey : notnull where TValue : class
     {
         while(true)
         {
             // Get the current state
-            var original = Volatile.Read(ref dictionary);
+            var originalDict = Volatile.Read(ref dictionary);
 
             // Create the item
-            var item = original.TryGetValue(key, out var existing) ? updateFactory(key, existing, arg) : addFactory(key, arg);
-
-            // Set the item
-            var updated = original.SetItem(key, item);
-            if(original == updated)
+            TValue? item;
+            if(originalDict.TryGetValue(key, out var existing))
             {
-                // No change
-                finalState = original;
-                return item;
+                previous = existing;
+                item = updateFactory(key, existing, arg);
+                if(item == existing)
+                {
+                    // No change
+                    updated = existing;
+                    finalState = originalDict;
+                    return false;
+                }
+            }
+            else
+            {
+                previous = null;
+                item = addFactory(key, arg);
             }
 
-            if(Interlocked.CompareExchange(ref dictionary, updated, original) == original)
+            // Process the item
+            var updatedDict = item == null ? originalDict.Remove(key) : originalDict.SetItem(key, item);
+            if(originalDict == updatedDict)
+            {
+                // No change
+                updated = item;
+                finalState = originalDict;
+                return false;
+            }
+
+            if(Interlocked.CompareExchange(ref dictionary, updatedDict, originalDict) == originalDict)
             {
                 // Unchanged in the meantime, store
-                finalState = updated;
-                return item;
+                updated = item;
+                finalState = updatedDict;
+                return true;
             }
         }
     }

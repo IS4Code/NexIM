@@ -13,9 +13,13 @@ public class ClientSession : IClientSession
 
     public sbyte Priority { get; set; }
 
-    bool receivesRosterUpdates;
+    bool receivesRosterUpdates, receivesPresenceUpdates;
+    ICollection<Contact>? lastUpdatedRoster;
 
     public string Identifier { get; }
+
+    public Sender Sender { get; set; }
+    public Status Status { get; set; }
 
     public ClientSession(IXmppSession xmpp, string identifier)
     {
@@ -41,6 +45,11 @@ public class ClientSession : IClientSession
         receivesRosterUpdates = true;
     }
 
+    public void SubscribeToPresenceUpdates()
+    {
+        receivesPresenceUpdates = true;
+    }
+
     async ValueTask IClientSession.Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState)
     {
         var from = GetResource(sender);
@@ -53,11 +62,8 @@ public class ClientSession : IClientSession
         }
 
         await using var msg = await xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
-        
-        if(sender.Nickname is { } nick)
-        {
-            await msg.Nickname(nick);
-        }
+
+        await WriteSender(sender.Presentation, msg);
         if(message.Subject is { } subject)
         {
             await msg.Subject(subject);
@@ -134,15 +140,109 @@ public class ClientSession : IClientSession
         }
     }
 
+    async ValueTask WriteSender(SenderPresentation sender, ISenderPresentation presence)
+    {
+        if(sender.Nickname is { } nick)
+        {
+            await presence.Nickname(nick);
+        }
+    }
+
+    async ValueTask IClientSession.StatusUpdate(Sender sender, Status status)
+    {
+        if(!receivesPresenceUpdates)
+        {
+            return;
+        }
+
+        var from = GetResource(sender);
+
+        var type = status.Availability == Availability.Unavailable ? "unavailable" : null;
+
+        await using var presence = await xmpp.Presence(new Stanza(From: from, To: xmpp.RemoteResource, Type: type));
+
+        if(status.Availability switch {
+            Availability.Chatting => "chat",
+            Availability.Away => "away",
+            Availability.Gone => "xa",
+            Availability.Busy => "dnd",
+            _ => null
+        } is { } show)
+        {
+            await presence.Show(show);
+        }
+
+        if(status.Description is { } description)
+        {
+            await presence.Status(description);
+        }
+
+        await WriteSender(sender.Presentation, presence);
+    }
+
+    private async ValueTask WritePresence(Sender sender, string type)
+    {
+        var from = GetResource(sender);
+
+        await using var presence = await xmpp.Presence(new Stanza(From: from.Bare, To: xmpp.RemoteResource, Type: type));
+
+        await WriteSender(sender.Presentation, presence);
+    }
+
+    async ValueTask IClientSession.SubscribeRequest(Sender sender)
+    {
+        await WritePresence(sender, "subscribe");
+    }
+
+    async ValueTask IClientSession.SubscribeResponse(Sender sender)
+    {
+        await WritePresence(sender, "subscribed");
+    }
+
+    async ValueTask IClientSession.UnsubscribeRequest(Sender sender)
+    {
+        await WritePresence(sender, "unsubscribe");
+    }
+
+    async ValueTask IClientSession.UnsubscribeResponse(Sender sender)
+    {
+        await WritePresence(sender, "unsubscribed");
+    }
+
     public static string GetContactsVersion(ICollection<Contact> contacts)
     {
         // New immutable instance each time
         return unchecked((uint)contacts.GetHashCode()).ToString("x08");
     }
 
-    async ValueTask IClientSession.ContactAdded(Contact contact, ICollection<Contact> current)
+    bool CheckContactUpdate(Contact contact, ICollection<Contact> current)
     {
         if(!receivesRosterUpdates)
+        {
+            // Not interested
+            return false;
+        }
+
+        if(current == lastUpdatedRoster)
+        {
+            // No update
+            return false;
+        }
+
+        lastUpdatedRoster = current;
+
+        if(!contact.SubscriptionState.ApprovedTo)
+        {
+            // Not explicitly added
+            return false;
+        }
+
+        return true;
+    }
+
+    async ValueTask IClientSession.ContactUpdated(Contact contact, ICollection<Contact> current)
+    {
+        if(!CheckContactUpdate(contact, current))
         {
             return;
         }
@@ -150,18 +250,12 @@ public class ClientSession : IClientSession
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
 
         await using var roster = await iq.RosterQuery(GetContactsVersion(current));
-        await using var item = await roster.Item(GetAddress(contact.Account), contact.Name, contact.SubscriptionState switch
-        {
-            SubscriptionState.To => "to",
-            SubscriptionState.From => "from",
-            SubscriptionState.Both => "both",
-            _ => "none"
-        });
+        await SendContact(roster, contact);
     }
 
     async ValueTask IClientSession.ContactRemoved(Contact contact, ICollection<Contact> current)
     {
-        if(!receivesRosterUpdates)
+        if(!CheckContactUpdate(contact, current))
         {
             return;
         }
@@ -169,12 +263,34 @@ public class ClientSession : IClientSession
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: "set"));
 
         await using var roster = await iq.RosterQuery(GetContactsVersion(current));
-        await using var item = await roster.Item(GetAddress(contact.Account), contact.Name, "remove");
+        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, "remove", null, null);
+    }
+
+    public static async ValueTask SendContact(IRosterQueryHandler roster, Contact contact)
+    {
+        if(!contact.SubscriptionState.ApprovedTo)
+        {
+            // Invisible
+            return;
+        }
+
+        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, contact.SubscriptionState.Accepted switch
+        {
+            SubscriptionDirection.To => "to",
+            SubscriptionDirection.From => "from",
+            SubscriptionDirection.Both => "both",
+            _ => "none"
+        }, contact.SubscriptionState.PendingTo ? "subscribe" : null, contact.SubscriptionState.ApprovedFrom);
+
+        if(contact.Group is { } group)
+        {
+            await item.Group(group);
+        }
     }
 
     internal static XmppAddress GetAddress(AccountName account)
     {
-        return account.Identifier is XmppAddress addr ? addr : XmppAddress.Parse(account.ToString());
+        return account.Identifier is XmppAddress addr ? addr : XmppResource.Parse(account.ToString() ?? "").Address;
     }
 
     internal static XmppResource GetResource(AccountName account, string? resourceIdentifier)

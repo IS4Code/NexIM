@@ -36,7 +36,7 @@ internal class Message : StanzaHandler, IMessageHandler
         SetOnce(ref subject, text);
     }
 
-    async ValueTask ISenderDetails.Nickname(string? text)
+    async ValueTask ISenderPresentation.Nickname(string? text)
     {
         SetOnce(ref nick, text);
     }
@@ -73,7 +73,7 @@ internal class Message : StanzaHandler, IMessageHandler
             throw XmppStanzaException.BadRequest("Receiver of a message is empty.");
         }
         var targetAccount = ClientSession.GetAccount(to, out var targetIdentifier);
-        if(Server.Sessions.GetSessions(targetAccount, targetIdentifier).FirstOrDefault() is not { } target)
+        if(Server.Sessions.GetSessions(targetAccount, targetIdentifier, false).FirstOrDefault() is not { } target)
         {
             throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");
         }
@@ -81,7 +81,7 @@ internal class Message : StanzaHandler, IMessageHandler
         var sender = new Sender(
             Account: AccountName,
             Identifier: RemoteResource.ResourceIdentifier,
-            Nickname: nick
+            Presentation: new SenderPresentation(Nickname: nick)
         );
 
         var message =

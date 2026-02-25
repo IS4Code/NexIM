@@ -1,7 +1,15 @@
-﻿namespace Unicord.Server.Model;
+﻿using System.Runtime.InteropServices;
 
+namespace Unicord.Server.Model;
+
+[StructLayout(LayoutKind.Auto)]
 public readonly record struct Sender(
     AccountName Account, 
-    string? Identifier,
+    string? Identifier = null,
+    SenderPresentation Presentation = default
+);
+
+[StructLayout(LayoutKind.Auto)]
+public readonly record struct SenderPresentation(
     string? Nickname
 );

@@ -85,6 +85,9 @@ public interface IFeaturesHandler : IPayloadHandler
 
     [Name("ver", "urn:xmpp:features:rosterver")]
     ValueTask RosterVersion();
+
+    [Name("sub", "urn:xmpp:features:pre-approval")]
+    ValueTask PreApproval();
 }
 
 [ComplexType, Namespace(XmppTls)]
@@ -129,14 +132,14 @@ public interface IStanzaHandler : IPayloadHandler
 }
 
 [ComplexType]
-public interface ISenderDetails : IPayloadHandler
+public interface ISenderPresentation : IPayloadHandler
 {
     [Name("nick", "http://jabber.org/protocol/nick")]
     ValueTask Nickname(string? text);
 }
 
 [ComplexType, Namespace(Client)]
-public interface IMessageHandler : IStanzaHandler, ISenderDetails
+public interface IMessageHandler : IStanzaHandler, ISenderPresentation
 {
     [Name("subject")]
     ValueTask Subject(string? text);
@@ -152,7 +155,7 @@ public interface IMessageHandler : IStanzaHandler, ISenderDetails
 }
 
 [ComplexType, Namespace(Client)]
-public interface IPresenceHandler : IStanzaHandler, ISenderDetails
+public interface IPresenceHandler : IStanzaHandler, ISenderPresentation
 {
     [Name("show")]
     ValueTask Show(string? text);
@@ -181,7 +184,13 @@ public interface IInfoQueryHandler : IStanzaHandler
 public interface IRosterQueryHandler : IPayloadHandler
 {
     [Name("item")]
-    ValueTask<IRosterItemHandler> Item([Name("jid")] XmppAddress? identifier, [Name("name")] string? name, [Name("subscription")] string? subscription);
+    ValueTask<IRosterItemHandler> Item(
+        [Name("jid")] XmppResource? identifier,
+        [Name("name")] string? name,
+        [Name("subscription")] string? subscription,
+        [Name("ask")] string? pending,
+        [Name("approved")] bool? subscriptionApproved
+    );
 }
 
 [ComplexType, Namespace(IqRoster)]

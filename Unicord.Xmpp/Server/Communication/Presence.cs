@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -24,7 +25,7 @@ internal class Presence : StanzaHandler, IPresenceHandler
         SetOnce(ref status, text);
     }
 
-    async ValueTask ISenderDetails.Nickname(string? text)
+    async ValueTask ISenderPresentation.Nickname(string? text)
     {
         SetOnce(ref nick, text);
     }
@@ -49,6 +50,51 @@ internal class Presence : StanzaHandler, IPresenceHandler
                 clientSession.Priority = newPriority;
                 Server.Sessions.AddOrUpdateSession(Session.AccountName, Session.ClientSession);
             }
+        }
+
+        var sender = new SenderPresentation(Nickname: nick);
+
+        if(Type == null)
+        {
+            // TODO Handle To
+            Session.ClientSession?.SubscribeToPresenceUpdates();
+            await Server.StatusUpdate(Account, RemoteResource.ResourceIdentifier, sender, new Status(
+                show switch
+                {
+                    "chat" => Availability.Chatting,
+                    "away" => Availability.Away,
+                    "xa" => Availability.Gone,
+                    "dnd" => Availability.Busy,
+                    _ => Availability.Available
+                },
+                status
+            ));
+            return;
+        }
+
+        if(To is not { } to)
+        {
+            throw XmppStanzaException.BadRequest();
+        }
+
+        var target = ClientSession.GetAccount(to, out _);
+
+        switch(Type)
+        {
+            case "subscribe":
+                await Server.SendSubscribeRequest(Account, sender, target);
+                break;
+            case "subscribed":
+                await Server.SendSubscribeResponse(Account, sender, target);
+                break;
+            case "unsubscribe":
+                await Server.SendUnsubscribeNotification(Account, sender, target);
+                break;
+            case "unsubscribed":
+                await Server.SendSubscribeCancellation(Account, sender, target);
+                break;
+            default:
+                throw XmppStanzaException.FeatureNotImplemented();
         }
     }
 }

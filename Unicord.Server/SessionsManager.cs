@@ -67,7 +67,7 @@ public class SessionsManager
         }
     }
 
-    public IEnumerable<IClientSession> GetSessions(AccountName account, string? identifier)
+    public IEnumerable<IClientSession> GetSessions(AccountName account, string? identifier, bool checkPriority)
     {
         if(!activeSessions.TryGetValue(account, out var sessions))
         {
@@ -76,18 +76,29 @@ public class SessionsManager
         }
         if(identifier == null)
         {
-            // All sessions with non-zero descending priority
-            var byPriority =
-                sessions.ByPriority
-                .TakeWhile(static pair => pair.Key >= 0)
-                .SelectMany(static pair => pair.Value);
+            if(checkPriority)
+            {
+                // All sessions with non-zero descending priority
+                var byPriority =
+                    sessions.ByPriority
+                    .TakeWhile(static pair => pair.Key >= 0)
+                    .SelectMany(static pair => pair.Value);
 
-            return byPriority;
+                return byPriority;
+            }
+            else
+            {
+                // Order is irrelevant
+                return sessions.ByIdentifier.Values;
+            }
         }
         else if(sessions.ByIdentifier.TryGetValue(identifier, out var session))
         {
             // Found
-            return new[] { session };
+            if(!checkPriority || session.Priority >= 0)
+            {
+                return new[] { session };
+            }
         }
         return Array.Empty<IClientSession>();
     }

@@ -16,7 +16,7 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
         cachedVersion = version;
     }
 
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppAddress? identifier, string? name, string? subscription)
+    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, string? subscription, string? pending, bool? subscriptionApproved)
     {
         throw Unexpected();
     }
@@ -40,23 +40,14 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
 
         foreach(var contact in contacts)
         {
-            await using var item = await roster.Item(ClientSession.GetAddress(contact.Account), contact.Name, contact.SubscriptionState switch {
-                SubscriptionState.To => "to",
-                SubscriptionState.From => "from",
-                SubscriptionState.Both => "both",
-                _ => "none"
-            });
-            if(contact.Group is { } group)
-            {
-                await item.Group(group);
-            }
+            await ClientSession.SendContact(roster, contact);
         }
     }
 }
 
 internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
 {
-    (XmppAddress id, string? name, bool remove)? item;
+    (XmppResource id, string? name, bool remove)? item;
     string? group;
 
     public SetRosterQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
@@ -64,12 +55,16 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
 
     }
 
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppAddress? identifier, string? name, string? subscription)
+    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, string? subscription, string? pending, bool? subscriptionApproved)
     {
         if(identifier is not { } id)
         {
             throw XmppStanzaException.BadRequest("JID is missing.");
         }
+
+        // TODO verify?
+        id = id.Bare;
+
         SetOnce(ref item, (id, name, subscription == "remove"));
         return new ItemHandler(this, Server, Session, null);
     }
@@ -83,7 +78,7 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
 
         var account = Account;
 
-        var target = ClientSession.GetAccount(id);
+        var target = ClientSession.GetAccount(id.Address);
         if(remove)
         {
             if(!await Server.RemoveContact(account, target))
@@ -93,7 +88,7 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
         }
         else
         {
-            if(!await Server.SetContact(account, new Contact(target, name, group)))
+            if(!await Server.SetContact(account, new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
             {
                 throw XmppStanzaException.ItemNotFound();
             }
