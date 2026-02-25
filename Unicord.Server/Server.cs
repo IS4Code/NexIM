@@ -105,8 +105,7 @@ public class Server
             // Auto-accepted from approved state - update and reply back
 
             await ContactUpdate(targetAccount, updated, contacts);
-
-            return await ReceiveSubscribeResponse(new Sender(target), sender.Account);
+            return await Subscribed(target, default, sender.Account);
         }
 
         if(!updated.SubscriptionState.PendingFrom)
@@ -132,7 +131,7 @@ public class Server
         return true;
     }
 
-    public async ValueTask<bool> SendSubscribeResponse(Account account, SenderPresentation sender, AccountName target)
+    public async ValueTask<bool> SendSubscribeResponse(Account account, SenderPresentation senderPresentation, AccountName target)
     {
         // Update confirmation
         if(!account.TrySetAcceptedSubscriptionFrom(target, out _, out var updated, out var contacts))
@@ -145,8 +144,7 @@ public class Server
         {
             // Inform of updated contact and reply back
             await ContactUpdate(account, updated, contacts);
-
-            return await ReceiveSubscribeResponse(new Sender(account.Name, Presentation: sender), target);
+            return await Subscribed(account.Name, senderPresentation, target);
         }
 
         if(!updated.SubscriptionState.ApprovedFrom)
@@ -176,6 +174,12 @@ public class Server
 
         // Inform of updated contact
         await ContactUpdate(targetAccount, updated, contacts);
+
+        // Route to sessions
+        foreach(var session in Sessions.GetSessions(target, null, false))
+        {
+            await session.SubscribeResponse(sender);
+        }
 
         return true;
     }
@@ -317,6 +321,26 @@ public class Server
         {
             await ContactRemove(account, previous, contacts);
         }
+    }
+
+    private async ValueTask<bool> Subscribed(AccountName account, SenderPresentation senderPresentation, AccountName target)
+    {
+        await ReceiveSubscribeResponse(new Sender(account, Presentation: senderPresentation), target);
+
+        foreach(var session in Sessions.GetSessions(account, null, false))
+        {
+            var status = session.Status;
+            if(status.Availability == Availability.Unavailable)
+            {
+                // Invisible
+                continue;
+            }
+
+            var sender = new Sender(account, session.Identifier, session.Presentation);
+            await StatusUpdate(sender, status, target);
+        }
+
+        return true;
     }
 
     public async ValueTask StatusUpdate(Account account, string? identifier, SenderPresentation senderPresentation, Status status)

@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server;
 using Unicord.Server.Model;
 using Unicord.Server.Primitives.Xml;
-using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
@@ -20,7 +18,7 @@ public class ClientSession : IClientSession
 
     public string Identifier { get; }
 
-    public Sender Sender { get; set; }
+    public SenderPresentation Presentation { get; set; }
     public Status Status { get; set; }
 
     public ClientSession(IXmppSession xmpp, string identifier)
@@ -47,9 +45,11 @@ public class ClientSession : IClientSession
         receivesRosterUpdates = true;
     }
 
-    public void SubscribeToPresenceUpdates()
+    public void UpdatePresence(SenderPresentation presentation, Status status)
     {
-        receivesPresenceUpdates = true;
+        Presentation = presentation;
+        Status = status;
+        receivesPresenceUpdates = status.Availability != Availability.Unavailable;
     }
 
     async ValueTask IClientSession.Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState)

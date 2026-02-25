@@ -9,7 +9,7 @@ namespace Unicord.Xmpp.Server.Communication;
 internal class Presence : StanzaHandler, IPresenceHandler
 {
     StatusType? show;
-    string? status, nick;
+    string? statusText, nick;
     sbyte? priority;
 
     public Presence(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
@@ -24,7 +24,7 @@ internal class Presence : StanzaHandler, IPresenceHandler
 
     async ValueTask IPresenceHandler.Status(string? text)
     {
-        SetOnce(ref status, text);
+        SetOnce(ref statusText, text);
     }
 
     async ValueTask ISenderPresentation.Nickname(string? text)
@@ -56,20 +56,21 @@ internal class Presence : StanzaHandler, IPresenceHandler
 
         var sender = new SenderPresentation(Nickname: nick);
 
-        if(Type == null)
+        if(Type is null or StanzaType.Unavailable)
         {
             // TODO Handle To
-            Session.ClientSession?.SubscribeToPresenceUpdates();
-            await Server.StatusUpdate(Account, RemoteResource.ResourceIdentifier, sender, new Status(
+            var status = new Status(
                 show switch {
                     StatusType.Chat => Availability.Chatting,
                     StatusType.Away => Availability.Away,
                     StatusType.ExtendedAway => Availability.Gone,
                     StatusType.DoNotDisturb => Availability.Busy,
-                    _ => Availability.Available
+                    _ => Type == StanzaType.Unavailable ? Availability.Unavailable : Availability.Available
                 },
-                status
-            ));
+                statusText
+            );
+            Session.ClientSession?.UpdatePresence(sender, status);
+            await Server.StatusUpdate(Account, RemoteResource.ResourceIdentifier, sender, status);
             return;
         }
 

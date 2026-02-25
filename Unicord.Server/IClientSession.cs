@@ -9,7 +9,7 @@ public interface IClientSession
     string Identifier { get; }
     sbyte Priority { get; }
 
-    Sender Sender { get; }
+    SenderPresentation Presentation { get; }
     Status Status { get; }
 
     ValueTask Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState);
