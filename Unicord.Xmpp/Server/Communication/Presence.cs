@@ -69,7 +69,10 @@ internal class Presence : StanzaHandler, IPresenceHandler
                 },
                 statusText
             );
-            Session.ClientSession?.UpdatePresence(sender, status);
+            if(Session.ClientSession?.UpdatePresence(sender, status) == true)
+            {
+                await Server.SendStatusProbe(Account, sender);
+            }
             await Server.StatusUpdate(Account, RemoteResource.ResourceIdentifier, sender, status);
             return;
         }

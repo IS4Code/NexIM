@@ -45,11 +45,14 @@ public class ClientSession : IClientSession
         receivesRosterUpdates = true;
     }
 
-    public void UpdatePresence(SenderPresentation presentation, Status status)
+    public bool UpdatePresence(SenderPresentation presentation, Status status)
     {
         Presentation = presentation;
         Status = status;
-        receivesPresenceUpdates = status.Availability != Availability.Unavailable;
+        bool available = status.Availability != Availability.Unavailable;
+        bool previous = receivesPresenceUpdates;
+        receivesPresenceUpdates = available;
+        return !previous && available;
     }
 
     async ValueTask IClientSession.Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState)

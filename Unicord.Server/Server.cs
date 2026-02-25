@@ -390,4 +390,59 @@ public class Server
             await session.StatusUpdate(sender, status);
         }
     }
+
+    public async ValueTask SendStatusProbe(Account account, SenderPresentation senderPresentation)
+    {
+        var contacts = account.Contacts;
+
+        var sender = new Sender(account.Name, Presentation: senderPresentation);
+
+        foreach(var contact in contacts)
+        {
+            if(!contact.SubscriptionState.AcceptedTo)
+            {
+                continue;
+            }
+
+            // Subscribed to contact
+
+            await ReceiveStatusProbe(sender, contact.Account);
+        }
+    }
+
+    public async ValueTask<bool> ReceiveStatusProbe(Sender sender, AccountName targetAccount)
+    {
+        if(Accounts.GetAccount(targetAccount) is not { } account)
+        {
+            return false;
+        }
+
+        if(account.GetContact(sender.Account) is not { SubscriptionState.AcceptedFrom: true })
+        {
+            // Not subscribed
+            await ReceiveSubscribeCancellation(new Sender(targetAccount), sender.Account);
+            return false;
+        }
+
+        bool any = false;
+        foreach(var session in Sessions.GetSessions(targetAccount, null, false))
+        {
+            var status = session.Status;
+            if(status.Availability == Availability.Unavailable)
+            {
+                continue;
+            }
+
+            await StatusUpdate(new Sender(targetAccount, session.Identifier, session.Presentation), status, sender.Account);
+            any = true;
+        }
+
+        // Unavailable
+        if(!any)
+        {
+            // Respond with unavailable status
+            await StatusUpdate(new Sender(targetAccount), new Status(Availability.Unavailable), sender.Account);
+        }
+        return true;
+    }
 }
