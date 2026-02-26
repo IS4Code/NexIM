@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
+using Unicord.Server.Primitives;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -9,7 +10,9 @@ internal class Message : StanzaHandler, IMessageHandler
 {
     ConversationType? type;
 
-    string? subject, body, nick;
+    LocalizedString subject, body;
+
+    string? nick;
     ChatState? state;
 
     public Message(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
@@ -26,14 +29,14 @@ internal class Message : StanzaHandler, IMessageHandler
         };
     }
 
-    async ValueTask IMessageHandler.Body(string? text)
+    async ValueTask IMessageHandler.Body(LanguageTaggedString? text)
     {
-        SetOnce(ref body, text);
+        body = body.Add(text);
     }
 
-    async ValueTask IMessageHandler.Subject(string? text)
+    async ValueTask IMessageHandler.Subject(LanguageTaggedString? text)
     {
-        SetOnce(ref subject, text);
+        subject = subject.Add(text);
     }
 
     async ValueTask ISenderPresentation.Nickname(string? text)
@@ -85,9 +88,9 @@ internal class Message : StanzaHandler, IMessageHandler
         );
 
         var message =
-            (subject != null || body != null)
-            ? new Unicord.Server.Model.Message(subject, body)
-            : null;
+            (subject.Empty && body.Empty)
+            ? null
+            : new Unicord.Server.Model.Message(subject, body);
 
         await target.Conversation(sender, type, message, state);
     }

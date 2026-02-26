@@ -12,7 +12,6 @@ using static Constants;
 
 static file class Constants
 {
-    public const string Xml = "http://www.w3.org/XML/1998/namespace";
     public const string Client = "jabber:client";
     public const string IqRoster = "jabber:iq:roster";
     public const string IqAuth = "jabber:iq:auth";
@@ -143,10 +142,10 @@ public interface ISenderPresentation : IPayloadHandler
 public interface IMessageHandler : IStanzaHandler, ISenderPresentation
 {
     [Name("subject")]
-    ValueTask Subject(string? text);
+    ValueTask Subject(LanguageTaggedString? text);
 
     [Name("body")]
-    ValueTask Body(string? text);
+    ValueTask Body(LanguageTaggedString? text);
 
     [Name("active", ChatStates)] ValueTask Active();
     [Name("inactive", ChatStates)] ValueTask Inactive();
@@ -162,7 +161,7 @@ public interface IPresenceHandler : IStanzaHandler, ISenderPresentation
     ValueTask Show(Token<StatusType>? text);
 
     [Name("status")]
-    ValueTask Status(string? text);
+    ValueTask Status(LanguageTaggedString? text);
 
     [Name("priority")]
     ValueTask Priority(sbyte? value);
@@ -221,7 +220,7 @@ public interface IAuthQueryHandler : IPayloadHandler
 public interface IStreamErrorHandler : IPayloadHandler
 {
     [Name("text")]
-    ValueTask Text(string? text, [Name("lang", Xml)] string? language);
+    ValueTask Text(LanguageTaggedString? text);
 
     [Name("bad-format")] ValueTask BadFormat();
     [Name("bad-namespace-prefix")] ValueTask BadNamespacePrefix();
@@ -253,7 +252,7 @@ public interface IStreamErrorHandler : IPayloadHandler
 public interface IStanzaErrorHandler : IPayloadHandler
 {
     [Name("text")]
-    ValueTask Text(string? text, [Name("lang", Xml)] string? language);
+    ValueTask Text(LanguageTaggedString? text);
 
     [Name("bad-request")] ValueTask BadRequest();
     [Name("conflict")] ValueTask Conflict();

@@ -7,7 +7,7 @@ namespace Unicord.Server.Primitives.Xml;
 /// <summary>
 /// Provides support for encoding to XML.
 /// </summary>
-public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>
+public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -51,6 +51,19 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
     ValueTask IValueXmlEncoder<Token<Enum>>.Encode(XmlWriter writer, Token<Enum> token)
     {
         return EncodeTokenAsync(writer, token.Value);
+    }
+
+    async ValueTask IValueXmlEncoder<LanguageTaggedString>.Encode(XmlWriter writer, LanguageTaggedString value)
+    {
+        if(!writer.XmlLang.Equals(value.LanguageTag, StringComparison.OrdinalIgnoreCase))
+        {
+            if(writer.WriteState == WriteState.Attribute)
+            {
+                throw new NotSupportedException("A language-tagged string cannot be stored in an attribute.");
+            }
+            await writer.WriteAttributeStringAsync("xml", "lang", "http://www.w3.org/XML/1998/namespace", value.LanguageTag);
+        }
+        await writer.WriteStringAsync(value.Value);
     }
 }
 

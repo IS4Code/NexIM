@@ -23,9 +23,9 @@ public readonly record struct Token<TEnum> where TEnum : Enum
     public bool Equals(Token<TEnum> obj) => ReferenceEquals(Value, obj.Value);
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(Value);
 
-    public bool Matches(string str)
+    public override string ToString()
     {
-        return ReferenceEquals(Value, str);
+        return Value;
     }
 
     public static Token<TEnum> FromAtomized(string atomizedValue)

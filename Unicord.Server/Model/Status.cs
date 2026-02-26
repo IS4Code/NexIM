@@ -1,8 +1,10 @@
-﻿namespace Unicord.Server.Model;
+﻿using Unicord.Server.Primitives;
+
+namespace Unicord.Server.Model;
 
 public record struct Status(
     Availability Availability,
-    string? Description = null
+    LocalizedString Description = default
 );
 
 public enum Availability

@@ -1,4 +1,6 @@
-﻿namespace Unicord.Server.Model;
+﻿using Unicord.Server.Primitives;
+
+namespace Unicord.Server.Model;
 
 public enum ConversationType
 {
@@ -19,4 +21,4 @@ public enum ChatState
     Paused
 }
 
-public record Message(string? Subject, string? Body);
+public record Message(LocalizedString Subject, LocalizedString Body);

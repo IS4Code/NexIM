@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,17 +11,6 @@ using static ErrorType;
 
 public abstract class XmppException : ApplicationException
 {
-    protected string DefaultLanguage {
-        get {
-            var culture = CultureInfo.CurrentUICulture;
-            if(culture == CultureInfo.InvariantCulture)
-            {
-                return "en";
-            }
-            return culture.TwoLetterISOLanguageName;
-        }
-    }
-
     // May be absent if no error message was provide during construction.
     public override string? Message { get; }
 
@@ -138,7 +126,7 @@ public class XmppStreamException : XmppException<IStreamErrorHandler>
         await base.Output(handler);
         if(!String.IsNullOrWhiteSpace(Message))
         {
-            await handler.Text(Message, DefaultLanguage);
+            await handler.Text(new(Message!));
         }
     }
 
@@ -192,7 +180,7 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
         await base.Output(handler);
         if(!String.IsNullOrWhiteSpace(Message))
         {
-            await handler.Text(Message, DefaultLanguage);
+            await handler.Text(new(Message!));
         }
     }
 

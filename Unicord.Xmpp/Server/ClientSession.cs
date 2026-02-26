@@ -69,11 +69,11 @@ public class ClientSession : IClientSession
         await using var msg = await xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
 
         await WriteSender(sender.Presentation, msg);
-        if(message.Subject is { } subject)
+        foreach(var subject in message.Subject)
         {
             await msg.Subject(subject);
         }
-        if(message.Body is { } body)
+        foreach(var body in message.Body)
         {
             await msg.Body(body);
         }
@@ -177,7 +177,7 @@ public class ClientSession : IClientSession
             await presence.Show(show);
         }
 
-        if(status.Description is { } description)
+        foreach(var description in status.Description)
         {
             await presence.Status(description);
         }

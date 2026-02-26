@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
+using Unicord.Server.Primitives;
 using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
@@ -9,7 +10,8 @@ namespace Unicord.Xmpp.Server.Communication;
 internal class Presence : StanzaHandler, IPresenceHandler
 {
     StatusType? show;
-    string? statusText, nick;
+    LocalizedString statusText;
+    string? nick;
     sbyte? priority;
 
     public Presence(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
@@ -22,9 +24,9 @@ internal class Presence : StanzaHandler, IPresenceHandler
         SetOnce(ref show, text?.ToEnum());
     }
 
-    async ValueTask IPresenceHandler.Status(string? text)
+    async ValueTask IPresenceHandler.Status(LanguageTaggedString? text)
     {
-        SetOnce(ref statusText, text);
+        statusText.Add(text);
     }
 
     async ValueTask ISenderPresentation.Nickname(string? text)
