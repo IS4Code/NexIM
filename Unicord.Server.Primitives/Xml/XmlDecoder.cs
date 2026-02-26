@@ -172,7 +172,25 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
                 }
             }
 
-            return reader.NameTable.Add(array, 0, total);
+            // Trim whitespace
+            int start = 0;
+            Trim();
+
+            return reader.NameTable.Add(array, start, total);
+
+            void Trim()
+            {
+                ReadOnlySpan<char> span = array.AsSpan(0, total);
+                var trimmed = span.Trim(" \r\n\t".AsSpan());
+                if(trimmed.Length == span.Length)
+                {
+                    return;
+                }
+                if(span.Overlaps(trimmed, out start))
+                {
+                    total = trimmed.Length;
+                }
+            }
         }
         finally
         {
