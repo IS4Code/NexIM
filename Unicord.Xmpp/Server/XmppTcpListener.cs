@@ -8,7 +8,7 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppTcpListener : XmppListener<TcpClient>
+public class XmppTcpListener : XmppStreamListener<TcpClient>
 {
     readonly TcpListener listener;
 

@@ -15,7 +15,7 @@ namespace Unicord.Xmpp.Server;
 
 using static XmppVocabulary.Standard;
 
-public abstract class XmppListener<TClient>
+public abstract class XmppStreamListener<TClient>
 {
     readonly XmppNameTable nametable;
 
@@ -28,7 +28,7 @@ public abstract class XmppListener<TClient>
 
     const bool prettyOutput = true;
 
-    public XmppListener(IXmppReceiver<XmppStreamSession> receiver)
+    public XmppStreamListener(IXmppReceiver<XmppStreamSession> receiver)
     {
         this.receiver = receiver;
 
