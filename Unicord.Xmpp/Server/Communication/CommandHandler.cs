@@ -25,9 +25,9 @@ internal abstract class CommandHandler : IPayloadHandler
         Identifier = identifier;
     }
 
-    protected Stanza NewResponse(StanzaType? type = StanzaType.Result)
+    protected Stanza NewResponse(StanzaType? type = StanzaType.Result, XmppResource? from = null)
     {
-        return new Stanza(Type: type?.ToToken(), Identifier: Identifier);
+        return new Stanza(Type: type?.ToToken(), Identifier: Identifier, From: from ?? Session.LocalResource, To: Session.RemoteResource);
     }
 
     protected void SetOnce<T>(ref T storage, T value)

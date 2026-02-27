@@ -178,6 +178,9 @@ public interface IInfoQueryHandler : IStanzaHandler
 
     [Name("query", IqAuth)]
     ValueTask<IAuthQueryHandler> AuthQuery();
+
+    [Name("ping", "urn:xmpp:ping")]
+    ValueTask Ping();
 }
 
 [ComplexType, Namespace(IqRoster)]

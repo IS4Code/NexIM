@@ -16,7 +16,7 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
     {
         if(handled != true && Type is not (StanzaType.Result or StanzaType.Error))
         {
-            throw XmppStanzaException.FeatureNotImplemented();
+            throw XmppStanzaException.ServiceUnavailable();
         }
     }
 
@@ -34,6 +34,39 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
                 return new SetAuthQuery(Server, Session, Identifier);
             default:
                 return NullHandler.Instance;
+        }
+    }
+
+    async ValueTask IInfoQueryHandler.Ping()
+    {
+        SetOnce(ref handled, true);
+
+        if(Type != StanzaType.Get)
+        {
+            return;
+        }
+
+        if(To is not { } to || to == Session.LocalResource)
+        {
+            // Sent to the server
+            await using var iq = await Session.InfoQuery(NewResponse());
+        }
+        else if(to == to.Bare)
+        {
+            if(Server.Accounts.GetAccount(ClientSession.GetAccount(to, out _)) != null)
+            {
+                // Account exists
+                await using var iq = await Session.InfoQuery(NewResponse());
+            }
+            else
+            {
+                throw XmppStanzaException.ServiceUnavailable();
+            }
+        }
+        else
+        {
+            // Sent to a resource, never indicate whether it exists
+            // TODO Route (check presence?)
         }
     }
 
