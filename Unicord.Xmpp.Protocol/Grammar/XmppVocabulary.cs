@@ -21,6 +21,7 @@ public abstract partial class XmppVocabulary : XmlNameTable
 
         public static readonly Token<Enum> StreamsNs = Token<Enum>.FromAtomized("http://etherx.jabber.org/streams");
         public static readonly Token<Enum> JabberClientNs = Token<Enum>.FromAtomized("jabber:client");
+        public static readonly Token<Enum> FramingNs = Token<Enum>.FromAtomized("urn:ietf:params:xml:ns:xmpp-framing");
 
         public static readonly Token<Enum> Stream = Token<Enum>.FromAtomized("stream");
 
@@ -33,6 +34,9 @@ public abstract partial class XmppVocabulary : XmlNameTable
         public static readonly Token<Enum> From = Token<Enum>.FromAtomized("from");
         public static readonly Token<Enum> To = Token<Enum>.FromAtomized("to");
         public static readonly Token<Enum> Version = Token<Enum>.FromAtomized("version");
+
+        public static readonly Token<Enum> Open = Token<Enum>.FromAtomized("open");
+        public static readonly Token<Enum> Close = Token<Enum>.FromAtomized("close");
     }
 
     private partial void AddKeys();
@@ -54,6 +58,7 @@ public abstract partial class XmppVocabulary : XmlNameTable
 
         AddKey(Standard.StreamsNs.Value);
         AddKey(Standard.JabberClientNs.Value);
+        AddKey(Standard.FramingNs.Value);
 
         AddKey(Standard.Stream.Value);
 
@@ -66,6 +71,9 @@ public abstract partial class XmppVocabulary : XmlNameTable
         AddKey(Standard.From.Value);
         AddKey(Standard.To.Value);
         AddKey(Standard.Version.Value);
+
+        AddKey(Standard.Open.Value);
+        AddKey(Standard.Close.Value);
 
         AddKey("stream:stream");
         foreach(char c in Enumerable.Range('a', ('z' - 'a') + 1))

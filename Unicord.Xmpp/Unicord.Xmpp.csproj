@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="deniszykov.WebSocketListener" Version="4.2.18" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Unicord.Server\Unicord.Server.csproj" />
     <ProjectReference Include="..\Unicord.Xmpp.Protocol\Unicord.Xmpp.Protocol.csproj" />
   </ItemGroup>
