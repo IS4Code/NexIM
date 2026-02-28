@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
 
@@ -15,58 +12,14 @@ namespace Unicord.Xmpp.Server;
 
 using static XmppVocabulary.Standard;
 
-public abstract class XmppStreamListener<TClient>
+public abstract class XmppStreamListener<TClient> : XmppXmlListener<XmppStreamSession>
 {
-    readonly XmppNameTable nametable;
+    protected override bool PrettyOutput => true;
 
-    protected XmlReaderSettings ReaderSettings { get; }
-    protected XmlWriterSettings WriterSettings { get; }
-
-    readonly IXmppReceiver<XmppStreamSession> receiver;
-
-    readonly XmppDecoder decoder = new();
-
-    const bool prettyOutput = true;
-
-    public XmppStreamListener(IXmppReceiver<XmppStreamSession> receiver)
+    public XmppStreamListener(IXmppReceiver<XmppStreamSession> receiver) : base(receiver, ConformanceLevel.Document)
     {
-        this.receiver = receiver;
 
-        nametable = new();
-
-        ReaderSettings = new()
-        {
-            Async = true,
-            CheckCharacters = false,
-            CloseInput = false,
-            ConformanceLevel = ConformanceLevel.Document,
-            DtdProcessing = DtdProcessing.Ignore,
-            IgnoreComments = true,
-            IgnoreProcessingInstructions = true,
-            IgnoreWhitespace = true,
-            NameTable = nametable,
-            ValidationType = ValidationType.None,
-            XmlResolver = XmlResolver.ThrowingResolver
-        };
-
-        WriterSettings = new()
-        {
-            Async = true,
-            CheckCharacters = false,
-            CloseOutput = false,
-            ConformanceLevel = ConformanceLevel.Document,
-            Encoding = new UTF8Encoding(false),
-            Indent = prettyOutput,
-            NamespaceHandling = NamespaceHandling.OmitDuplicates,
-            NewLineChars = "\n",
-            NewLineHandling = NewLineHandling.Entitize,
-            OmitXmlDeclaration = true,
-            NewLineOnAttributes = prettyOutput,
-            WriteEndDocumentOnClose = false
-        };
     }
-
-    public abstract Task RunAsync(CancellationToken cancellationToken = default);
 
     protected abstract ValueTask<XmppStreamSession> StartSession(TClient client, CancellationToken cancellationToken);
 
@@ -76,9 +29,9 @@ public abstract class XmppStreamListener<TClient>
         await using var session = await StartSession(client, cancellationToken);
 
         // Receive the session and prepare handler for incoming commands
-        await using var handler = await receiver.Connected(session);
+        await using var handler = await Receiver.Connected(session);
 
-        (StanzaKind type, string? id)? lastStanza = null;
+        StanzaInfo? lastStanza = null;
 
         await using PayloadHandlers handlers = new();
         try
@@ -109,31 +62,13 @@ public abstract class XmppStreamListener<TClient>
                                         throw XmppStreamException.BadFormat();
                                     }
 
-                                    if(reader.GetAttribute("to") is not { } to)
-                                    {
-                                        throw XmppStreamException.HostUnknown("Destination address missing.");
-                                    }
-
-                                    // TODO Verify that the resource matches exactly the host of the server
-                                    session.LocalResource = XmppResource.Parse(to);
-
-                                    if(reader.GetAttribute(Lang.Value, XmlNs.Value) is { } lang)
-                                    {
-                                        session.Language = lang;
-                                    }
-
                                     var writer = session.Writer;
 
                                     await writer.WriteStartElementAsync(Stream.Value, Stream.Value, StreamsNs.Value);
                                     await writer.WriteAttributeStringAsync(Xmlns.Value, Stream.Value, XmlnsNs.Value, StreamsNs.Value);
                                     await writer.WriteAttributeStringAsync(null, Xmlns.Value, null, JabberClientNs.Value);
 
-                                    session.StreamIdentifier = Guid.NewGuid().ToString("N");
-
-                                    await writer.WriteAttributeStringAsync(null, Version.Value, null, "1.0");
-                                    await writer.WriteAttributeStringAsync(null, From.Value, null, session.LocalResource.ToString());
-                                    await writer.WriteAttributeStringAsync(null, Id.Value, null, session.StreamIdentifier);
-                                    await writer.WriteAttributeStringAsync(null, Lang.Value, XmlNs.Value, session.Language);
+                                    await StreamStarted(reader, writer, session);
 
                                     // Stream is ready
                                     await handler.StreamStarted();
@@ -157,7 +92,7 @@ public abstract class XmppStreamListener<TClient>
 
                                 default:
                                     // Payload of a known command
-                                    if(await decoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
+                                    if(await Decoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
                                     {
                                         // Recognized payload type
                                         await EnterHandler(payloadHandler);
@@ -215,8 +150,8 @@ public abstract class XmppStreamListener<TClient>
                     await OnError(xe, async exc => {
                         if(command == null)
                         {
-                            var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.id);
-                            command = lastStanza?.type switch
+                            var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.Identifier);
+                            command = lastStanza?.Kind switch
                             {
                                 StanzaKind.InfoQuery => await errorHandler.InfoQuery(stanza),
                                 StanzaKind.Presence => await errorHandler.Presence(stanza),
@@ -303,140 +238,5 @@ public abstract class XmppStreamListener<TClient>
             }
             await writer.FlushAsync();
         }
-    }
-
-    private Stanza ParseStanza(XmlReader reader)
-    {
-        var stanza = new Stanza();
-        if(reader.MoveToFirstAttribute())
-        {
-            do
-            {
-                var attrName = reader.LocalName;
-                if(reader.NamespaceURI == Empty)
-                {
-                    switch(attrName[0])
-                    {
-                        case 't':
-                            if(attrName == Type)
-                            {
-                                stanza.Type = Token<StanzaType>.FromAtomized(reader.NameTable.Add(reader.Value));
-                            }
-                            else if(attrName == To)
-                            {
-                                stanza.To = XmppResource.Parse(reader.Value);
-                                continue;
-                            }
-                            break;
-                        case 'f':
-                            if(attrName == From)
-                            {
-                                stanza.From = XmppResource.Parse(reader.Value);
-                                continue;
-                            }
-                            break;
-                        case 'i':
-                            if(attrName == Id)
-                            {
-                                stanza.Identifier = reader.Value;
-                                continue;
-                            }
-                            break;
-                    }
-                }
-
-                // Unknown attribute
-                continue;
-            }
-            while(reader.MoveToNextAttribute());
-        }
-        return stanza;
-    }
-
-    private ValueTask<XmppDecoder.Result> EnterCommand(XmlReader reader, IStreamHandler handler, out (StanzaKind, string?)? info)
-    {
-        var elementName = reader.LocalName;
-        var elementNs = reader.NamespaceURI;
-        if(elementNs == JabberClientNs)
-        {
-            switch(elementName[0])
-            {
-                case 'i':
-                    if(elementName == Iq)
-                    {
-                        var stanza = ParseStanza(reader);
-                        info = (StanzaKind.InfoQuery, stanza.Identifier);
-                        return Success(handler.InfoQuery(stanza));
-                    }
-                    break;
-                case 'm':
-                    if(elementName == Message)
-                    {
-                        var stanza = ParseStanza(reader);
-                        info = (StanzaKind.Message, stanza.Identifier);
-                        return Success(handler.Message(stanza));
-                    }
-                    break;
-                case 'p':
-                    if(elementName == Presence)
-                    {
-                        var stanza = ParseStanza(reader);
-                        info = (StanzaKind.Presence, stanza.Identifier);
-                        return Success(handler.Presence(stanza));
-                    }
-                    break;
-            }
-        }
-
-        // Not a stanza - decode normally
-        info = null;
-        return decoder.DecodePayload(reader, handler);
-
-        static async ValueTask<XmppDecoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
-        {
-            return new(true, await task);
-        }
-    }
-
-    private bool GetXmppException<TException>(Exception e, [MaybeNullWhen(false)] out TException xmppException) where TException : XmppException
-    {
-        switch(e)
-        {
-            case TException xe:
-                xmppException = xe;
-                return true;
-            case { InnerException: { } inner } when GetXmppException(inner, out xmppException):
-                return true;
-            default:
-                xmppException = null;
-                return false;
-        }
-    }
-
-    private class PayloadHandlers : Stack<IPayloadHandler>, IAsyncDisposable
-    {
-        public THandler Get<THandler>() where THandler : IPayloadHandler
-        {
-            if(!this.TryPeek(out var top) || top is not THandler handler)
-            {
-                throw new NotSupportedException("The current payload handler does not support this element.");
-            }
-            return handler;
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            while(this.TryPop(out var top))
-            {
-                await top.DisposeAsync();
-            }
-        }
-    }
-
-    private enum StanzaKind
-    {
-        Message,
-        Presence,
-        InfoQuery
     }
 }

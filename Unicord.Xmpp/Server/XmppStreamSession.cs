@@ -69,8 +69,11 @@ public abstract class XmppStreamSession : XmppXmlSession
 
             async Task CloseStream()
             {
-                await writer.WriteEndDocumentAsync();
-                await writer.FlushAsync();
+                if(writer.WriteState is not (WriteState.Start or WriteState.Prolog or WriteState.Closed))
+                {
+                    await writer.WriteEndDocumentAsync();
+                    await writer.FlushAsync();
+                }
                 await writer.DisposeAsync();
             }
         }
