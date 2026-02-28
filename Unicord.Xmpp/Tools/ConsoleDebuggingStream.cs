@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Unicord.Xmpp.Tools;
 
-internal sealed class ConsoleDebuggingStream : Stream
+internal sealed class ConsoleDebuggingStream : NonSeekableStream
 {
     readonly Stream inner;
 
@@ -21,14 +21,9 @@ internal sealed class ConsoleDebuggingStream : Stream
 
     public override bool CanRead => inner.CanRead;
     public override bool CanWrite => inner.CanWrite;
-    public override bool CanSeek => false;
     public override bool CanTimeout => inner.CanTimeout;
     public override int ReadTimeout { get => inner.ReadTimeout; set => inner.ReadTimeout = value; }
     public override int WriteTimeout { get => inner.WriteTimeout; set => inner.WriteTimeout = value; }
-    public override long Length => throw new NotSupportedException();
-    public override void SetLength(long value) => throw new NotSupportedException();
-    public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
 
     static readonly char[] trimChars = { '\n', '\r' };
 
@@ -202,62 +197,6 @@ internal sealed class ConsoleDebuggingStream : Stream
     {
         OnWrite(buffer.Span);
         return inner.WriteAsync(buffer, cancellationToken);
-    }
-
-    public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
-    {
-        var task = ReadAsync(buffer, offset, count);
-        var tcs = new TaskCompletionSource<int>(state);
-        task.ContinueWith(t => {
-            if(t.IsFaulted)
-            {
-                tcs.TrySetException(t.Exception.InnerExceptions);
-            }
-            else if(t.IsCanceled)
-            {
-                tcs.TrySetCanceled();
-            }
-            else
-            {
-                tcs.TrySetResult(t.Result);
-            }
-
-            callback?.Invoke(tcs.Task);
-        }, TaskScheduler.Default);
-        return tcs.Task;
-    }
-
-    public override int EndRead(IAsyncResult asyncResult)
-    {
-        return ((Task<int>)asyncResult).GetAwaiter().GetResult();
-    }
-
-    public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
-    {
-        var task = WriteAsync(buffer, offset, count);
-        var tcs = new TaskCompletionSource(state);
-        task.ContinueWith(t => {
-            if(t.IsFaulted)
-            {
-                tcs.TrySetException(t.Exception.InnerExceptions);
-            }
-            else if(t.IsCanceled)
-            {
-                tcs.TrySetCanceled();
-            }
-            else
-            {
-                tcs.TrySetResult();
-            }
-
-            callback?.Invoke(tcs.Task);
-        }, TaskScheduler.Default);
-        return tcs.Task;
-    }
-
-    public override void EndWrite(IAsyncResult asyncResult)
-    {
-        ((Task)asyncResult).GetAwaiter().GetResult();
     }
 
     public override void Flush()

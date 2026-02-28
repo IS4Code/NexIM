@@ -5,11 +5,10 @@ using System.Threading.Tasks;
 
 namespace Unicord.Xmpp.Tools;
 
-internal sealed class BidirectionalStream(Stream input, Stream output) : Stream
+internal sealed class BidirectionalStream(Stream input, Stream output) : NonSeekableStream
 {
     public override bool CanRead => input.CanRead;
     public override bool CanWrite => output.CanWrite;
-    public override bool CanSeek => false;
     public override bool CanTimeout => input.CanTimeout && output.CanTimeout;
 
     public override int ReadTimeout {
@@ -21,9 +20,6 @@ internal sealed class BidirectionalStream(Stream input, Stream output) : Stream
         get => output.WriteTimeout;
         set => output.WriteTimeout = value;
     }
-
-    public override long Length => throw new NotSupportedException();
-    public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
     public override void Flush()
     {
@@ -155,15 +151,5 @@ internal sealed class BidirectionalStream(Stream input, Stream output) : Stream
             await output.DisposeAsync();
         }
         GC.SuppressFinalize(this);
-    }
-
-    public override long Seek(long offset, SeekOrigin origin)
-    {
-        throw new NotSupportedException();
-    }
-
-    public override void SetLength(long value)
-    {
-        throw new NotSupportedException();
     }
 }
