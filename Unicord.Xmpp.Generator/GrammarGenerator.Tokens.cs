@@ -70,16 +70,9 @@ partial class GrammarGenerator
                 writer.Indent++;
                 {
                     writer.WriteLine("var name = token.Value;");
-                    writer.WriteLine("if(name.Length > 0)");
-                    writer.WriteLine("{");
-                    writer.Indent++;
-                    {
-                        Partition(writer, "name", fieldName => {
-                            writer.WriteLine($"return {typeName}.{fieldName};");
-                        }, list, 0);
-                    }
-                    writer.Indent--;
-                    writer.WriteLine("}");
+                    Partition(writer, "name", fieldName => {
+                        writer.WriteLine($"return {typeName}.{fieldName};");
+                    }, list);
                     writer.WriteLine($"return ({typeName})(-1);");
                 }
                 writer.Indent--;

@@ -610,7 +610,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                     writer.Indent--;
                     writer.WriteLine("}");
                 }
-            }, names, 0);
+            }, names);
         }
 
         writer.Dispose();
@@ -637,88 +637,187 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         }
     }
     
-    private static void Partition<TElement>(IndentedTextWriter writer, string nameVariable, Action<TElement> handler, IEnumerable<(string name, TElement element)> names, int pos)
+    private static void Partition<TElement>(IndentedTextWriter writer, string nameVariable, Action<TElement> handler, IEnumerable<(string name, TElement element)> names)
     {
-        writer.WriteLine($"switch({nameVariable}[{pos}])");
+        if(names.Count() <= 2)
+        {
+            CheckEach(names);
+            return;
+        }
+
+        var lengthGroups = names.GroupBy(t => t.name.Length);
+        var (minLength, maxLength, visitedLength) = FindGaps(lengthGroups);
+
+        writer.WriteLine($"switch({nameVariable}.Length)");
         writer.WriteLine("{");
         writer.Indent++;
+
+        foreach(var group in lengthGroups)
         {
-            foreach(var group in names.GroupBy(t => t.name[pos]))
+            int commonLength = group.Key;
+            writer.WriteLine($"case {commonLength}:");
+            PartitionByDistinguishingCharacter(group, commonLength, 0);
+            writer.WriteLine("break;");
+        }
+        if(visitedLength.Count > 0)
+        {
+            // Generate empty cases to use CIL switch
+            bool any = false;
+            while(++minLength < maxLength)
             {
-                writer.WriteLine($"case {FormatLiteral(group.Key)}:");
-
-                // Number of characters needed to do another partitioning
-                int minLongerLength = pos + 2;
-
-                // Names that would (not) be partitioned
-                var longer = group.Where(p => p.name.Length >= minLongerLength);
-                var shorter = group.Where(p => p.name.Length < minLongerLength);
-
-                const int minCountToNestedSwitch = 5;
-                if(longer.Take(minCountToNestedSwitch).Count() >= minCountToNestedSwitch)
+                if(!visitedLength.Contains(minLength))
                 {
-                    // Too many checks, partition again
-
-                    // Find the prefix from which differences start to occur
-                    var sample = longer.First().name;
-                    var differenceFrom = Enumerable.Range(minLongerLength, sample.Length - minLongerLength + 1).Where(length => {
-                        var prefix = sample.Substring(0, length);
-                        // Not a common prefix
-                        return !longer.All(t => t.name.StartsWith(prefix, StringComparison.Ordinal));
-                    }).Select(l => (int?)l).FirstOrDefault() ?? (sample.Length - 1);
-
-                    if(differenceFrom > minCountToNestedSwitch)
-                    {
-                        // Partition only those that differ after the common prefix
-
-                        longer = group.Where(p => p.name.Length >= differenceFrom);
-                        shorter = group.Where(p => p.name.Length < differenceFrom);
-                    }
-
-                    writer.WriteLine($"if({nameVariable}.Length >= {differenceFrom})");
-                    writer.WriteLine("{");
-                    writer.Indent++;
-                    Partition(writer, nameVariable, handler, longer, differenceFrom - 1);
-                    writer.Indent--;
-                    writer.WriteLine("}");
-
-                    if(shorter.Any())
-                    {
-                        // Check the rest
-                        writer.WriteLine("else");
-                    }
+                    writer.WriteLine($"case {minLength}:");
+                    any = true;
                 }
-                else
-                {
-                    shorter = group;
-                }
-
-                bool firstNameCheck = true;
-                foreach(var item in shorter)
-                {
-                    // Matches element name first character
-
-                    if(firstNameCheck)
-                    {
-                        firstNameCheck = false;
-                    }
-                    else
-                    {
-                        writer.Write("else ");
-                    }
-
-                    writer.WriteLine($"if({nameVariable} == (object){FormatLiteral(item.name)})");
-                    writer.WriteLine("{");
-                    writer.Indent++;
-                    handler(item.element);
-                    writer.Indent--;
-                    writer.WriteLine("}");
-                }
+            }
+            if(any)
+            {
                 writer.WriteLine("break;");
             }
         }
+
         writer.Indent--;
         writer.WriteLine("}");
+
+        void PartitionByDistinguishingCharacter(IEnumerable<(string name, TElement element)> names, int commonLength, int checkedCharacters)
+        {
+            if(checkedCharacters == commonLength)
+            {
+                // Partitioned enough times to narrow down to the exact case
+
+                if(names.Count() != 1)
+                {
+                    throw new ApplicationException($"Partitioning by {checkedCharacters} characters did not result in a single case.");
+                }
+
+                foreach(var elem in names)
+                {
+                    handler(elem.element);
+                }
+                return;
+            }
+
+            if(names.Count() <= 2)
+            {
+                CheckEach(names);
+                return;
+            }
+
+            // Find an index that produces the most number of groups
+            var (index, groups) =
+                Enumerable.Range(0, commonLength)
+                .Select(i => (i, g: names.GroupBy(t => t.name[i])))
+                .OrderByDescending(t => t.g.Count())
+                // Minimize number of empty cases
+                .ThenBy(t => CountGaps(t.g))
+                .First();
+
+            writer.WriteLine($"switch({nameVariable}[{index}])");
+            writer.WriteLine("{");
+            writer.Indent++;
+
+            foreach(var group in groups)
+            {
+                writer.WriteLine($"case {FormatLiteral(group.Key)}:");
+
+                // Recurse
+                PartitionByDistinguishingCharacter(group, commonLength, checkedCharacters + 1);
+
+                writer.WriteLine("break;");
+            }
+
+            var (min, max, visited) = FindGaps(groups);
+            if(visited.Count > 0)
+            {
+                // Generate empty cases
+                bool any = false;
+                while(++min < max)
+                {
+                    if(!visited.Contains(min))
+                    {
+                        writer.WriteLine($"case {FormatLiteral(min)}:");
+                        any = true;
+                    }
+                }
+                if(any)
+                {
+                    writer.WriteLine("break;");
+                }
+            }
+
+            writer.Indent--;
+            writer.WriteLine("}");
+        }
+
+        void CheckEach(IEnumerable<(string name, TElement element)> names)
+        {
+            bool firstNameCheck = true;
+            foreach(var item in names)
+            {
+                if(firstNameCheck)
+                {
+                    firstNameCheck = false;
+                }
+                else
+                {
+                    writer.Write("else ");
+                }
+
+                writer.WriteLine($"if({nameVariable} == (object){FormatLiteral(item.name)})");
+                writer.WriteLine("{");
+                writer.Indent++;
+                handler(item.element);
+                writer.Indent--;
+                writer.WriteLine("}");
+            }
+        }
+
+        static int CountGaps<TValue>(IEnumerable<IGrouping<char, TValue>> groups)
+        {
+            var (min, max, visited) = FindGaps(groups);
+            int count = 0;
+            while(++min < max)
+            {
+                if(!visited.Contains(min))
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        static (TKey min, TKey max, HashSet<TKey> visited) FindGaps<TKey, TValue>(IEnumerable<IGrouping<TKey, TValue>> groups) where TKey : struct, IComparable<TKey>, IEquatable<TKey>
+        {
+            TKey min = default, max = default;
+            var visited = new HashSet<TKey>();
+            foreach(var group in groups)
+            {
+                var key = group.Key;
+                if(!visited.Add(key))
+                {
+                    continue;
+                }
+
+                if(visited.Count <= 1)
+                {
+                    // First element
+                    min = key;
+                    max = key;
+                    continue;
+                }
+
+                if(key.CompareTo(min) < 0)
+                {
+                    min = key;
+                }
+                if(key.CompareTo(max) > 0)
+                {
+                    max = key;
+                }
+            }
+            return (min, max, visited);
+        }
     }
 
     private static void AnalyzeMethod(IMethodSymbol method, out bool returnsHandler, out IParameterSymbol? valueParam, out Dictionary<(string localName, string? ns), IParameterSymbol> attributeParams)
