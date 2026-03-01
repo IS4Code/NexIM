@@ -148,7 +148,7 @@ public abstract class XmppFrameListener<TSocket> : XmppXmlListener<XmppFrameSess
                                 _ => await errorHandler.Message(stanza)
                             };
                         }
-                        return await command.Error(exc.Type?.ToToken());
+                        return await command.Error(exc.Type?.ToToken(), exc.Code);
                     });
                     if(command != null)
                     {

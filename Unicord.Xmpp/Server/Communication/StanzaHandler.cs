@@ -33,7 +33,7 @@ internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
         }
     }
 
-    ValueTask<IStanzaErrorHandler> IStanzaHandler.Error(Token<ErrorType>? type)
+    ValueTask<IStanzaErrorHandler> IStanzaHandler.Error(Token<ErrorType>? type, int? code)
     {
         return Program.NotImplemented<IStanzaErrorHandler>();
     }

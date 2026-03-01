@@ -172,7 +172,7 @@ public interface ISaslMechanismsHandler : IPayloadHandler
 public interface IStanzaHandler : IPayloadHandler
 {
     [Name("error")]
-    ValueTask<IStanzaErrorHandler> Error([Name("type")] Token<ErrorType>? type);
+    ValueTask<IStanzaErrorHandler> Error([Name("type")] Token<ErrorType>? type, [Name("code")] int? code);
 }
 
 [ComplexType]
