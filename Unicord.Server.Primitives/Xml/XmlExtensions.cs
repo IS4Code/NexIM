@@ -13,7 +13,14 @@ public static class XmlExtensions
         if(read == 0 && count != 0)
         {
             // End of text
-            reader.Read();
+            if(reader.NodeType == XmlNodeType.Attribute)
+            {
+                reader.MoveToElement();
+            }
+            else
+            {
+                reader.Read();
+            }
         }
         return read;
     }
@@ -24,7 +31,14 @@ public static class XmlExtensions
         if(read == 0 && count != 0)
         {
             // End of text
-            await reader.ReadAsync();
+            if(reader.NodeType == XmlNodeType.Attribute)
+            {
+                reader.MoveToElement();
+            }
+            else
+            {
+                await reader.ReadAsync();
+            }
         }
         return read;
     }

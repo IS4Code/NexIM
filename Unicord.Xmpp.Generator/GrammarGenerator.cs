@@ -489,6 +489,8 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                         int varCounter = 0;
 
                         AnalyzeMethod(method, out var returnsHandler, out var valueParam, out var attributeParams);
+
+                        bool onAttribute = false;
                         foreach(var pair2 in attributeParams)
                         {
                             var (attrName, attrNs) = pair2.Key;
@@ -520,6 +522,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                                 {
                                     // Read directly
                                     writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? reader.{readerMethod}() : ");
+                                    onAttribute = true;
                                 }
                                 else
                                 {
@@ -532,9 +535,16 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                             {
                                 // Go through decoder
                                 writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this) : ");
+                                onAttribute = true;
                             }
                             DefaultParamValue(param);
                             writer.WriteLine(";");
+                        }
+
+                        if(onAttribute)
+                        {
+                            // Move back
+                            writer.WriteLine("reader.MoveToElement();");
                         }
 
                         if(returnsHandler)
