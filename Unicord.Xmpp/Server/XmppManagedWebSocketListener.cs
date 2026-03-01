@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
@@ -103,6 +104,8 @@ public class XmppManagedWebSocketListener : XmppFrameListener<vtortola.WebSocket
         public override IPrincipal? User => throw new NotImplementedException();
 
         public override WebSocket WebSocket => socket;
+
+        X509Certificate? IWebSocketRequest.RemoteCertificate => null; // TODO Not supported
 
         EndPoint IWebSocketRequest.LocalEndPoint => webSocket.LocalEndpoint;
 

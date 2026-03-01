@@ -17,9 +17,9 @@ public class AccountsManager
 
     }
 
-    public async ValueTask<bool> Authenticate(AccountName accountName, TemporaryString? password)
+    public async ValueTask<bool> Authenticate(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
     {
-        if(!accountName.IsValid || password == null)
+        if(!accountName.IsValid || password.Length == 0)
         {
             return false;
         }
@@ -47,7 +47,7 @@ public class AccountsManager
                 Span<byte> data = stackalloc byte[SHA256.HashSizeInBytes * 2];
 
                 SHA256.HashData(MemoryMarshal.Cast<char, byte>(accountName.ToString()), data);
-                SHA256.HashData(MemoryMarshal.Cast<char, byte>(password.Value), data.Slice(SHA256.HashSizeInBytes));
+                SHA256.HashData(MemoryMarshal.Cast<char, byte>(password.Span), data.Slice(SHA256.HashSizeInBytes));
                 SHA256.HashData(data, buffer);
 
                 return buffer;
@@ -55,7 +55,7 @@ public class AccountsManager
             finally
             {
                 // No longer needed
-                password.Dispose();
+                memoryHandle?.Dispose();
             }
         }
     }

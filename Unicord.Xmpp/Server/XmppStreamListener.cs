@@ -165,6 +165,23 @@ public abstract class XmppStreamListener<TClient> : XmppXmlListener<XmppStreamSe
                         await command.DisposeAsync();
                     }
                 }
+                catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
+                {
+                    IStreamHandler errorHandler = session;
+
+                    ISaslFailureHandler? command = null;
+                    await OnError(xe, async exc => {
+                        if(command == null)
+                        {
+                            command = await errorHandler.SaslFailure();
+                        }
+                        return command;
+                    });
+                    if(command != null)
+                    {
+                        await command.DisposeAsync();
+                    }
+                }
                 finally
                 {
                     await session.Flush();

@@ -21,6 +21,9 @@ static file class Constants
     public const string Stanzas = "urn:ietf:params:xml:ns:xmpp-stanzas";
     public const string FeaturesCompress = "http://jabber.org/features/compress";
     public const string Compression = "http://jabber.org/protocol/compress";
+    public const string XmppSasl = "urn:ietf:params:xml:ns:xmpp-sasl";
+    public const string XmppBind = "urn:ietf:params:xml:ns:xmpp-bind";
+    public const string XmppSession = "urn:ietf:params:xml:ns:xmpp-session";
 }
 
 [StructLayout(LayoutKind.Auto)]
@@ -46,13 +49,13 @@ public interface ITransportHandler : IPayloadHandler
     ValueTask<IStreamErrorHandler> Error();
 
     [Name("starttls", XmppTls)]
-    ValueTask StartTls();
+    ValueTask TlsStart();
 
     [Name("proceed", XmppTls)]
-    ValueTask ProceedTls();
+    ValueTask TlsProceed();
 
     [Name("failure", XmppTls)]
-    ValueTask FailureTls();
+    ValueTask TlsFailure();
 
     [Name("compress", Compression)]
     ValueTask<ICompressionHandler> Compress();
@@ -62,6 +65,24 @@ public interface ITransportHandler : IPayloadHandler
 
     [Name("compressed", Compression)]
     ValueTask Compressed();
+
+    [Name("auth", XmppSasl)]
+    ValueTask SaslAuth([Name("mechanism")] Token<SaslMechanism>? mechanism, TemporaryUtf8String? data);
+
+    [Name("challenge", XmppSasl)]
+    ValueTask SaslChallenge(TemporaryUtf8String? data);
+
+    [Name("response", XmppSasl)]
+    ValueTask SaslResponse(TemporaryUtf8String? data);
+
+    [Name("abort", XmppSasl)]
+    ValueTask SaslAbort();
+
+    [Name("failure", XmppSasl)]
+    ValueTask<ISaslFailureHandler> SaslFailure();
+
+    [Name("success", XmppSasl)]
+    ValueTask SaslSuccess();
 }
 
 public interface IStreamHandler : ITransportHandler
@@ -88,6 +109,15 @@ public interface IFeaturesHandler : IPayloadHandler
 
     [Name("sub", "urn:xmpp:features:pre-approval")]
     ValueTask PreApproval();
+
+    [Name("bind", XmppBind)]
+    ValueTask Bind();
+
+    [Name("session", XmppSession)]
+    ValueTask<ISessionFeaturesHandler> Session();
+
+    [Name("mechanisms", XmppSasl)]
+    ValueTask<ISaslMechanismsHandler> SaslMechanisms();
 }
 
 [ComplexType, Namespace(XmppTls)]
@@ -122,6 +152,20 @@ public interface ICompressionFailureHandler : IPayloadHandler, IStanzaErrorHandl
 
     [Name("processing-failed")]
     ValueTask ProcessingFailed();
+}
+
+[ComplexType, Namespace(XmppSession)]
+public interface ISessionFeaturesHandler : IPayloadHandler
+{
+    [Name("optional")]
+    ValueTask Optional();
+}
+
+[ComplexType, Namespace(XmppSasl)]
+public interface ISaslMechanismsHandler : IPayloadHandler
+{
+    [Name("mechanism")]
+    ValueTask Mechanism(Token<SaslMechanism>? name);
 }
 
 [ComplexType, Namespace(Client)]
@@ -179,6 +223,12 @@ public interface IInfoQueryHandler : IStanzaHandler
     [Name("query", IqAuth)]
     ValueTask<IAuthQueryHandler> AuthQuery();
 
+    [Name("bind", XmppBind)]
+    ValueTask<IBindHandler> Bind();
+
+    [Name("session", XmppSession)]
+    ValueTask Session();
+
     [Name("ping", "urn:xmpp:ping")]
     ValueTask Ping();
 }
@@ -217,6 +267,16 @@ public interface IAuthQueryHandler : IPayloadHandler
 
     [Name("resource")]
     ValueTask Resource(string? value);
+}
+
+[ComplexType, Namespace(XmppBind)]
+public interface IBindHandler : IPayloadHandler
+{
+    [Name("resource")]
+    ValueTask Resource(string? value);
+
+    [Name("jid")]
+    ValueTask Identifier(XmppResource? value);
 }
 
 [ComplexType, Namespace(Streams)]
@@ -281,6 +341,18 @@ public interface IStanzaErrorHandler : IPayloadHandler
     [Name("unexpected-request")] ValueTask UnexpectedRequest();
 }
 
+[ComplexType, Namespace(XmppSasl)]
+public interface ISaslFailureHandler : IPayloadHandler
+{
+    [Name("aborted")] ValueTask Aborted();
+    [Name("incorrect-encoding")] ValueTask IncorrectEncoding();
+    [Name("invalid-authzid")] ValueTask InvalidAuthzid();
+    [Name("invalid-mechanism")] ValueTask InvalidMechanism();
+    [Name("mechanism-too-weak")] ValueTask MechanismTooWeak();
+    [Name("not-authorized")] ValueTask NotAuthorized();
+    [Name("temporary-auth-failure")] ValueTask TemporaryAuthFailure();
+}
+
 [SimpleType]
 public enum StanzaType
 {
@@ -342,6 +414,14 @@ public enum RosterSubscriptionDirection
 public enum RosterPendingAction
 {
     [Name("subscribe")] Subscription
+}
+
+[SimpleType]
+public enum SaslMechanism
+{
+    [Name("ANONYMOUS")] Anonymous,
+    [Name("EXTERNAL")] External,
+    [Name("PLAIN")] Plain
 }
 
 public abstract class PayloadHandler : IPayloadHandler

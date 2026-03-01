@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Unicord.Xmpp.Protocol;
@@ -54,13 +55,16 @@ public class XmppNativeWebSocketListener : XmppFrameListener<(HttpListenerReques
         }
     }
 
-    protected override ValueTask<XmppFrameSession> StartSession((HttpListenerRequest request, WebSocketContext context) info, CancellationToken cancellationToken)
+    protected async override ValueTask<XmppFrameSession> StartSession((HttpListenerRequest request, WebSocketContext context) info, CancellationToken cancellationToken)
     {
-        return new(new XmppWebSocketSession(new Request(info.request), info.context, ReaderSettings, WriterSettings, cancellationToken));
+        var request = info.request;
+        var wrapper = new Request(request, request.IsSecureConnection ? await request.GetClientCertificateAsync() : null);
+        return new XmppWebSocketSession(wrapper, info.context, ReaderSettings, WriterSettings, cancellationToken);
     }
 
-    class Request(HttpListenerRequest request) : IWebSocketRequest
+    class Request(HttpListenerRequest request, X509Certificate? certificate) : IWebSocketRequest
     {
+        public X509Certificate? RemoteCertificate => certificate;
         public EndPoint LocalEndPoint => request.LocalEndPoint;
         public EndPoint RemoteEndPoint => request.RemoteEndPoint;
     }

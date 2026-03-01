@@ -1,5 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Xml.Linq;
+using Unicord.Server.Primitives;
+using Unicord.Server.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol;
 
@@ -89,22 +91,22 @@ public abstract class XmppSendingHandler : IXmppSendingHandler
         return OnError();
     }
 
-    protected abstract ValueTask OnStartTls();
-    ValueTask ITransportHandler.StartTls()
+    protected abstract ValueTask OnTlsStart();
+    ValueTask ITransportHandler.TlsStart()
     {
-        return OnStartTls();
+        return OnTlsStart();
     }
 
-    protected abstract ValueTask OnProceedTls();
-    ValueTask ITransportHandler.ProceedTls()
+    protected abstract ValueTask OnTlsProceed();
+    ValueTask ITransportHandler.TlsProceed()
     {
-        return OnProceedTls();
+        return OnTlsProceed();
     }
 
-    protected abstract ValueTask OnFailureTls();
-    ValueTask ITransportHandler.FailureTls()
+    protected abstract ValueTask OnTlsFailure();
+    ValueTask ITransportHandler.TlsFailure()
     {
-        return OnFailureTls();
+        return OnTlsFailure();
     }
 
     protected abstract ValueTask OnOther(XElement payload);
@@ -129,5 +131,41 @@ public abstract class XmppSendingHandler : IXmppSendingHandler
     ValueTask ITransportHandler.Compressed()
     {
         return OnCompressed();
+    }
+
+    protected abstract ValueTask OnSaslAuth(Token<SaslMechanism>? mechanism, TemporaryUtf8String? data);
+    ValueTask ITransportHandler.SaslAuth(Token<SaslMechanism>? mechanism, TemporaryUtf8String? data)
+    {
+        return OnSaslAuth(mechanism, data);
+    }
+
+    protected abstract ValueTask OnSaslChallenge(TemporaryUtf8String? data);
+    ValueTask ITransportHandler.SaslChallenge(TemporaryUtf8String? data)
+    {
+        return OnSaslChallenge(data);
+    }
+
+    protected abstract ValueTask OnSaslResponse(TemporaryUtf8String? data);
+    ValueTask ITransportHandler.SaslResponse(TemporaryUtf8String? data)
+    {
+        return OnSaslResponse(data);
+    }
+
+    protected abstract ValueTask OnSaslAbort();
+    ValueTask ITransportHandler.SaslAbort()
+    {
+        return OnSaslAbort();
+    }
+
+    protected abstract ValueTask<ISaslFailureHandler> OnSaslFailure();
+    ValueTask<ISaslFailureHandler> ITransportHandler.SaslFailure()
+    {
+        return OnSaslFailure();
+    }
+
+    protected abstract ValueTask OnSaslSuccess();
+    ValueTask ITransportHandler.SaslSuccess()
+    {
+        return OnSaslSuccess();
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
 using Unicord.Server.Primitives;
@@ -18,13 +19,57 @@ public class Server
 
     public async ValueTask<bool> Authenticate(AccountName accountName, TemporaryString? password, IClientSession session)
     {
-        if(!await Accounts.Authenticate(accountName, password))
+        if(!await Accounts.Authenticate(accountName, password?.Value.AsMemory() ?? default, password))
         {
             return false;
         }
 
         Sessions.AddSession(accountName, session);
         return true;
+    }
+
+    public async ValueTask<AccountName?> AuthenticatePlain(TemporaryUtf8String? data, Func<string, AccountName> usernameResolver)
+    {
+        if(data == null)
+        {
+            return null;
+        }
+
+        var memory = data.Value.AsMemory();
+
+        // Format [authzid]NUL[authid]NUL[password]
+        int usernameAt = memory.Span.IndexOf('\0');
+        if(++usernameAt == 0)
+        {
+            return null;
+        }
+        int passwordAt = memory.Span.Slice(usernameAt).IndexOf('\0');
+        if(++passwordAt == 0)
+        {
+            return null;
+        }
+        passwordAt += usernameAt;
+        if(memory.Span.Slice(passwordAt).IndexOf('\0') != -1)
+        {
+            return null;
+        }
+
+        var authzid = memory.Slice(0, usernameAt - 1);
+        var username = memory.Slice(usernameAt, passwordAt - usernameAt - 1).ToString();
+        var password = memory.Slice(passwordAt);
+
+        var accountName = usernameResolver(username);
+        if(authzid.Length != 0 && !((ReadOnlySpan<char>)authzid.Span).Equals(accountName.ToString().AsSpan(), StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if(!await Accounts.Authenticate(accountName, password, data))
+        {
+            return null;
+        }
+
+        return accountName;
     }
 
     public async ValueTask<bool> RemoveContact(Account account, AccountName target)

@@ -3,6 +3,7 @@ using System.Buffers;
 using System.IO;
 using System.Net;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -25,10 +26,9 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
 
     public override bool CanCompress => false;
 
+    public override X509Certificate? RemoteCertificate => request.RemoteCertificate;
     public override EndPoint? LocalEndPoint => request.LocalEndPoint;
-
     public override EndPoint? RemoteEndPoint => request.RemoteEndPoint;
-
     public override CancellationToken CancellationToken => cancellationToken;
 
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
@@ -52,6 +52,7 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
 
 public interface IWebSocketRequest
 {
+    X509Certificate? RemoteCertificate { get; }
     EndPoint LocalEndPoint { get; }
     EndPoint RemoteEndPoint { get; }
 }

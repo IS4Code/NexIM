@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Unicord.Server.Primitives;
+using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
 
@@ -26,6 +28,7 @@ public abstract class XmppXmlSession : XmppSession
 
     protected abstract ValueTask UpgradeTls();
     protected abstract ValueTask EnableCompression();
+    protected abstract ValueTask Authenticated();
     protected abstract ValueTask Close();
 
     public abstract ValueTask Flush();
@@ -62,13 +65,13 @@ public abstract class XmppXmlSession : XmppSession
         return Enter<IInfoQueryHandler>(handler);
     }
 
-    protected async sealed override ValueTask OnStartTls()
+    protected async sealed override ValueTask OnTlsStart()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
         {
             ITransportHandler handler = commandHandler;
-            await handler.StartTls();
+            await handler.TlsStart();
             await Flush();
         }
         finally
@@ -77,13 +80,13 @@ public abstract class XmppXmlSession : XmppSession
         }
     }
 
-    protected async sealed override ValueTask OnProceedTls()
+    protected async sealed override ValueTask OnTlsProceed()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
         {
             ITransportHandler handler = commandHandler;
-            await handler.ProceedTls();
+            await handler.TlsProceed();
             await Flush();
 
             // Swap to TLS while locked
@@ -95,7 +98,7 @@ public abstract class XmppXmlSession : XmppSession
         }
     }
 
-    protected async sealed override ValueTask OnFailureTls()
+    protected async sealed override ValueTask OnTlsFailure()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -103,7 +106,7 @@ public abstract class XmppXmlSession : XmppSession
             try
             {
                 ITransportHandler handler = commandHandler;
-                await handler.FailureTls();
+                await handler.TlsFailure();
                 await Flush();
             }
             finally
@@ -143,6 +146,91 @@ public abstract class XmppXmlSession : XmppSession
 
             // Enable compression while locked
             await EnableCompression();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    protected async override ValueTask OnSaslAuth(Token<SaslMechanism>? mechanism, TemporaryUtf8String? data)
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            ITransportHandler handler = commandHandler;
+            await handler.SaslAuth(mechanism, data);
+            await Flush();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    protected async override ValueTask OnSaslAbort()
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            ITransportHandler handler = commandHandler;
+            await handler.SaslAbort();
+            await Flush();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    protected async override ValueTask OnSaslChallenge(TemporaryUtf8String? data)
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            ITransportHandler handler = commandHandler;
+            await handler.SaslChallenge(data);
+            await Flush();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    protected async override ValueTask<ISaslFailureHandler> OnSaslFailure()
+    {
+        var handler = new SaslFailureHandler(this);
+        await handler.Acquire();
+        return handler;
+    }
+
+    protected async override ValueTask OnSaslResponse(TemporaryUtf8String? data)
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            ITransportHandler handler = commandHandler;
+            await handler.SaslResponse(data);
+            await Flush();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    protected async override ValueTask OnSaslSuccess()
+    {
+        await semaphore.WaitAsync(CancellationToken);
+        try
+        {
+            ITransportHandler handler = commandHandler;
+            await handler.SaslSuccess();
+            await Flush();
+
+            // Finish authentication while locked
+            await Authenticated();
         }
         finally
         {
@@ -385,6 +473,19 @@ public abstract class XmppXmlSession : XmppSession
         protected override ValueTask<ICompressionHandler> Open()
         {
             return Handler.Compress();
+        }
+    }
+
+    sealed class SaslFailureHandler : TopLevelElementHandler<ISaslFailureHandler>
+    {
+        public SaslFailureHandler(XmppXmlSession session) : base(session)
+        {
+
+        }
+
+        protected override ValueTask<ISaslFailureHandler> Open()
+        {
+            return Handler.SaslFailure();
         }
     }
 

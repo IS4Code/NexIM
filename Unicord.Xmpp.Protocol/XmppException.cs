@@ -212,3 +212,28 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
         return message != null ? new(type, message, details) : new(type, details);
     }
 }
+
+public class XmppSaslException : XmppException<ISaslFailureHandler>
+{
+    public XmppSaslException(Func<ISaslFailureHandler, ValueTask> details) : base(details)
+    {
+
+    }
+
+    public XmppSaslException(string? message, Func<ISaslFailureHandler, ValueTask> details) : base(message, details)
+    {
+
+    }
+
+    public static XmppSaslException Aborted(string? message = null) => Create(message, static h => h.Aborted());
+    public static XmppSaslException IncorrectEncoding(string? message = null) => Create(message, static h => h.IncorrectEncoding());
+    public static XmppSaslException InvalidAuthzid(string? message = null) => Create(message, static h => h.InvalidAuthzid());
+    public static XmppSaslException InvalidMechanism(string? message = null) => Create(message, static h => h.InvalidMechanism());
+    public static XmppSaslException NotAuthorized(string? message = null) => Create(message, static h => h.NotAuthorized());
+    public static XmppSaslException TemporaryAuthFailure(string? message = null) => Create(message, static h => h.TemporaryAuthFailure());
+
+    private static XmppSaslException Create(string? message, Func<ISaslFailureHandler, ValueTask> details)
+    {
+        return message != null ? new(message, details) : new(details);
+    }
+}

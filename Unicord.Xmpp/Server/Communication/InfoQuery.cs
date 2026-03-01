@@ -37,6 +37,44 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
         }
     }
 
+    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
+    {
+        SetOnce(ref handled, true);
+
+        EnsureReceiverIsServer();
+        switch(Type)
+        {
+            case StanzaType.Get:
+                throw XmppStanzaException.BadRequest();
+            case StanzaType.Set:
+                return new BindHandler(Server, Session, Identifier);
+            default:
+                return NullHandler.Instance;
+        }
+    }
+
+    async ValueTask IInfoQueryHandler.Session()
+    {
+        SetOnce(ref handled, true);
+
+        EnsureReceiverIsServer();
+        switch(Type)
+        {
+            case StanzaType.Get:
+                throw XmppStanzaException.BadRequest();
+            case StanzaType.Set:
+                break;
+            default:
+                return;
+        }
+
+        // Ensure authenticated and bound
+        _ = RemoteResource;
+
+        // Success
+        await using var iq = await Session.InfoQuery(NewResponse());
+    }
+
     async ValueTask IInfoQueryHandler.Ping()
     {
         SetOnce(ref handled, true);

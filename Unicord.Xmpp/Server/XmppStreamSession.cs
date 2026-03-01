@@ -70,10 +70,10 @@ public abstract class XmppStreamSession : XmppXmlSession
 
             async Task CloseStream()
             {
-                if(writer.WriteState is not (WriteState.Start or WriteState.Prolog or WriteState.Closed))
+                if(writer.WriteState is not (WriteState.Start or WriteState.Closed))
                 {
-                    await writer.WriteEndDocumentAsync();
-                    await writer.FlushAsync();
+                    // Data was not closed
+                    await EndStream();
                 }
                 await writer.DisposeAsync();
             }
@@ -81,6 +81,16 @@ public abstract class XmppStreamSession : XmppXmlSession
         catch(Exception e) when(IsAllowedClosingException(e))
         {
             // Accessing closed stream
+        }
+    }
+
+    protected async virtual ValueTask EndStream()
+    {
+        if(writer.WriteState != WriteState.Prolog)
+        {
+            // Close all open elements, including the top-level <stream>
+            await writer.WriteEndDocumentAsync();
+            await writer.FlushAsync();
         }
     }
 

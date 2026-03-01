@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server;
 using Unicord.Server.Model;
@@ -16,15 +17,17 @@ public class ClientSession : IClientSession
     bool receivesRosterUpdates, receivesPresenceUpdates;
     ICollection<Contact>? lastUpdatedRoster;
 
-    public string Identifier { get; }
+    public required AccountName AccountName { get; init; }
+    public required string? Identifier { get; set; }
+
+    string IClientSession.Identifier => Identifier ?? throw new InvalidOperationException("The session is not bound to any resource yet.");
 
     public SenderPresentation Presentation { get; set; }
     public Status Status { get; set; }
 
-    public ClientSession(IXmppSession xmpp, string identifier)
+    public ClientSession(IXmppSession xmpp)
     {
         this.xmpp = xmpp;
-        Identifier = identifier;
     }
 
     private Token<StanzaType>? MessageType(ConversationType? type)

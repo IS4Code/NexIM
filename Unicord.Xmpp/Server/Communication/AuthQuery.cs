@@ -52,9 +52,9 @@ internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
         await query.Username(null);
         await query.Resource(null);
 
+        // Never request plaintext password over insecure connection
         if(Session.IsSecure)
         {
-            // Can authenticate with plaintext password
             await query.Password(null);
         }
         else
@@ -66,7 +66,7 @@ internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
 
 internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
 {
-    string? username, resource;
+    string? username, resource, digest;
     TemporaryString? password;
 
     public SetAuthQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
@@ -81,6 +81,12 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
 
     async ValueTask IAuthQueryHandler.Password(TemporaryString? value)
     {
+        if(!Session.IsSecure)
+        {
+            // Password was not requested
+            throw XmppStanzaException.BadRequest();
+        }
+
         if(value == null)
         {
             return;
@@ -104,9 +110,14 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
         }
     }
 
-    ValueTask IAuthQueryHandler.Digest(string? value)
+    async ValueTask IAuthQueryHandler.Digest(string? value)
     {
-        return default;
+        if(Session.IsSecure)
+        {
+            // Digest was not requested
+            throw XmppStanzaException.BadRequest();
+        }
+        SetOnce(ref digest, value);
     }
 
     async ValueTask IAuthQueryHandler.Resource(string? value)
@@ -118,16 +129,27 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
     {
         try
         {
-            if(username == null || resource == null || password == null)
+            if(username == null || resource == null || Session.IsSecure ? password == null : digest == null)
             {
                 throw XmppStanzaException.BadRequest();
+            }
+
+            if(password == null)
+            {
+                // Authenticating with a digest requires server knowledge of the plaintext password
+                throw XmppStanzaException.NotAuthorized();
             }
 
             var identifier = new XmppResource(username, LocalResource.Address.Host, resource);
 
             var accountName = ClientSession.GetAccount(identifier, out _);
 
-            var clientSession = new ClientSession(Session, resource);
+            var clientSession = new ClientSession(Session)
+            {
+                Identifier = resource,
+                AccountName = accountName
+            };
+
             if(!await Server.Authenticate(accountName, password, clientSession))
             {
                 throw XmppStanzaException.NotAuthorized();

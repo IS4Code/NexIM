@@ -13,7 +13,7 @@ namespace Unicord.Xmpp.Server;
 /// Provides an implementation of <see cref="IXmppSession"/> 
 /// sending XMPP commands via a <see cref="NetworkStream"/> instance.
 /// </summary>
-public abstract class XmppNetworkSession(NetworkStream networkStream, CancellationToken cancellationToken) : XmppStreamSession(networkStream)
+public abstract class XmppNetworkSession(NetworkStream networkStream, CancellationToken cancellationToken) : XmppAuthSession(networkStream)
 {
     SslStream? sslStream;
 
@@ -32,7 +32,7 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
         // Do not compress when TLS is a possibility
         !isCompressed && !CanUpgradeTls;
 
-    public X509Certificate? RemoteCertificate => sslStream?.RemoteCertificate;
+    public sealed override X509Certificate? RemoteCertificate => sslStream?.RemoteCertificate;
     public sealed override EndPoint? LocalEndPoint => networkStream.Socket.LocalEndPoint;
     public sealed override EndPoint? RemoteEndPoint => networkStream.Socket.RemoteEndPoint;
     public sealed override CancellationToken CancellationToken => cancellationToken;

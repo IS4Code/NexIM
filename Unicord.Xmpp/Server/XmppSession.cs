@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
@@ -21,9 +23,13 @@ public interface IXmppSession : IXmppSendingHandler
     bool CanCompress { get; }
     EndPoint? LocalEndPoint { get; }
     EndPoint? RemoteEndPoint { get; }
+    X509Certificate? RemoteCertificate { get; }
 
     AccountName AccountName { get; }
     ClientSession? ClientSession { get; set; }
+
+    [MemberNotNullWhen(true, nameof(ClientSession))]
+    bool IsAuthenticated { get; }
 }
 
 /// <summary>
@@ -37,10 +43,12 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract bool CanCompress { get; }
     public abstract EndPoint? LocalEndPoint { get; }
     public abstract EndPoint? RemoteEndPoint { get; }
+    public abstract X509Certificate? RemoteCertificate { get; }
     public abstract CancellationToken CancellationToken { get; }
 
-    public AccountName AccountName => ClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
+    public AccountName AccountName => ClientSession?.AccountName ?? ClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
     public ClientSession? ClientSession { get; set; }
+    public bool IsAuthenticated => ClientSession != null;
 
     protected bool IsAllowedClosingException(Exception e)
     {
