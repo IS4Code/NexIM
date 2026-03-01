@@ -40,11 +40,10 @@ internal abstract class WebSocketStream : NonSeekableStream
         return ReadAsync(buffer, offset, count).GetAwaiter().GetResult();
     }
 
-    public async sealed override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken = default)
+    public sealed override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken = default)
     {
-        // Do not use the ArraySegment version since this returns a struct 
-        var result = await WebSocket.ReceiveAsync(buffer.AsMemory(offset, count), cancellationToken);
-        return result.Count;
+        // Do not use the ArraySegment version to have a struct result
+        return ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
     }
 
     public async sealed override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)

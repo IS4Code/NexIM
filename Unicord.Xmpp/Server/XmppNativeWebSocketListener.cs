@@ -61,6 +61,7 @@ public class XmppNativeWebSocketListener : XmppFrameListener<(HttpListenerReques
 
     class Request(HttpListenerRequest request) : IWebSocketRequest
     {
+        public EndPoint LocalEndPoint => request.LocalEndPoint;
         public EndPoint RemoteEndPoint => request.RemoteEndPoint;
     }
 }

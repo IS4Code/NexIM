@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml;
@@ -77,7 +78,7 @@ public abstract class XmppStreamSession : XmppXmlSession
                 await writer.DisposeAsync();
             }
         }
-        catch(IOException)
+        catch(Exception e) when(IsAllowedClosingException(e))
         {
             // Accessing closed stream
         }

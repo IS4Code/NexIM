@@ -1,5 +1,8 @@
 using System;
+using System.IO;
 using System.Net;
+using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Threading;
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
@@ -16,6 +19,7 @@ public interface IXmppSession : IXmppSendingHandler
     bool IsSecure { get; }
     bool CanUpgradeTls { get; }
     bool CanCompress { get; }
+    EndPoint? LocalEndPoint { get; }
     EndPoint? RemoteEndPoint { get; }
 
     AccountName AccountName { get; }
@@ -31,9 +35,15 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract bool IsSecure { get; }
     public abstract bool CanUpgradeTls { get; }
     public abstract bool CanCompress { get; }
+    public abstract EndPoint? LocalEndPoint { get; }
     public abstract EndPoint? RemoteEndPoint { get; }
     public abstract CancellationToken CancellationToken { get; }
 
     public AccountName AccountName => ClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
     public ClientSession? ClientSession { get; set; }
+
+    protected bool IsAllowedClosingException(Exception e)
+    {
+        return e is SocketException or WebSocketException or WebException or HttpListenerException or IOException or ObjectDisposedException;
+    }
 }

@@ -74,7 +74,7 @@ public abstract class XmppFrameSession : XmppXmlSession
                 await writer.DisposeAsync();
             }
         }
-        catch(IOException)
+        catch(Exception e) when(IsAllowedClosingException(e))
         {
             // Accessing closed stream
         }

@@ -25,6 +25,8 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
 
     public override bool CanCompress => false;
 
+    public override EndPoint? LocalEndPoint => request.LocalEndPoint;
+
     public override EndPoint? RemoteEndPoint => request.RemoteEndPoint;
 
     public override CancellationToken CancellationToken => cancellationToken;
@@ -50,5 +52,6 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
 
 public interface IWebSocketRequest
 {
+    EndPoint LocalEndPoint { get; }
     EndPoint RemoteEndPoint { get; }
 }

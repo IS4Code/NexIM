@@ -23,8 +23,8 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
 
     public sealed override bool IsSecure =>
         sslStream != null ||
-        // Loopback connection is considered secure
-        RemoteEndPoint is IPEndPoint { Address: var addr } && IPAddress.IsLoopback(addr);
+        // Local connection is considered secure
+        LocalEndPoint.SameAddressAs(RemoteEndPoint);
 
     public sealed override bool CanUpgradeTls => sslStream == null;
 
@@ -33,6 +33,7 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
         !isCompressed && !CanUpgradeTls;
 
     public X509Certificate? RemoteCertificate => sslStream?.RemoteCertificate;
+    public sealed override EndPoint? LocalEndPoint => networkStream.Socket.LocalEndPoint;
     public sealed override EndPoint? RemoteEndPoint => networkStream.Socket.RemoteEndPoint;
     public sealed override CancellationToken CancellationToken => cancellationToken;
 

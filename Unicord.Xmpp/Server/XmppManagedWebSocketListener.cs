@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
@@ -10,6 +9,7 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
@@ -86,10 +86,7 @@ public class XmppManagedWebSocketListener : XmppFrameListener<vtortola.WebSocket
 
         public override bool IsAuthenticated => throw new NotImplementedException();
 
-        public override bool IsLocal =>
-            webSocket.LocalEndpoint is IPEndPoint { Address: var localAddress } &&
-            webSocket.RemoteEndpoint is IPEndPoint { Address: var remoteAddress } &&
-            localAddress.Equals(remoteAddress);
+        public override bool IsLocal => webSocket.LocalEndpoint.SameAddressAs(webSocket.RemoteEndpoint);
 
         public override bool IsSecureConnection => webSocket.HttpRequest.IsSecure;
 
@@ -106,6 +103,8 @@ public class XmppManagedWebSocketListener : XmppFrameListener<vtortola.WebSocket
         public override IPrincipal? User => throw new NotImplementedException();
 
         public override WebSocket WebSocket => socket;
+
+        EndPoint IWebSocketRequest.LocalEndPoint => webSocket.LocalEndpoint;
 
         EndPoint IWebSocketRequest.RemoteEndPoint => webSocket.RemoteEndpoint;
 
@@ -228,7 +227,6 @@ public class XmppManagedWebSocketListener : XmppFrameListener<vtortola.WebSocket
                     finally
                     {
                         await writer.DisposeAsync();
-                        writer = null;
                     }
                 }
             }
