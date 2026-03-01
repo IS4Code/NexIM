@@ -8,7 +8,7 @@ namespace Unicord.Server.Primitives.Xml;
 /// <summary>
 /// Provides support for decoding from XML.
 /// </summary>
-public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token<Enum>>, IValueXmlDecoder<LanguageTaggedString>
+public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<TemporaryUtf8String>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token<Enum>>, IValueXmlDecoder<LanguageTaggedString>
 {
     protected abstract void ThrowElementNotEmpty();
     protected abstract void ThrowElementNotSimple();
@@ -98,8 +98,12 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
         }
     }
 
-    static readonly TemporaryString.AsynchronousReader<XmlReader> xmlTemporaryStringReader = static async (buffer, reader) => {
-        return await reader.ReadContentAsCharsAsync(buffer.Array!, buffer.Offset, buffer.Count);
+    static readonly TemporaryArray<char>.AsynchronousReader<XmlReader> xmlTemporaryCharReader = static (buffer, reader) => {
+        return reader.ReadContentAsCharsAsync(buffer.Array!, buffer.Offset, buffer.Count);
+    };
+
+    static readonly TemporaryArray<byte>.AsynchronousReader<XmlReader> xmlTemporaryByteReader = static (buffer, reader) => {
+        return new(reader.ReadContentAsBase64Async(buffer.Array!, buffer.Offset, buffer.Count));
     };
 
     async ValueTask<TemporaryString> IValueXmlDecoder<TemporaryString>.Decode(XmlReader reader)
@@ -107,7 +111,7 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
         var str = new TemporaryString(arraySource: ArraySource<char>.Instance);
         try
         {
-            await str.ReadFromAsync(xmlTemporaryStringReader, reader);
+            await str.ReadFromAsync(xmlTemporaryCharReader, reader);
             return str;
         }
         catch when(Dispose())
@@ -123,16 +127,33 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
         }
     }
 
-    static readonly TemporaryArray<byte>.AsynchronousReader<XmlReader> xmlTemporaryByteArrayReader = static async (buffer, reader) => {
-        return await reader.ReadContentAsBase64Async(buffer.Array!, buffer.Offset, buffer.Count);
-    };
+    async ValueTask<TemporaryUtf8String> IValueXmlDecoder<TemporaryUtf8String>.Decode(XmlReader reader)
+    {
+        var str = new TemporaryUtf8String(arraySource: ArraySource<char>.Instance);
+        try
+        {
+            await str.ReadFromAsync(xmlTemporaryByteReader, reader);
+            return str;
+        }
+        catch when(Dispose())
+        {
+            // Dispose unreturned data immediately
+            throw;
+        }
+
+        bool Dispose()
+        {
+            str.Dispose();
+            return false;
+        }
+    }
 
     async ValueTask<TemporaryArray<byte>> IValueXmlDecoder<TemporaryArray<byte>>.Decode(XmlReader reader)
     {
         var arr = new TemporaryArray<byte>(arraySource: ArraySource<byte>.Instance);
         try
         {
-            await arr.ReadFromAsync(xmlTemporaryByteArrayReader, reader);
+            await arr.ReadFromAsync(xmlTemporaryByteReader, reader);
             return arr;
         }
         catch when(Dispose())

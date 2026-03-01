@@ -7,7 +7,7 @@ namespace Unicord.Server.Primitives.Xml;
 /// <summary>
 /// Provides support for encoding to XML.
 /// </summary>
-public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>
+public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -26,21 +26,32 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
         return writer.WriteEndAttributeAsync();
     }
 
+    static readonly TemporaryArray<char>.AsynchronousWriter<XmlWriter> xmlTemporaryCharWriter = static (buffer, writer) => {
+        return new(writer.WriteCharsAsync(buffer.Array!, buffer.Offset, buffer.Count));
+    };
+
+    static readonly TemporaryArray<byte>.AsynchronousWriter<XmlWriter> xmlTemporaryByteWriter = static (buffer, writer) => {
+        return new(writer.WriteBase64Async(buffer.Array!, buffer.Offset, buffer.Count));
+    };
+
     ValueTask IValueXmlEncoder<ArraySegment<byte>>.Encode(XmlWriter writer, ArraySegment<byte> value)
     {
-        return new(writer.WriteBase64Async(value.Array!, value.Offset, value.Count));
+        return xmlTemporaryByteWriter(value, writer);
     }
 
-    async ValueTask IValueXmlEncoder<TemporaryString>.Encode(XmlWriter writer, TemporaryString value)
+    ValueTask IValueXmlEncoder<TemporaryString>.Encode(XmlWriter writer, TemporaryString value)
     {
-        var segment = value.Value;
-        await writer.WriteCharsAsync(segment.Array!, segment.Offset, segment.Count);
+        return value.WriteToAsync(xmlTemporaryCharWriter, writer);
     }
 
-    async ValueTask IValueXmlEncoder<TemporaryArray<byte>>.Encode(XmlWriter writer, TemporaryArray<byte> value)
+    ValueTask IValueXmlEncoder<TemporaryUtf8String>.Encode(XmlWriter writer, TemporaryUtf8String value)
     {
-        var segment = value.Value;
-        await writer.WriteBase64Async(segment.Array!, segment.Offset, segment.Count);
+        return value.WriteToAsync(xmlTemporaryByteWriter, writer);
+    }
+
+    ValueTask IValueXmlEncoder<TemporaryArray<byte>>.Encode(XmlWriter writer, TemporaryArray<byte> value)
+    {
+        return value.WriteToAsync(xmlTemporaryByteWriter, writer);
     }
 
     protected async ValueTask EncodeTokenAsync(XmlWriter writer, string tokenValue)

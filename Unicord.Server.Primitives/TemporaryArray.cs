@@ -15,6 +15,9 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
     public delegate int SynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
     public delegate ValueTask<int> AsynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
 
+    public delegate void SynchronousWriter<TArgs>(ArraySegment<T> inputBuffer, TArgs args);
+    public delegate ValueTask AsynchronousWriter<TArgs>(ArraySegment<T> inputBuffer, TArgs args);
+
     readonly ITemporaryArraySource<T> source;
 
     readonly object syncRoot = new();
@@ -49,7 +52,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
         handle = GCHandle.Alloc(storage, GCHandleType.Pinned);
     }
 
-    protected TemporaryArray(TemporaryArray<T> original)
+    private protected TemporaryArray(TemporaryArray<T> original)
     {
         lock(original.syncRoot)
         {
@@ -221,6 +224,16 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
         while((read = await reader(new(storage, Length, storage.Length - Length), args)) > 0);
     }
 
+    public void WriteTo<TArgs>(SynchronousWriter<TArgs> writer, TArgs args)
+    {
+        writer(Value, args);
+    }
+
+    public ValueTask WriteToAsync<TArgs>(AsynchronousWriter<TArgs> writer, TArgs args)
+    {
+        return writer(Value, args);
+    }
+
     public Span<T>.Enumerator GetEnumerator()
     {
         return Data.GetEnumerator();
@@ -300,27 +313,5 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
     {
         Dispose(true);
         GC.SuppressFinalize(this);
-    }
-}
-
-/// <summary>
-/// Provides a mutable string implementation whose contents can be determinstically
-/// cleared from memory.
-/// </summary>
-public class TemporaryString : TemporaryArray<char>
-{
-    public TemporaryString(int capacity = 1, ITemporaryArraySource<char>? arraySource = null) : base(capacity, arraySource)
-    {
-
-    }
-
-    protected TemporaryString(TemporaryArray<char> original) : base(original)
-    {
-
-    }
-
-    public static new TemporaryString MoveFrom(TemporaryArray<char> original)
-    {
-        return new(original);
     }
 }
