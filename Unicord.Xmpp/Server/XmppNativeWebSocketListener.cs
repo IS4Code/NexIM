@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
@@ -49,7 +48,7 @@ public class XmppNativeWebSocketListener : XmppFrameListener<(HttpListenerReques
 
             await HandleSocket((context.Request, wsContext), cancellationToken);
         }
-        catch(Exception e) when(!Debugger.IsAttached)
+        catch(Exception e) when(Program.SuppressUnexpectedExceptions())
         {
             Console.WriteLine(e);
         }

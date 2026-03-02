@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -39,7 +38,7 @@ public class XmppTcpListener : XmppStreamListener<TcpClient>
         {
             await HandleStream(client, cancellationToken);
         }
-        catch(Exception e) when(!Debugger.IsAttached)
+        catch(Exception e) when(Program.SuppressUnexpectedExceptions())
         {
             Console.WriteLine(e);
         }

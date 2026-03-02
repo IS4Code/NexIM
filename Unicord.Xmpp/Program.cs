@@ -20,4 +20,10 @@ internal class Program
         Debugger.Break();
         throw new NotImplementedException(null, XmppStanzaException.FeatureNotImplemented());
     }
+
+    internal static bool SuppressUnexpectedExceptions()
+    {
+        Debugger.Break();
+        return true;
+    }
 }

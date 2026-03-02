@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -204,7 +203,7 @@ public abstract class XmppStreamListener<TClient> : XmppXmlListener<XmppStreamSe
             await OnStreamError(xe);
             throw;
         }
-        catch when(!Debugger.IsAttached)
+        catch when(Program.SuppressUnexpectedExceptions())
         {
             await OnStreamError(XmppStreamException.InternalServerError());
             throw;
