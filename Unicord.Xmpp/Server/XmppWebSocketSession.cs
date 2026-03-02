@@ -19,8 +19,7 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
 
     public override bool IsSecure =>
         context.IsLocal
-        || context.IsSecureConnection
-        || RemoteEndPoint is IPEndPoint { Address: var addr } && IPAddress.IsLoopback(addr);
+        || context.IsSecureConnection;
 
     public override bool CanUpgradeTls => false;
 
