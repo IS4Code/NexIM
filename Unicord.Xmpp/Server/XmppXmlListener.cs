@@ -87,34 +87,33 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
     protected ValueTask<XmppDecoder.Result> EnterCommand(XmlReader reader, IStreamHandler handler, out StanzaInfo? info)
     {
         var elementName = reader.LocalName;
-        var elementNs = reader.NamespaceURI;
-        if(elementNs == JabberClientNs)
+        if(reader.NamespaceURI == JabberClientNs)
         {
-            switch(elementName[0])
+            switch(elementName.Length)
             {
-                case 'i':
-                    if(elementName == Iq)
-                    {
-                        var stanza = ParseStanza(reader);
-                        info = new(StanzaKind.InfoQuery, stanza.Identifier);
-                        return Success(handler.InfoQuery(stanza));
-                    }
-                    break;
-                case 'm':
-                    if(elementName == Message)
-                    {
-                        var stanza = ParseStanza(reader);
-                        info = new(StanzaKind.Message, stanza.Identifier);
-                        return Success(handler.Message(stanza));
-                    }
-                    break;
-                case 'p':
-                    if(elementName == Presence)
-                    {
-                        var stanza = ParseStanza(reader);
-                        info = new(StanzaKind.Presence, stanza.Identifier);
-                        return Success(handler.Presence(stanza));
-                    }
+                case 2 when elementName == Iq:
+                {
+                    var stanza = ParseStanza(reader);
+                    info = new(StanzaKind.InfoQuery, stanza.Identifier);
+                    return Success(handler.InfoQuery(stanza));
+                }
+                case 7 when elementName == Message:
+                {
+                    var stanza = ParseStanza(reader);
+                    info = new(StanzaKind.Message, stanza.Identifier);
+                    return Success(handler.Message(stanza));
+                }
+                case 8 when elementName == Presence:
+                {
+                    var stanza = ParseStanza(reader);
+                    info = new(StanzaKind.Presence, stanza.Identifier);
+                    return Success(handler.Presence(stanza));
+                }
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                    // Contiguous to compile to CIL switch
                     break;
             }
         }
@@ -139,12 +138,13 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
                 var attrName = reader.LocalName;
                 if(reader.NamespaceURI == Empty)
                 {
-                    switch(attrName[0])
+                    switch(attrName.Length)
                     {
-                        case 't':
-                            if(attrName == Type)
+                        case 2:
+                            if(attrName == Id)
                             {
-                                stanza.Type = Token<StanzaType>.FromAtomized(reader.NameTable.Add(reader.Value));
+                                stanza.Identifier = reader.Value;
+                                continue;
                             }
                             else if(attrName == To)
                             {
@@ -152,19 +152,19 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
                                 continue;
                             }
                             break;
-                        case 'f':
-                            if(attrName == From)
+                        case 4:
+                            if(attrName == Type)
+                            {
+                                stanza.Type = Token<StanzaType>.FromAtomized(reader.NameTable.Add(reader.Value));
+                            }
+                            else if(attrName == From)
                             {
                                 stanza.From = XmppResource.Parse(reader.Value.AsMemory(), reader.NameTable);
                                 continue;
                             }
                             break;
-                        case 'i':
-                            if(attrName == Id)
-                            {
-                                stanza.Identifier = reader.Value;
-                                continue;
-                            }
+                        case 3:
+                            // Contiguous to compile to CIL switch
                             break;
                     }
                 }
