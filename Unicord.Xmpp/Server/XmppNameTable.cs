@@ -41,7 +41,7 @@ public class XmppNameTable : XmppVocabulary,
     [ThreadStatic]
     static string? createResult, findResult;
 
-    public virtual string Add(ReadOnlyMemory<char> memory)
+    public override string Add(ReadOnlyMemory<char> memory)
     {
         try
         {
@@ -84,7 +84,7 @@ public class XmppNameTable : XmppVocabulary,
         }
     }
 
-    public virtual string? Get(ReadOnlyMemory<char> memory)
+    public override string? Get(ReadOnlyMemory<char> memory)
     {
         return Get(CreateRecord(memory));
     }
@@ -147,26 +147,6 @@ public class XmppNameTable : XmppVocabulary,
     private PreHashed<ReadOnlyMemory<char>> CreateRecord(ReadOnlyMemory<char> memory)
     {
         return new(GetHashCode(memory.Span), memory);
-    }
-
-    public sealed override string Add(char[] array, int offset, int length)
-    {
-        return Add(array.AsMemory(offset, length));
-    }
-
-    public sealed override string Add(string str)
-    {
-        return Add(str.AsMemory());
-    }
-
-    public sealed override string? Get(char[] array, int offset, int length)
-    {
-        return Get(array.AsMemory(offset, length));
-    }
-
-    public sealed override string? Get(string str)
-    {
-        return Get(str.AsMemory());
     }
 
     protected virtual int GetHashCode(ReadOnlySpan<char> span)

@@ -1,16 +1,65 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Xml;
+using Unicord.Server.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly record struct XmppAddress(string? User, string Host)
+public readonly record struct XmppAddress : IEquatable<XmppAddress>
 {
     public const int MaxComponentLength = 1023;
 
     static readonly StringComparer comparer = StringComparer.OrdinalIgnoreCase;
     static readonly Encoding encoding = new UTF8Encoding(false);
+
+    public string? User { get; }
+    public string Host { get; }
+
+    public XmppAddress HostOnly => new(null, Host, false);
+
+    internal XmppAddress(ReadOnlyMemory<char>? user, ReadOnlyMemory<char> host, XmlNameTable? nameTable, bool validate)
+    {
+        if(user is { } u)
+        {
+            if(validate)
+            {
+                ValidateLocalComponent(u.Span);
+            }
+            User = GetString(u);
+        }
+
+        if(validate)
+        {
+            ValidateHostComponent(host.Span);
+        }
+        Host = GetString(host);
+
+        string GetString(ReadOnlyMemory<char> memory)
+        {
+            if(nameTable == null)
+            {
+                return memory.ToString();
+            }
+            return nameTable.Add(memory);
+        }
+    }
+
+    internal XmppAddress(string? user, string host, bool validate) : this(user?.AsMemory(), host.AsMemory(), null, validate)
+    {
+
+    }
+
+    public XmppAddress(ReadOnlyMemory<char>? user, ReadOnlyMemory<char> host, XmlNameTable? nameTable) : this(user, host, nameTable, true)
+    {
+
+    }
+
+    public XmppAddress(string? user, string host) : this(user, host, true)
+    {
+
+    }
 
     public bool Equals(XmppAddress other)
     {
@@ -27,40 +76,22 @@ public readonly record struct XmppAddress(string? User, string Host)
         return hash.ToHashCode();
     }
 
-    internal static XmppAddress Parse(ReadOnlySpan<char> span)
+    public static XmppAddress Parse(ReadOnlyMemory<char> data, XmlNameTable? nameTable)
     {
+        var span = data.Span;
+
         int hostAt = span.IndexOf('@');
         if(hostAt == -1)
         {
-            ValidateHostComponent(span);
-            return new(null, span.ToString());
+            return new(null, data, nameTable);
         }
 
-        var user = span.Slice(0, hostAt);
-        ValidateLocalComponent(user);
-
-        var host = span.Slice(hostAt + 1);
-        ValidateHostComponent(host);
-
-        return new(user.ToString(), host.ToString());
+        return new(data.Slice(0, hostAt), data.Slice(hostAt + 1), nameTable);
     }
 
-    internal static XmppAddress Parse(string text)
+    public static XmppAddress Parse(string data)
     {
-        int hostAt = text.IndexOf('@');
-        if(hostAt == -1)
-        {
-            ValidateHostComponent(text.AsSpan());
-            return new(null, text);
-        }
-
-        var user = text.AsSpan(0, hostAt);
-        ValidateLocalComponent(user);
-
-        var host = text.AsSpan(hostAt + 1);
-        ValidateHostComponent(host);
-
-        return new(user.ToString(), host.ToString());
+        return Parse(data.AsMemory(), null);
     }
 
     static void ValidateComponentLength(ReadOnlySpan<char> span)
@@ -115,12 +146,12 @@ public readonly record struct XmppAddress(string? User, string Host)
         }
     }
 
-    internal string ToString(bool validate)
+    public override string ToString()
     {
         var host = Host;
-        if(validate)
+        if(host == null)
         {
-            ValidateHostComponent(host.AsSpan());
+            throw new InvalidOperationException("The instance has been default-initialized.");
         }
 
         var user = User;
@@ -129,16 +160,6 @@ public readonly record struct XmppAddress(string? User, string Host)
             return host;
         }
 
-        if(validate)
-        {
-            ValidateLocalComponent(user.AsSpan());
-        }
-
         return $"{user}@{host}";
-    }
-
-    public override string ToString()
-    {
-        return ToString(false);
     }
 }

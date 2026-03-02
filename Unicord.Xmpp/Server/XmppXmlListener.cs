@@ -79,7 +79,7 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
         }
 
         // TODO Verify that the resource matches exactly the host of the server
-        session.LocalResource = XmppResource.Parse(to);
+        session.LocalResource = XmppResource.Parse(to.AsMemory(), reader.NameTable);
 
         await writer.WriteAttributeStringAsync(null, From.Value, null, session.LocalResource.ToString());
     }
@@ -148,14 +148,14 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
                             }
                             else if(attrName == To)
                             {
-                                stanza.To = XmppResource.Parse(reader.Value);
+                                stanza.To = XmppResource.Parse(reader.Value.AsMemory(), reader.NameTable);
                                 continue;
                             }
                             break;
                         case 'f':
                             if(attrName == From)
                             {
-                                stanza.From = XmppResource.Parse(reader.Value);
+                                stanza.From = XmppResource.Parse(reader.Value.AsMemory(), reader.NameTable);
                                 continue;
                             }
                             break;

@@ -1,18 +1,64 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Xml;
+using Unicord.Server.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly record struct XmppResource(XmppAddress Address, string? ResourceIdentifier)
+public readonly record struct XmppResource
 {
-    bool Validated { get; init; }
-
     public const int MaxLength = XmppAddress.MaxComponentLength * 3 + 2;
 
-    public XmppResource Bare => new(Address, null);
+    public XmppAddress Address { get; }
+    public string? ResourceIdentifier { get; }
 
-    public XmppResource(string? user, string host, string? resourceIdentifier) : this(new XmppAddress(user, host), resourceIdentifier)
+    public XmppResource Bare => new(Address, null, false);
+
+    internal XmppResource(XmppAddress address, ReadOnlyMemory<char>? resourceIdentifier, XmlNameTable? nameTable, bool validate)
+    {
+        if(resourceIdentifier is { } data)
+        {
+            if(validate)
+            {
+                XmppAddress.ValidateResourceComponent(data.Span);
+            }
+            ResourceIdentifier = GetString(data);
+        }
+
+        Address = address;
+
+        string GetString(ReadOnlyMemory<char> memory)
+        {
+            if(nameTable == null)
+            {
+                return memory.ToString();
+            }
+            return nameTable.Add(memory);
+        }
+    }
+
+    internal XmppResource(XmppAddress address, string? resourceIdentifier, bool validate) : this(address, resourceIdentifier?.AsMemory(), null, validate)
+    {
+
+    }
+
+    public XmppResource(ReadOnlyMemory<char>? user, ReadOnlyMemory<char> host, ReadOnlyMemory<char>? resourceIdentifier, XmlNameTable? nameTable) : this(new XmppAddress(user, host, nameTable), resourceIdentifier, nameTable, true)
+    {
+
+    }
+
+    public XmppResource(string? user, string host, string? resourceIdentifier) : this(new XmppAddress(user, host), resourceIdentifier, true)
+    {
+
+    }
+
+    public XmppResource(XmppAddress address, ReadOnlyMemory<char>? resourceIdentifier, XmlNameTable? nameTable) : this(address, resourceIdentifier, nameTable, true)
+    {
+
+    }
+
+    public XmppResource(XmppAddress address, string? resourceIdentifier) : this(address, resourceIdentifier, true)
     {
 
     }
@@ -37,53 +83,33 @@ public readonly record struct XmppResource(XmppAddress Address, string? Resource
         return value.IsWiderThan(this);
     }
 
-    public static XmppResource Parse(ReadOnlySpan<char> span)
+    public static XmppResource Parse(ReadOnlyMemory<char> data, XmlNameTable? nameTable)
     {
+        var span = data.Span;
         int resourceStart = span.IndexOf('/');
         if(resourceStart == -1)
         {
-            return new(XmppAddress.Parse(span), null);
+            return new(XmppAddress.Parse(data, nameTable), null);
         }
         else
         {
-            var resourcePart = span.Slice(resourceStart + 1);
-            XmppAddress.ValidateResourceComponent(resourcePart);
-            return new(XmppAddress.Parse(span.Slice(0, resourceStart)), resourcePart.ToString())
-            {
-                Validated = true
-            };
+            var addressPart = data.Slice(0, resourceStart);
+            var resourcePart = data.Slice(resourceStart + 1);
+            return new(XmppAddress.Parse(addressPart, nameTable), resourcePart, nameTable);
         }
     }
 
-    public static XmppResource Parse(string text)
+    public static XmppResource Parse(string data)
     {
-        int resourceStart = text.IndexOf('/');
-        if(resourceStart == -1)
-        {
-            return new(XmppAddress.Parse(text), null);
-        }
-        else
-        {
-            var resourcePart = text.AsSpan(resourceStart + 1);
-            XmppAddress.ValidateResourceComponent(resourcePart);
-            return new(XmppAddress.Parse(text.AsSpan(0, resourceStart)), resourcePart.ToString())
-            {
-                Validated = true
-            };
-        }
+        return Parse(data.AsMemory(), null);
     }
 
     public override string ToString()
     {
-        bool validate = !Validated;
         if(ResourceIdentifier == null)
         {
-            return Address.ToString(validate);
+            return Address.ToString();
         }
-        if(validate)
-        {
-            XmppAddress.ValidateResourceComponent(ResourceIdentifier.AsSpan());
-        }
-        return $"{Address.ToString(validate)}/{ResourceIdentifier}";
+        return $"{Address}/{ResourceIdentifier}";
     }
 }

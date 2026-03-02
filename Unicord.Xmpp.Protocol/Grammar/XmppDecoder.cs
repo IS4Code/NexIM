@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Server.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
@@ -23,6 +24,7 @@ public partial class XmppDecoder : XmlDecoder, IValueXmlDecoder<XmppResource>
 
     async ValueTask<XmppResource> IValueXmlDecoder<XmppResource>.Decode(XmlReader reader)
     {
-        return XmppResource.Parse(await reader.ReadContentAsStringAsync());
+        var token = await DecodeTokenAsync(reader);
+        return XmppResource.Parse(token.AsMemory(), reader.NameTable);
     }
 }
