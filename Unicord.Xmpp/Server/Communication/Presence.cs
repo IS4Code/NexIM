@@ -26,7 +26,7 @@ internal class Presence : StanzaHandler, IPresenceHandler
 
     async ValueTask IPresenceHandler.Status(LanguageTaggedString? text)
     {
-        statusText.Add(text);
+        statusText.Add(text, Session.RemoteLanguage);
     }
 
     async ValueTask ISenderPresentation.Nickname(string? text)

@@ -37,14 +37,15 @@ public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerabl
         return other is { } value ? Add(value) : this;
     }
 
-    public LocalizedString Add(LanguageTaggedString other)
+    public LocalizedString Add(LanguageTaggedString other, string? defaultLanguage)
     {
-        return new(data.Add(other.LanguageTag, other.Value));
+        var languageTag = other.LanguageTag;
+        return new(data.Add(String.IsNullOrEmpty(languageTag) ? (defaultLanguage ?? "") : languageTag, other.Value));
     }
 
-    public LocalizedString Add(LanguageTaggedString? other)
+    public LocalizedString Add(LanguageTaggedString? other, string? defaultLanguage)
     {
-        return other is { } value ? Add(value) : this;
+        return other is { } value ? Add(value, defaultLanguage) : this;
     }
 
     public override bool Equals(object obj)

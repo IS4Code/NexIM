@@ -13,7 +13,7 @@ namespace Unicord.Xmpp.Server;
 
 internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketContext context, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(WebSocketStream.Create(context.WebSocket, WebSocketMessageType.Text, ArrayPool<byte>.Shared))
 {
-    protected override string DefaultLanguage => "en";
+    public override string DefaultLanguage => "en";
 
     public override bool Connected => context.WebSocket.State is WebSocketState.Connecting or WebSocketState.Open;
 

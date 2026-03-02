@@ -31,12 +31,12 @@ internal class Message : StanzaHandler, IMessageHandler
 
     async ValueTask IMessageHandler.Body(LanguageTaggedString? text)
     {
-        body = body.Add(text);
+        body = body.Add(text, Session.RemoteLanguage);
     }
 
     async ValueTask IMessageHandler.Subject(LanguageTaggedString? text)
     {
-        subject = subject.Add(text);
+        subject = subject.Add(text, Session.RemoteLanguage);
     }
 
     async ValueTask ISenderPresentation.Nickname(string? text)

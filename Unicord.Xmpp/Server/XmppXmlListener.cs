@@ -63,12 +63,12 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
     {
         await writer.WriteAttributeStringAsync(null, Version.Value, null, "1.0");
 
-        if(reader.GetAttribute(Lang.Value, XmlNs.Value) is { } lang)
-        {
-            session.Language = lang;
-        }
+        session.RemoteLanguage = reader.GetAttribute(Lang.Value, XmlNs.Value);
 
-        await writer.WriteAttributeStringAsync(null, Lang.Value, XmlNs.Value, session.Language);
+        // TODO Pick the best language
+        session.LocalLanguage = session.DefaultLanguage;
+
+        await writer.WriteAttributeStringAsync(null, Lang.Value, XmlNs.Value, session.LocalLanguage);
 
         session.StreamIdentifier = Guid.NewGuid().ToString("N");
         await writer.WriteAttributeStringAsync(null, Id.Value, null, session.StreamIdentifier);

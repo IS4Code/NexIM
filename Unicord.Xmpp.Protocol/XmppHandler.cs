@@ -39,7 +39,8 @@ public interface IXmppSendingHandler : IXmppHandler
     string? StreamIdentifier { get; }
     XmppResource? LocalResource { get; }
     XmppResource? RemoteResource { get; set; }
-    string Language { get; set; }
+    string? LocalLanguage { get; set; }
+    string? RemoteLanguage { get; set; }
 }
 
 /// <summary>
@@ -51,13 +52,10 @@ public abstract class XmppSendingHandler : IXmppSendingHandler
     public XmppResource? LocalResource { get; set; }
     public XmppResource? RemoteResource { get; set; }
 
-    protected abstract string DefaultLanguage { get; }
+    public abstract string DefaultLanguage { get; }
 
-    string? language;
-    public string Language {
-        get => language ?? DefaultLanguage;
-        set => language = value;
-    }
+    public string? LocalLanguage { get; set; }
+    public string? RemoteLanguage { get; set; }
 
     public abstract ValueTask DisposeAsync();
 
