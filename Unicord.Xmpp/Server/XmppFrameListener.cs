@@ -55,7 +55,7 @@ public abstract class XmppFrameListener<TSocket> : XmppXmlListener<XmppFrameSess
 
                                         await writer.WriteEndElementAsync();
 
-                                        await writer.FlushAsync();
+                                        await session.FlushCommand();
 
                                         // Stream is ready
                                         await handler.StreamStarted();
@@ -173,7 +173,7 @@ public abstract class XmppFrameListener<TSocket> : XmppXmlListener<XmppFrameSess
                 }
                 finally
                 {
-                    await session.Flush();
+                    await session.FlushCommand();
                 }
             }
         }
@@ -242,7 +242,6 @@ public abstract class XmppFrameListener<TSocket> : XmppXmlListener<XmppFrameSess
                 await using var err = await errorHandler(exc);
                 await exc.Output(err);
             }
-            await writer.FlushAsync();
         }
     }
 

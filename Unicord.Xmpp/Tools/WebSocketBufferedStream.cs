@@ -8,8 +8,8 @@ namespace Unicord.Xmpp.Tools;
 
 internal sealed class WebSocketBufferedStream(WebSocket webSocket, ArrayPool<byte> bufferPool) : WebSocketStream(webSocket)
 {
-    byte[]? flushArray;
-    int flushCount;
+    byte[]? lastArray;
+    int lastCount;
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
@@ -24,34 +24,55 @@ internal sealed class WebSocketBufferedStream(WebSocket webSocket, ArrayPool<byt
             return;
         }
 
-        // Flush previous data
-        await FlushAsync(cancellationToken, false);
+        // Send previous data
+        await SendAsync(cancellationToken, false);
 
         // Preserve data to be sent
-        flushArray = bufferPool.Rent(count);
-        flushCount = count;
-        buffer.Span.CopyTo(flushArray.AsSpan());
+        lastArray = bufferPool.Rent(count);
+        lastCount = count;
+        buffer.Span.CopyTo(lastArray.AsSpan());
     }
 
-    public override Task FlushAsync(CancellationToken cancellationToken = default)
+    public async override Task FlushAsync(CancellationToken cancellationToken = default)
     {
-        return FlushAsync(cancellationToken, true).AsTask();
-    }
-
-    private async ValueTask FlushAsync(CancellationToken cancellationToken, bool endOfMessage)
-    {
-        if(flushArray != null)
+        if(lastArray != null)
         {
-            // Send previous unflushed message
+            // Send previous message but leave the array to indicate the message is not finished
             try
             {
-                await WebSocket.SendAsync(new ArraySegment<byte>(flushArray, 0, flushCount), SendingMessageType, endOfMessage, cancellationToken);
+                await WebSocket.SendAsync(new ArraySegment<byte>(lastArray, 0, lastCount), SendingMessageType, false, cancellationToken);
             }
             finally
             {
-                bufferPool.Return(flushArray);
-                flushArray = null;
-                flushCount = 0;
+                lastCount = 0;
+            }
+        }
+    }
+
+    public override ValueTask SendAsync(CancellationToken cancellationToken = default)
+    {
+        return SendAsync(cancellationToken, true);
+    }
+
+    private async ValueTask SendAsync(CancellationToken cancellationToken, bool endOfMessage)
+    {
+        if(lastArray != null)
+        {
+            // Send previous message
+            try
+            {
+                if(!endOfMessage && lastCount == 0)
+                {
+                    // Nothing to send
+                    return;
+                }
+                await WebSocket.SendAsync(new ArraySegment<byte>(lastArray, 0, lastCount), SendingMessageType, endOfMessage, cancellationToken);
+            }
+            finally
+            {
+                bufferPool.Return(lastArray);
+                lastArray = null;
+                lastCount = 0;
             }
         }
     }

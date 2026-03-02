@@ -31,7 +31,7 @@ public abstract class XmppXmlSession : XmppSession
     protected abstract ValueTask Authenticated();
     protected abstract ValueTask Close();
 
-    public abstract ValueTask Flush();
+    public abstract ValueTask FlushCommand();
 
     protected async sealed override ValueTask<IFeaturesHandler> OnFeatures()
     {
@@ -72,7 +72,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.TlsStart();
-            await Flush();
+            await FlushCommand();
         }
         finally
         {
@@ -87,7 +87,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.TlsProceed();
-            await Flush();
+            await FlushCommand();
 
             // Swap to TLS while locked
             await UpgradeTls();
@@ -107,7 +107,7 @@ public abstract class XmppXmlSession : XmppSession
             {
                 ITransportHandler handler = commandHandler;
                 await handler.TlsFailure();
-                await Flush();
+                await FlushCommand();
             }
             finally
             {
@@ -142,7 +142,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.Compressed();
-            await Flush();
+            await FlushCommand();
 
             // Enable compression while locked
             await EnableCompression();
@@ -160,7 +160,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.SaslAuth(mechanism, data);
-            await Flush();
+            await FlushCommand();
         }
         finally
         {
@@ -175,7 +175,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.SaslAbort();
-            await Flush();
+            await FlushCommand();
         }
         finally
         {
@@ -190,7 +190,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.SaslChallenge(data);
-            await Flush();
+            await FlushCommand();
         }
         finally
         {
@@ -212,7 +212,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.SaslResponse(data);
-            await Flush();
+            await FlushCommand();
         }
         finally
         {
@@ -227,7 +227,7 @@ public abstract class XmppXmlSession : XmppSession
         {
             ITransportHandler handler = commandHandler;
             await handler.SaslSuccess();
-            await Flush();
+            await FlushCommand();
 
             // Finish authentication while locked
             await Authenticated();
@@ -250,7 +250,7 @@ public abstract class XmppXmlSession : XmppSession
         try
         {
             await message.WriteToAsync(Writer, CancellationToken);
-            await Flush();
+            await FlushCommand();
         }
         finally
         {
@@ -315,7 +315,7 @@ public abstract class XmppXmlSession : XmppSession
             try
             {
                 await base.DisposeAsync();
-                await Session.Flush();
+                await Session.FlushCommand();
             }
             finally
             {

@@ -7,7 +7,7 @@ namespace Unicord.Xmpp.Tools;
 
 internal sealed class WebSocketUnbufferedStream(WebSocket webSocket) : WebSocketStream(webSocket)
 {
-    bool needsFlush;
+    bool unfinished;
 
     public async override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
@@ -22,7 +22,7 @@ internal sealed class WebSocketUnbufferedStream(WebSocket webSocket) : WebSocket
         }
         finally
         {
-            needsFlush = true;
+            unfinished = true;
         }
     }
 
@@ -39,13 +39,13 @@ internal sealed class WebSocketUnbufferedStream(WebSocket webSocket) : WebSocket
         }
         finally
         {
-            needsFlush = true;
+            unfinished = true;
         }
     }
 
-    public async override Task FlushAsync(CancellationToken cancellationToken = default)
+    public async override ValueTask SendAsync(CancellationToken cancellationToken = default)
     {
-        if(!needsFlush)
+        if(!unfinished)
         {
             return;
         }
@@ -55,7 +55,7 @@ internal sealed class WebSocketUnbufferedStream(WebSocket webSocket) : WebSocket
         }
         finally
         {
-            needsFlush = false;
+            unfinished = false;
         }
     }
 }

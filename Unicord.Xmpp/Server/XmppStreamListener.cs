@@ -183,7 +183,7 @@ public abstract class XmppStreamListener<TClient> : XmppXmlListener<XmppStreamSe
                 }
                 finally
                 {
-                    await session.Flush();
+                    await session.FlushCommand();
                 }
             }
         }
@@ -252,7 +252,6 @@ public abstract class XmppStreamListener<TClient> : XmppXmlListener<XmppStreamSe
                 await using var err = await errorHandler(exc);
                 await exc.Output(err);
             }
-            await writer.FlushAsync();
         }
     }
 }

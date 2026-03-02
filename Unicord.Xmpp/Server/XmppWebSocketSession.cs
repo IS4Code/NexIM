@@ -11,7 +11,7 @@ using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
-internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketContext context, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(WebSocketStream.Create(context.WebSocket, WebSocketMessageType.Text, ArrayPool<byte>.Shared))
+internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketContext context, WebSocketStream wsStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(wsStream)
 {
     public override string DefaultLanguage => "en";
 
@@ -31,6 +31,11 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
     public override EndPoint? RemoteEndPoint => request.RemoteEndPoint;
     public override CancellationToken CancellationToken => cancellationToken;
 
+    public XmppWebSocketSession(IWebSocketRequest request, WebSocketContext context, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : this(request, context, OpenStream(context), readerSettings, writerSettings, cancellationToken)
+    {
+
+    }
+
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
     {
         stream = new ConsoleDebuggingStream(stream);
@@ -47,6 +52,21 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
     protected async override ValueTask UpgradeTls()
     {
         throw new NotSupportedException();
+    }
+
+    public async override ValueTask FlushCommand()
+    {
+        await base.FlushCommand();
+        if(Writer.WriteState is WriteState.Prolog)
+        {
+            // Only when something was written
+            await wsStream.SendAsync();
+        }
+    }
+
+    static WebSocketStream OpenStream(WebSocketContext context)
+    {
+        return WebSocketStream.Create(context.WebSocket, WebSocketMessageType.Text, ArrayPool<byte>.Shared);
     }
 }
 

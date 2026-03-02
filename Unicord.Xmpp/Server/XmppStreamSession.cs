@@ -45,7 +45,7 @@ public abstract class XmppStreamSession : XmppXmlSession
         return await Stream.ReadAsync(buffer, 0, 1, CancellationToken) > 0;
     }
 
-    public override ValueTask Flush()
+    public override ValueTask FlushCommand()
     {
         return new(writer.FlushAsync());
     }
@@ -90,7 +90,7 @@ public abstract class XmppStreamSession : XmppXmlSession
         {
             // Close all open elements, including the top-level <stream>
             await writer.WriteEndDocumentAsync();
-            await writer.FlushAsync();
+            await FlushCommand();
         }
     }
 

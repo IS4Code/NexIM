@@ -65,7 +65,12 @@ internal abstract class WebSocketStream : NonSeekableStream
         FlushAsync().GetAwaiter().GetResult();
     }
 
-    public abstract override Task FlushAsync(CancellationToken cancellationToken = default);
+    public override Task FlushAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public abstract ValueTask SendAsync(CancellationToken cancellationToken = default);
 
     public sealed override void Close()
     {
@@ -74,7 +79,7 @@ internal abstract class WebSocketStream : NonSeekableStream
 
     public async ValueTask CloseAsync(CancellationToken cancellationToken = default)
     {
-        await FlushAsync(cancellationToken);
+        await SendAsync(cancellationToken);
         await WebSocket.CloseAsync(ClosingStatus, ClosingDescription, cancellationToken);
     }
 
@@ -88,7 +93,7 @@ internal abstract class WebSocketStream : NonSeekableStream
 
     public async sealed override ValueTask DisposeAsync()
     {
-        await FlushAsync();
+        await SendAsync();
         await WebSocket.CloseOutputAsync(ClosingStatus, ClosingDescription, default);
     }
 }
