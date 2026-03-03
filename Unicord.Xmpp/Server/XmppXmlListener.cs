@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Server.Primitives.Xml;
@@ -10,6 +11,7 @@ using Unicord.Xmpp.Protocol;
 namespace Unicord.Xmpp.Server;
 
 using static XmppVocabulary.Standard;
+using static XmppHandlerSession;
 
 public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where TSession : XmppXmlSession
 {
@@ -59,6 +61,149 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
         };
     }
 
+    protected abstract ValueTask Read(TSession session, CancellationToken cancellationToken);
+
+    protected async ValueTask HandleSession(TSession session, CancellationToken cancellationToken)
+    {
+        // Receive the session and prepare handler for incoming commands
+        await using var handler = await Receiver.Connected(session);
+
+        session.MainHandler = handler;
+
+        try
+        {
+            // Dispose all handlers at the end
+            await using var handlers = session.Handlers;
+
+            while(await session.Reader.ReadAsync())
+            {
+                try
+                {
+                    await Read(session, cancellationToken);
+                }
+                catch(Exception e) when(GetXmppException<XmppStanzaException>(e, out var xe))
+                {
+                    await HandleException(xe, session, session.LastStanza);
+                }
+                catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
+                {
+                    await HandleException(xe, session);
+                }
+                finally
+                {
+                    await session.FlushCommand();
+                }
+            }
+        }
+        catch(XmlException e)
+        {
+            await HandleException(e, session, 1);
+        }
+        catch(Exception e) when(GetXmppException<XmppStreamException>(e, out var xe))
+        {
+            await HandleException(xe, session);
+            throw;
+        }
+        catch when(Program.SuppressUnexpectedExceptions())
+        {
+            await HandleException(XmppStreamException.InternalServerError(), session);
+            throw;
+        }
+        finally
+        {
+            if(session.StreamIdentifier != null)
+            {
+                await handler.StreamStopped();
+            }
+        }
+    }
+
+    async ValueTask HandleException(XmppStanzaException exception, TSession session, StanzaInfo? lastStanza)
+    {
+        IStreamHandler errorHandler = session;
+
+        IStanzaHandler? command = null;
+        await OnError(exception, session, async exc => {
+            if(command == null)
+            {
+                var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.Identifier);
+                command = lastStanza?.Kind switch
+                {
+                    StanzaKind.InfoQuery => await errorHandler.InfoQuery(stanza),
+                    StanzaKind.Presence => await errorHandler.Presence(stanza),
+                    _ => await errorHandler.Message(stanza)
+                };
+            }
+            return await command.Error(exc.Type?.ToToken(), exc.Code);
+        });
+        if(command != null)
+        {
+            await command.DisposeAsync();
+        }
+    }
+
+    async ValueTask HandleException(XmppSaslException exception, TSession session)
+    {
+        IStreamHandler errorHandler = session;
+
+        ISaslFailureHandler? command = null;
+        await OnError(exception, session, async exc => {
+            if(command == null)
+            {
+                command = await errorHandler.SaslFailure();
+            }
+            return command;
+        });
+        if(command != null)
+        {
+            await command.DisposeAsync();
+        }
+    }
+
+    ValueTask HandleException(XmppStreamException exception, TSession session)
+    {
+        ITransportHandler errorHandler = session;
+
+        return OnError(exception, session, _ => errorHandler.Error());
+    }
+
+    async ValueTask HandleException(XmlException exception, TSession session, int commandDepth)
+    {
+        var reader = session.Reader;
+        if(reader.Depth <= commandDepth && (reader.EOF || !session.Connected || await session.CheckFinished()))
+        {
+            // Terminated at the top level
+            return;
+        }
+
+        await HandleException(XmppStreamException.XmlNotWellFormed(), session);
+    }
+
+    async ValueTask OnError<TException, THandler>(TException exception, TSession session, Func<TException, ValueTask<THandler>> errorHandler) where TException : XmppException<THandler> where THandler : IPayloadHandler
+    {
+        var errors = new List<TException>
+        {
+            exception
+        };
+        while(session.Handlers.TryPop(out var top))
+        {
+            try
+            {
+                await top.DisposeAsync();
+            }
+            catch(Exception e2) when(GetXmppException<TException>(e2, out var xe2))
+            {
+                errors.Add(xe2);
+            }
+        }
+
+        foreach(var exc in errors)
+        {
+            await using var err = await errorHandler(exc);
+            await exc.Output(err);
+        }
+    }
+
     protected async ValueTask StreamStarted(XmlReader reader, XmlWriter writer, XmppSession session)
     {
         await writer.WriteAttributeStringAsync(null, Version.Value, null, "1.0");
@@ -84,7 +229,7 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
         await writer.WriteAttributeStringAsync(null, From.Value, null, session.LocalResource.ToString());
     }
 
-    protected ValueTask<XmppDecoder.Result> EnterCommand(XmlReader reader, IStreamHandler handler, out StanzaInfo? info)
+    protected ValueTask<XmppDecoder.Result> EnterCommand(TSession session, XmlReader reader, IStreamHandler handler)
     {
         var elementName = reader.LocalName;
         if(reader.NamespaceURI == JabberClientNs)
@@ -94,19 +239,19 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
                 case 2 when elementName == Iq:
                 {
                     var stanza = ParseStanza(reader);
-                    info = new(StanzaKind.InfoQuery, stanza.Identifier);
+                    session.LastStanza = new(StanzaKind.InfoQuery, stanza.Identifier);
                     return Success(handler.InfoQuery(stanza));
                 }
                 case 7 when elementName == Message:
                 {
                     var stanza = ParseStanza(reader);
-                    info = new(StanzaKind.Message, stanza.Identifier);
+                    session.LastStanza = new(StanzaKind.Message, stanza.Identifier);
                     return Success(handler.Message(stanza));
                 }
                 case 8 when elementName == Presence:
                 {
                     var stanza = ParseStanza(reader);
-                    info = new(StanzaKind.Presence, stanza.Identifier);
+                    session.LastStanza = new(StanzaKind.Presence, stanza.Identifier);
                     return Success(handler.Presence(stanza));
                 }
                 case 3:
@@ -119,7 +264,7 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
         }
 
         // Not a stanza - decode normally
-        info = null;
+        session.LastStanza = null;
         return Decoder.DecodePayload(reader, handler);
 
         static async ValueTask<XmppDecoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
@@ -175,34 +320,5 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
             while(reader.MoveToNextAttribute());
         }
         return stanza;
-    }
-
-    protected class PayloadHandlers : Stack<IPayloadHandler>, IAsyncDisposable
-    {
-        public THandler Get<THandler>() where THandler : IPayloadHandler
-        {
-            if(!this.TryPeek(out var top) || top is not THandler handler)
-            {
-                throw new NotSupportedException("The current payload handler does not support this element.");
-            }
-            return handler;
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            while(this.TryPop(out var top))
-            {
-                await top.DisposeAsync();
-            }
-        }
-    }
-
-    protected record struct StanzaInfo(StanzaKind Kind, string? Identifier);
-
-    protected enum StanzaKind
-    {
-        Message,
-        Presence,
-        InfoQuery
     }
 }

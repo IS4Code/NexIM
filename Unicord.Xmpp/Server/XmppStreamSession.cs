@@ -18,7 +18,7 @@ public abstract class XmppStreamSession : XmppXmlSession
     public sealed override XmlWriter Writer => writer;
 
     XmlReader reader;
-    public XmlReader Reader => reader;
+    public sealed override XmlReader Reader => reader;
 
     public XmppStreamSession(Stream stream)
     {
@@ -40,9 +40,16 @@ public abstract class XmppStreamSession : XmppXmlSession
 
     static readonly byte[] buffer = new byte[1];
 
-    public async ValueTask<bool> CheckMoreData()
+    public async override ValueTask<bool> CheckFinished()
     {
-        return await Stream.ReadAsync(buffer, 0, 1, CancellationToken) > 0;
+        try
+        {
+            return await Stream.ReadAsync(buffer, 0, 1, CancellationToken) == 0;
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     public override ValueTask FlushCommand()
