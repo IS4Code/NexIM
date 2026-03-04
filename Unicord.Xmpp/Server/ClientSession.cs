@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server;
 using Unicord.Server.Model;
-using Unicord.Server.Primitives.Xml;
+using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;

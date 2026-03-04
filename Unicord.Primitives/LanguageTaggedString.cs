@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 
-namespace Unicord.Server.Primitives;
+namespace Unicord.Primitives;
 
 public record struct LanguageTaggedString(string Value, string LanguageTag)
 {

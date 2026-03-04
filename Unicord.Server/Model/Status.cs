@@ -1,4 +1,4 @@
-﻿using Unicord.Server.Primitives;
+﻿using Unicord.Primitives;
 
 namespace Unicord.Server.Model;
 

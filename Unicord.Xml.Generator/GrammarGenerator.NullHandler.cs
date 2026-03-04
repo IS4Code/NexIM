@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace Unicord.Xmpp.Generator;
+namespace Unicord.Xml.Generator;
 
 partial class GrammarGenerator
 {

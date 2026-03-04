@@ -3,8 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Server.Primitives;
-using Unicord.Server.Primitives.Xml;
+using Unicord.Primitives;
+using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
 

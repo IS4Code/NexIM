@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Server.Primitives.Xml;
+using Unicord.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol.Grammar;
 

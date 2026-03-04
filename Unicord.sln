@@ -1,17 +1,17 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34601.278
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xmpp", "Unicord.Xmpp\Unicord.Xmpp.csproj", "{AE773674-6177-4694-A144-860BF116FF17}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xmpp.Generator", "Unicord.Xmpp.Generator\Unicord.Xmpp.Generator.csproj", "{F7E98F9D-95B1-465F-8413-19944EC9A964}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xml.Generator", "Unicord.Xml.Generator\Unicord.Xml.Generator.csproj", "{F7E98F9D-95B1-465F-8413-19944EC9A964}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Server", "Unicord.Server\Unicord.Server.csproj", "{15D1C188-75E4-48FB-BE36-318C6953CFA0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Xmpp.Protocol", "Unicord.Xmpp.Protocol\Unicord.Xmpp.Protocol.csproj", "{AF91CF4E-6DE3-4E7C-A81B-D180749EB19E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Server.Primitives", "Unicord.Server.Primitives\Unicord.Server.Primitives.csproj", "{310424AF-EC44-4415-AC8C-2A4AA88257FD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Primitives", "Unicord.Primitives\Unicord.Primitives.csproj", "{310424AF-EC44-4415-AC8C-2A4AA88257FD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

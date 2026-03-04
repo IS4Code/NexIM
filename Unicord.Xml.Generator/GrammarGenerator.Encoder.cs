@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace Unicord.Xmpp.Generator;
+namespace Unicord.Xml.Generator;
 
 partial class GrammarGenerator
 {
@@ -16,7 +16,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
-        writer.WriteLine("using Unicord.Server.Primitives.Xml;");
+        writer.WriteLine("using Unicord.Primitives.Xml;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
         writer.Write("partial class Encoder");

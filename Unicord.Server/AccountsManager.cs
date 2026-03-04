@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
-using Unicord.Server.Primitives;
+using Unicord.Primitives;
 
 namespace Unicord.Server;
 

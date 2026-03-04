@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Unicord.Server.Primitives;
+namespace Unicord.Primitives;
 
 /// <summary>
 /// Provides a mutable array implementation whose contents can be determinstically

@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Server.Primitives.Xml;
+using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
-using Unicord.Server.Primitives;
+using Unicord.Primitives;
 
 namespace Unicord.Server;
 

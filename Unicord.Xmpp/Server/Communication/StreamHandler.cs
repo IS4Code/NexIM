@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Server.Primitives;
-using Unicord.Server.Primitives.Xml;
+using Unicord.Primitives;
+using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;

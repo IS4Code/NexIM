@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Buffers;
 
-namespace Unicord.Server.Primitives;
+namespace Unicord.Primitives;
 
 public interface ITemporaryArraySource<T> where T : unmanaged
 {

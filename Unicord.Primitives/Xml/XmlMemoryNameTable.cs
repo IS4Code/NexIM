@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Xml;
 
-namespace Unicord.Server.Primitives.Xml;
+namespace Unicord.Primitives.Xml;
 
 public abstract class XmlMemoryNameTable : XmlNameTable
 {

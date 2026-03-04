@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -14,8 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Unicord.Server.Primitives\Unicord.Server.Primitives.csproj" />
-    <ProjectReference Include="..\Unicord.Xmpp.Generator\Unicord.Xmpp.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    <ProjectReference Include="..\Unicord.Primitives\Unicord.Primitives.csproj" />
+    <ProjectReference Include="..\Unicord.Xml.Generator\Unicord.Xml.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>
 
 </Project>

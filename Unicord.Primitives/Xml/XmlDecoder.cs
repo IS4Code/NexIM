@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace Unicord.Server.Primitives.Xml;
+namespace Unicord.Primitives.Xml;
 
 /// <summary>
 /// Provides support for decoding from XML.

@@ -8,7 +8,7 @@ using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Unicord.Xmpp.Generator;
+namespace Unicord.Xml.Generator;
 
 partial class GrammarGenerator
 {
@@ -20,7 +20,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
-        writer.WriteLine("using Unicord.Server.Primitives.Xml;");
+        writer.WriteLine("using Unicord.Primitives.Xml;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
         writer.WriteLine("partial class Vocabulary");
@@ -352,7 +352,7 @@ partial class GrammarGenerator
 
         void UsingIfDisposable(ITypeSymbol type)
         {
-            if(GetQualifiedName(type).StartsWith("Unicord.Server.Primitives.Temporary") || type.Interfaces.Any(i => GetQualifiedName(i) == typeof(IDisposable).FullName))
+            if(GetQualifiedName(type).StartsWith("Unicord.Primitives.Temporary") || type.Interfaces.Any(i => GetQualifiedName(i) == typeof(IDisposable).FullName))
             {
                 writer.Write("using ");
             }

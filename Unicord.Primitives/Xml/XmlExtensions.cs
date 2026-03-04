@@ -5,7 +5,7 @@ using System.Xml;
 using System.Runtime.InteropServices;
 using System.Buffers;
 
-namespace Unicord.Server.Primitives.Xml;
+namespace Unicord.Primitives.Xml;
 
 public static class XmlExtensions
 {
