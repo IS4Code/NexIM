@@ -8,7 +8,7 @@ namespace Unicord.Xmpp.Generator;
 
 partial class GrammarGenerator
 {
-    private string GenerateNullHandler(IEnumerable<ITypeSymbol> types)
+    private string GenerateNullHandler(INamespaceSymbol container, IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
         var writer = new IndentedTextWriter(new StringWriter(sb), indent);
@@ -16,7 +16,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
-        writer.WriteLine($"namespace {protocolNs};");
+        writer.WriteLine($"namespace {FormatNonGlobal(container)};");
         writer.WriteLine("#nullable disable");
         writer.Write("partial class NullHandler : IPayloadHandler, IStreamHandler");
 

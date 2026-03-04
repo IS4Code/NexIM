@@ -5,8 +5,8 @@ using System.Xml;
 using System.Xml.Linq;
 using Unicord.Server.Primitives;
 using Unicord.Server.Primitives.Xml;
-using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Grammar;
 
 namespace Unicord.Xmpp.Server;
 
@@ -51,19 +51,19 @@ public abstract class XmppXmlSession : XmppSession
 
     protected sealed override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
-        var handler = new StanzaHandler(XmppVocabulary.Standard.Message.Value, stanza, this);
+        var handler = new StanzaHandler(Vocabulary.Standard.Message.Value, stanza, this);
         return Enter<IMessageHandler>(handler);
     }
 
     protected sealed override ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
     {
-        var handler = new StanzaHandler(XmppVocabulary.Standard.Presence.Value, stanza, this);
+        var handler = new StanzaHandler(Vocabulary.Standard.Presence.Value, stanza, this);
         return Enter<IPresenceHandler>(handler);
     }
 
     protected sealed override ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
-        var handler = new StanzaHandler(XmppVocabulary.Standard.Iq.Value, stanza, this);
+        var handler = new StanzaHandler(Vocabulary.Standard.Iq.Value, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
     }
 
@@ -260,7 +260,7 @@ public abstract class XmppXmlSession : XmppSession
         }
     }
 
-    abstract class PayloadHandler : XmppEncoder
+    abstract class PayloadHandler : Encoder
     {
         protected XmppXmlSession Session { get; }
 
@@ -272,7 +272,7 @@ public abstract class XmppXmlSession : XmppSession
             Session = session;
         }
 
-        protected override ValueTask<XmppEncoder> ForkInner()
+        protected override ValueTask<Encoder> ForkInner()
         {
             return new(new ElementHandler(Session));
         }
@@ -340,23 +340,23 @@ public abstract class XmppXmlSession : XmppSession
         protected async override ValueTask AcquireImpl()
         {
             var writer = Writer;
-            await writer.WriteStartElementAsync(null, kind, XmppVocabulary.Standard.JabberClientNs.Value);
+            await writer.WriteStartElementAsync(null, kind, Vocabulary.Standard.JabberClientNs.Value);
 
             if(stanza.Type is { } type)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.Type.Value, null, type.Value);
+                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Type.Value, null, type.Value);
             }
             if(stanza.From is { } from)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.From.Value, null, from.ToString());
+                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.From.Value, null, from.ToString());
             }
             if(stanza.To is { } to)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.To.Value, null, to.ToString());
+                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.To.Value, null, to.ToString());
             }
             if(stanza.Identifier is { } identifier)
             {
-                await writer.WriteAttributeStringAsync(null, XmppVocabulary.Standard.Id.Value, null, identifier);
+                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier);
             }
         }
     }
@@ -370,7 +370,7 @@ public abstract class XmppXmlSession : XmppSession
 
         }
 
-        protected override ValueTask<XmppEncoder> ForkInner()
+        protected override ValueTask<Encoder> ForkInner()
         {
             // Reuse the current instance to encode nested elements
             Interlocked.Increment(ref level);
@@ -412,7 +412,7 @@ public abstract class XmppXmlSession : XmppSession
             }
         }
 
-        protected sealed override ValueTask<XmppEncoder> ForkInner()
+        protected sealed override ValueTask<Encoder> ForkInner()
         {
             if(acquiring)
             {
@@ -498,7 +498,7 @@ public abstract class XmppXmlSession : XmppSession
 
         }
 
-        protected async override ValueTask<XmppEncoder> ForkInner()
+        protected async override ValueTask<Encoder> ForkInner()
         {
             throw new InvalidOperationException("The command must be empty.");
         }

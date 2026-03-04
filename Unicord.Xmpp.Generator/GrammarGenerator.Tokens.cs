@@ -9,7 +9,7 @@ namespace Unicord.Xmpp.Generator;
 
 partial class GrammarGenerator
 {
-    private string GenerateTokens(IEnumerable<ITypeSymbol> types)
+    private string GenerateTokens(INamespaceSymbol container, IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
         var writer = new IndentedTextWriter(new StringWriter(sb), indent);
@@ -17,7 +17,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.ComponentModel;");
         writer.WriteLine("using Unicord.Server.Primitives.Xml;");
-        writer.WriteLine($"namespace {protocolNs};");
+        writer.WriteLine($"namespace {FormatNonGlobal(container)};");
         writer.WriteLine("#nullable disable");
 
         writer.WriteLine("public static class Extensions");

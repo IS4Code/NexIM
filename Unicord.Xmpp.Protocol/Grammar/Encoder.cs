@@ -3,14 +3,13 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Unicord.Server.Primitives.Xml;
-using Unicord.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Grammar;
+namespace Unicord.Xmpp.Protocol.Grammar;
 
-public abstract partial class XmppEncoder : XmlEncoder, IPayloadHandler, IValueXmlEncoder<XmppResource>
+public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IValueXmlEncoder<XmppResource>
 {
     protected abstract CancellationToken CancellationToken { get; }
-    protected abstract ValueTask<XmppEncoder> ForkInner();
+    protected abstract ValueTask<Encoder> ForkInner();
     public abstract ValueTask DisposeAsync();
 
     async ValueTask IPayloadHandler.Other(XElement payload)

@@ -8,7 +8,7 @@ namespace Unicord.Xmpp.Generator;
 
 partial class GrammarGenerator
 {
-    private string GenerateEncoder(IEnumerable<ITypeSymbol> types)
+    private string GenerateEncoder(INamespaceSymbol container, IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
         var writer = new IndentedTextWriter(new StringWriter(sb), indent);
@@ -17,9 +17,9 @@ partial class GrammarGenerator
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
         writer.WriteLine("using Unicord.Server.Primitives.Xml;");
-        writer.WriteLine($"namespace {grammarNs};");
+        writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
-        writer.Write("partial class XmppEncoder");
+        writer.Write("partial class Encoder");
 
         // Implement all interfaces
         bool firstImplementation = true;
@@ -123,7 +123,7 @@ partial class GrammarGenerator
                             {
                                 // Use encoder
                                 writer.WriteLine($"await this.WriteStartAttributeAsync(writer, null, {FormatLiteral(attrLocalName)}, {FormatLiteral(attrNs)});");
-                                writer.WriteLine($"await this.Encode<{Format(paramType)}, XmppEncoder>(writer, {paramVar}, this);");
+                                writer.WriteLine($"await this.Encode<{Format(paramType)}, Encoder>(writer, {paramVar}, this);");
                                 writer.WriteLine($"await this.WriteEndAttributeAsync(writer);");
                             }
                             writer.Indent--;
@@ -150,7 +150,7 @@ partial class GrammarGenerator
                             else
                             {
                                 // Use encoder
-                                writer.WriteLine($"await this.Encode<{Format(paramType)}, XmppEncoder>(writer, {paramVar}, this);");
+                                writer.WriteLine($"await this.Encode<{Format(paramType)}, Encoder>(writer, {paramVar}, this);");
                             }
                             writer.Indent--;
                             writer.WriteLine("}");

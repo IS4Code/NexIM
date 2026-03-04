@@ -12,7 +12,7 @@ namespace Unicord.Xmpp.Generator;
 
 partial class GrammarGenerator
 {
-    private string GenerateDecoder(IEnumerable<ITypeSymbol> types)
+    private string GenerateDecoder(INamespaceSymbol container, IEnumerable<ITypeSymbol> types)
     {
         var sb = new StringBuilder();
         var writer = new IndentedTextWriter(new StringWriter(sb), indent);
@@ -21,9 +21,9 @@ partial class GrammarGenerator
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
         writer.WriteLine("using Unicord.Server.Primitives.Xml;");
-        writer.WriteLine($"namespace {grammarNs};");
+        writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
-        writer.WriteLine("partial class XmppVocabulary");
+        writer.WriteLine("partial class Vocabulary");
 
         var vocabulary = new HashSet<string>();
         var methods = new Dictionary<string, List<IMethodSymbol>>();
@@ -114,7 +114,7 @@ partial class GrammarGenerator
 
         // Generate decoder
 
-        writer.Write("partial class XmppDecoder");
+        writer.Write("partial class Decoder");
 
         // Implement all token encoders
         bool firstImplementation = true;
@@ -142,7 +142,7 @@ partial class GrammarGenerator
         writer.WriteLine("{");
         writer.Indent++;
         {
-            writer.WriteLine($"public partial async ValueTask<Result> DecodePayload(XmlReader reader, {baseNs}.Protocol.IPayloadHandler handler)");
+            writer.WriteLine($"public partial async ValueTask<Result> DecodePayload(XmlReader reader, {Format(container)}.IPayloadHandler handler)");
             writer.WriteLine("{");
             writer.Indent++;
             {
@@ -258,7 +258,7 @@ partial class GrammarGenerator
                             else
                             {
                                 // Go through decoder
-                                writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this) : ");
+                                writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? await this.Decode<{Format(paramType)}, Decoder>(reader, this) : ");
                                 onAttribute = true;
                             }
                             DefaultParamValue(param);
@@ -305,7 +305,7 @@ partial class GrammarGenerator
                                 else
                                 {
                                     // Go through decoder
-                                    writer.Write($"await this.Decode<{Format(paramType)}, XmppDecoder>(reader, this)");
+                                    writer.Write($"await this.Decode<{Format(paramType)}, Decoder>(reader, this)");
                                 }
                                 writer.Write(") : ");
                                 DefaultParamValue(param);

@@ -2,12 +2,12 @@
 using System.Linq;
 using Unicord.Server.Primitives.Xml;
 
-namespace Unicord.Xmpp.Grammar;
+namespace Unicord.Xmpp.Protocol.Grammar;
 
 /// <summary>
 /// Provides atomized common XMPP vocabulary elements.
 /// </summary>
-public abstract partial class XmppVocabulary : XmlMemoryNameTable
+public abstract partial class Vocabulary : XmlMemoryNameTable
 {
     public static class Standard
     {
@@ -40,7 +40,7 @@ public abstract partial class XmppVocabulary : XmlMemoryNameTable
 
     private partial void AddKeys();
 
-    public XmppVocabulary()
+    public Vocabulary()
     {
         Initialize();
     }

@@ -15,9 +15,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
 {
     const string indent = "    ";
 
-    const string baseNs = nameof(Unicord) + "." + nameof(Xmpp);
-    const string grammarNs = baseNs + ".Grammar";
-    const string protocolNs = baseNs + ".Protocol";
+    const string grammarNs = nameof(Unicord) + ".Server.Primitives.Xml.Grammar";
     const string complexTypeAttributeSimpleName = "ComplexType";
     const string simpleTypeAttributeSimpleName = "SimpleType";
     const string complexTypeAttributeFullName = grammarNs + "." + complexTypeAttributeSimpleName + "Attribute";
@@ -75,10 +73,16 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     {
         var realTypes = (IEnumerable<ITypeSymbol>)types.Where(t => t != null);
 
-        context.AddSource("XmppEncoder.Generated.cs", GenerateEncoder(realTypes));
-        context.AddSource("XmppDecoder.Generated.cs", GenerateDecoder(realTypes));
-        context.AddSource("NullHandler.Generated.cs", GenerateNullHandler(realTypes));
-        context.AddSource("Tokens.Generated.cs", GenerateTokens(realTypes));
+        foreach(var group in realTypes.GroupBy<ITypeSymbol, INamespaceSymbol>(t => t.ContainingNamespace, SymbolEqualityComparer.Default))
+        {
+            var ns = group.Key;
+            var nsName = GetQualifiedName(ns);
+
+            context.AddSource($"{nsName}.Encoder.Generated.cs", GenerateEncoder(ns, group));
+            context.AddSource($"{nsName}.Decoder.Generated.cs", GenerateDecoder(ns, group));
+            context.AddSource($"{nsName}.NullHandler.Generated.cs", GenerateNullHandler(ns, group));
+            context.AddSource($"{nsName}.Tokens.Generated.cs", GenerateTokens(ns, group));
+        }
     }
     
     private static void Partition<TElement>(IndentedTextWriter writer, string nameVariable, Action<TElement> handler, IEnumerable<(string name, TElement element)> names)
@@ -342,6 +346,11 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     private static string? Format(ISymbol? symbol)
     {
         return symbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+    }
+
+    private static string? FormatNonGlobal(ISymbol? symbol)
+    {
+        return symbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining));
     }
 
     public static string? FormatLiteral(char literal)

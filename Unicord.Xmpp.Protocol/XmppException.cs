@@ -3,7 +3,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Xmpp.Grammar;
 
 namespace Unicord.Xmpp.Protocol;
 
@@ -68,7 +67,7 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
 
     public virtual ValueTask Output(THandler handler) => details(handler);
 
-    sealed class Encoder : XmppEncoder
+    sealed class Encoder : Grammar.Encoder
     {
         static readonly XmlWriterSettings settings = new()
         {
@@ -97,7 +96,7 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
             Writer.Dispose();
         }
 
-        protected override ValueTask<XmppEncoder> ForkInner()
+        protected override ValueTask<Grammar.Encoder> ForkInner()
         {
             return new(this);
         }

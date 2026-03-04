@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Unicord.Server.Primitives.Xml;
-using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Grammar;
 
 namespace Unicord.Xmpp.Server;
 
-using static XmppVocabulary.Standard;
+using static Vocabulary.Standard;
 
 /// <summary>
 /// Provides an implementation of <see cref="IXmppSession"/> 
@@ -20,7 +20,7 @@ using static XmppVocabulary.Standard;
 /// </summary>
 public abstract class XmppHandlerSession : XmppXmlSession
 {
-    static readonly XmppDecoder decoder = new();
+    static readonly Decoder decoder = new();
 
     protected abstract int TopLevelReaderDepth { get; }
 
@@ -261,7 +261,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         }
     }
 
-    ValueTask<XmppDecoder.Result> HandleCommand(XmlReader reader)
+    ValueTask<Decoder.Result> HandleCommand(XmlReader reader)
     {
         var elementName = reader.LocalName;
         if(reader.NamespaceURI == JabberClientNs)
@@ -299,7 +299,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         lastStanza = null;
         return decoder.DecodePayload(reader, mainHandler);
 
-        static async ValueTask<XmppDecoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
+        static async ValueTask<Decoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
         {
             return new(true, await task);
         }

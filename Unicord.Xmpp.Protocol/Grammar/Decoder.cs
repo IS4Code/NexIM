@@ -2,11 +2,10 @@
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Server.Primitives.Xml;
-using Unicord.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Grammar;
+namespace Unicord.Xmpp.Protocol.Grammar;
 
-public partial class XmppDecoder : XmlDecoder, IValueXmlDecoder<XmppResource>
+public partial class Decoder : XmlDecoder, IValueXmlDecoder<XmppResource>
 {
     public readonly record struct Result(bool Success, IPayloadHandler? InnerHandler);
 

@@ -2,12 +2,11 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Xmpp.Grammar;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
-using Xmpp = XmppVocabulary.Standard;
+using Xmpp = Protocol.Grammar.Vocabulary.Standard;
 
 /// <summary>
 /// Provides an implementation of <see cref="IXmppSession"/> using

@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using Unicord.Xmpp.Grammar;
+using Unicord.Xmpp.Protocol.Grammar;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppNameTable : XmppVocabulary,
+public class XmppNameTable : Vocabulary,
     IEqualityComparer<XmppNameTable.PreHashed<XmppNameTable.WeakStringReference>>,
     IAlternateEqualityComparer<XmppNameTable.PreHashed<ReadOnlyMemory<char>>, XmppNameTable.PreHashed<XmppNameTable.WeakStringReference>>
 {
