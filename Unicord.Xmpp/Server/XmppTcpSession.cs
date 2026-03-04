@@ -11,6 +11,10 @@ using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
+/// <summary>
+/// Provides a final <see cref="IXmppSession"/> implementation
+/// that communicates using TCP.
+/// </summary>
 internal sealed class XmppTcpSession(NetworkStream networkStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppNetworkSession(networkStream, cancellationToken)
 {
     public override string DefaultLanguage => "en";

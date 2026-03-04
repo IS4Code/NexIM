@@ -5,6 +5,16 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
+/// <summary>
+/// Represents an entity capable of creating XMPP sessions
+/// representing accepted incoming connections.
+/// </summary>
+/// <typeparam name="TConnection">
+/// The type of the connections.
+/// </typeparam>
+/// <typeparam name="TSession">
+/// The type of the created sessions.
+/// </typeparam>
 public abstract class XmppServerListener<TConnection, TSession> : XmppXmlListener<TSession> where TSession : XmppHandlerSession
 {
     public XmppServerListener(IXmppReceiver<TSession> receiver) : base(receiver, ConformanceLevel.Document)

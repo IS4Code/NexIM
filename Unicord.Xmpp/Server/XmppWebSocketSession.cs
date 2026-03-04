@@ -11,6 +11,10 @@ using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
+/// <summary>
+/// Provides a final <see cref="IXmppSession"/> implementation
+/// that communicates using WebSocket.
+/// </summary>
 internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketContext context, WebSocketStream wsStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(wsStream)
 {
     public override string DefaultLanguage => "en";

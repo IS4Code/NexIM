@@ -4,6 +4,13 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
+/// <summary>
+/// Represents an entity capable of accepting XMPP connections
+/// as instances of <see cref="XmppXmlSession"/>.
+/// </summary>
+/// <typeparam name="TSession">
+/// The type of accepted sessions.
+/// </typeparam>
 public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where TSession : XmppXmlSession
 {
     readonly XmppNameTable nametable;

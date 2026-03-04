@@ -13,6 +13,9 @@ using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
+/// <summary>
+/// Listens to WebSocket XMPP connections using a managed implementation.
+/// </summary>
 public class XmppManagedWebSocketListener : XmppServerListener<vtortola.WebSockets.WebSocket, XmppFrameSession>
 {
     static readonly string[] protocols = { "xmpp" };

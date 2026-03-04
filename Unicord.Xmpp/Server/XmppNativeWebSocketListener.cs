@@ -9,6 +9,9 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
+/// <summary>
+/// Listens to WebSocket XMPP connections using a native implementation.
+/// </summary>
 public class XmppNativeWebSocketListener : XmppServerListener<(HttpListenerRequest request, WebSocketContext context), XmppFrameSession>
 {
     readonly HttpListener listener;

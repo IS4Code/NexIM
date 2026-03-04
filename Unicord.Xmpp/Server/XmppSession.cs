@@ -1,9 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Net;
-using System.Net.Sockets;
-using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Unicord.Server;
@@ -49,9 +46,4 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public AccountName AccountName => ClientSession?.AccountName ?? ClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
     public ClientSession? ClientSession { get; set; }
     public bool IsAuthenticated => ClientSession != null;
-
-    protected bool IsAllowedClosingException(Exception e)
-    {
-        return e is SocketException or WebSocketException or WebException or HttpListenerException or IOException or ObjectDisposedException;
-    }
 }

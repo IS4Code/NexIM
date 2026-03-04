@@ -7,6 +7,9 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
+/// <summary>
+/// Listens to TCP XMPP connections.
+/// </summary>
 public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
 {
     protected override bool PrettyOutput => true;
