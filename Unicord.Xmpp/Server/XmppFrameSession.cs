@@ -15,6 +15,8 @@ using Xmpp = XmppVocabulary.Standard;
 /// </summary>
 public abstract class XmppFrameSession(Stream stream) : XmppAuthSession(stream)
 {
+    protected override int TopLevelReaderDepth => 0;
+
     protected async override ValueTask Read(CancellationToken cancellationToken)
     {
         var reader = Reader;

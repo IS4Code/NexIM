@@ -95,6 +95,8 @@ public abstract class XmppStreamSession : XmppHandlerSession
         }
     }
 
+    protected override int TopLevelReaderDepth => 1;
+
     protected async override ValueTask Read(CancellationToken cancellationToken)
     {
         var reader = Reader;

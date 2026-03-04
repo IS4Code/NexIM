@@ -22,6 +22,8 @@ public abstract class XmppHandlerSession : XmppXmlSession
 {
     static readonly XmppDecoder decoder = new();
 
+    protected abstract int TopLevelReaderDepth { get; }
+
     IXmppReceivingHandler mainHandler = DefaultHandler.Instance;
     readonly PayloadHandlers handlers = new();
 
@@ -60,7 +62,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         }
         catch(XmlException e)
         {
-            await HandleException(e, 1);
+            await HandleException(e);
         }
         catch(Exception e) when(GetXmppException<XmppStreamException>(e, out var xe))
         {
@@ -222,10 +224,10 @@ public abstract class XmppHandlerSession : XmppXmlSession
         return OnError(exception, _ => errorHandler.Error());
     }
 
-    async ValueTask HandleException(XmlException exception, int commandDepth)
+    async ValueTask HandleException(XmlException exception)
     {
         var reader = Reader;
-        if(reader.Depth <= commandDepth && (reader.EOF || !Connected || await CheckFinished()))
+        if(reader.Depth <= TopLevelReaderDepth && (reader.EOF || !Connected || await CheckFinished()))
         {
             // Terminated at the top level
             return;
