@@ -9,7 +9,7 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppNativeWebSocketListener : XmppFrameListener<(HttpListenerRequest request, WebSocketContext context)>
+public class XmppNativeWebSocketListener : XmppServerListener<(HttpListenerRequest request, WebSocketContext context), XmppFrameSession>
 {
     readonly HttpListener listener;
 
@@ -46,7 +46,7 @@ public class XmppNativeWebSocketListener : XmppFrameListener<(HttpListenerReques
 
             using var socket = wsContext.WebSocket;
 
-            await HandleSocket((context.Request, wsContext), cancellationToken);
+            await Start((context.Request, wsContext), cancellationToken);
         }
         catch(Exception e) when(Program.SuppressUnexpectedExceptions())
         {
@@ -54,7 +54,7 @@ public class XmppNativeWebSocketListener : XmppFrameListener<(HttpListenerReques
         }
     }
 
-    protected async override ValueTask<XmppFrameSession> StartSession((HttpListenerRequest request, WebSocketContext context) info, CancellationToken cancellationToken)
+    protected async override ValueTask<XmppFrameSession> CreateSession((HttpListenerRequest request, WebSocketContext context) info, CancellationToken cancellationToken)
     {
         var request = info.request;
         var wrapper = new Request(request, request.IsSecureConnection ? await request.GetClientCertificateAsync() : null);

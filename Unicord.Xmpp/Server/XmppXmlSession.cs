@@ -14,7 +14,7 @@ namespace Unicord.Xmpp.Server;
 /// Provides an implementation of <see cref="IXmppSession"/> capable of
 /// sending synchronized XMPP commands as XML data.
 /// </summary>
-public abstract class XmppXmlSession : XmppHandlerSession
+public abstract class XmppXmlSession : XmppSession
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
     readonly CommandHandler commandHandler;

@@ -7,8 +7,10 @@ using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppTcpListener : XmppStreamListener<TcpClient>
+public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
 {
+    protected override bool PrettyOutput => true;
+
     readonly TcpListener listener;
 
     public XmppTcpListener(IXmppReceiver<XmppStreamSession> receiver) : base(receiver)
@@ -36,7 +38,7 @@ public class XmppTcpListener : XmppStreamListener<TcpClient>
     {
         try
         {
-            await HandleStream(client, cancellationToken);
+            await Start(client, cancellationToken);
         }
         catch(Exception e) when(Program.SuppressUnexpectedExceptions())
         {
@@ -48,7 +50,7 @@ public class XmppTcpListener : XmppStreamListener<TcpClient>
         }
     }
 
-    protected override ValueTask<XmppStreamSession> StartSession(TcpClient client, CancellationToken cancellationToken)
+    protected override ValueTask<XmppStreamSession> CreateSession(TcpClient client, CancellationToken cancellationToken)
     {
         return new(new XmppTcpSession(client.GetStream(), ReaderSettings, WriterSettings, cancellationToken));
     }

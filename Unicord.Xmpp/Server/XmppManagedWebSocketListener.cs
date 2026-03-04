@@ -13,7 +13,7 @@ using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppManagedWebSocketListener : XmppFrameListener<vtortola.WebSockets.WebSocket>
+public class XmppManagedWebSocketListener : XmppServerListener<vtortola.WebSockets.WebSocket, XmppFrameSession>
 {
     static readonly string[] protocols = { "xmpp" };
 
@@ -62,7 +62,7 @@ public class XmppManagedWebSocketListener : XmppFrameListener<vtortola.WebSocket
         {
             using var socket = webSocket;
 
-            await HandleSocket(socket, cancellationToken);
+            await Start(socket, cancellationToken);
         }
         catch(Exception e) when(Program.SuppressUnexpectedExceptions())
         {
@@ -70,7 +70,7 @@ public class XmppManagedWebSocketListener : XmppFrameListener<vtortola.WebSocket
         }
     }
 
-    protected override ValueTask<XmppFrameSession> StartSession(vtortola.WebSockets.WebSocket webSocket, CancellationToken cancellationToken)
+    protected override ValueTask<XmppFrameSession> CreateSession(vtortola.WebSockets.WebSocket webSocket, CancellationToken cancellationToken)
     {
         var context = new Context(webSocket);
         return new(new XmppWebSocketSession(context, context, ReaderSettings, WriterSettings, cancellationToken));
