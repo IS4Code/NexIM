@@ -16,4 +16,7 @@ static class Constants
     public const string XmppSasl = "urn:ietf:params:xml:ns:xmpp-sasl";
     public const string XmppBind = "urn:ietf:params:xml:ns:xmpp-bind";
     public const string XmppSession = "urn:ietf:params:xml:ns:xmpp-session";
+    public const string XmppPing = "urn:xmpp:ping";
+    public const string DiscoInfo = "http://jabber.org/protocol/disco#info";
+    public const string DiscoItems = "http://jabber.org/protocol/disco#items";
 }

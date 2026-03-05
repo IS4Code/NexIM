@@ -14,13 +14,19 @@ public interface IInfoQueryHandler : IStanzaHandler
     [Name("query", IqAuth)]
     ValueTask<IAuthQueryHandler> AuthQuery();
 
+    [Name("query", DiscoInfo)]
+    ValueTask<IDiscoInfoQueryHandler> DiscoInfoQuery([Name("node")] string? node);
+
+    [Name("query", DiscoItems)]
+    ValueTask<IDiscoItemsQueryHandler> DiscoItemsQuery([Name("node")] string? node);
+
     [Name("bind", XmppBind)]
     ValueTask<IBindHandler> Bind();
 
     [Name("session", XmppSession)]
     ValueTask Session();
 
-    [Name("ping", "urn:xmpp:ping")]
+    [Name("ping", XmppPing)]
     ValueTask Ping();
 }
 
