@@ -8,6 +8,7 @@ using System.Xml.Linq;
 using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server;
 
@@ -24,7 +25,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
 
     protected abstract int TopLevelReaderDepth { get; }
 
-    IXmppReceivingHandler mainHandler = DefaultHandler.Instance;
+    IXmppReceivingHandler mainHandler = NullHandler.Instance;
     readonly PayloadHandlers handlers = new();
 
     StanzaInfo? lastStanza;
@@ -395,26 +396,6 @@ public abstract class XmppHandlerSession : XmppXmlSession
             {
                 await top.DisposeAsync();
             }
-        }
-    }
-
-    sealed class DefaultHandler : NullHandler, IXmppReceivingHandler
-    {
-        public static new readonly DefaultHandler Instance = new();
-
-        private DefaultHandler()
-        {
-
-        }
-
-        public ValueTask StreamStarted()
-        {
-            return default;
-        }
-
-        public ValueTask StreamStopped()
-        {
-            return default;
         }
     }
 }

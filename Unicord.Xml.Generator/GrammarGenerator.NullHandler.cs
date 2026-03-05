@@ -16,7 +16,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
-        writer.WriteLine($"namespace {FormatNonGlobal(container)};");
+        writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
         writer.Write("partial class NullHandler : IPayloadHandler, IStreamHandler");
 
