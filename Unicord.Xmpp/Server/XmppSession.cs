@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server;
 
@@ -27,6 +30,9 @@ public interface IXmppSession : IXmppSendingHandler
 
     [MemberNotNullWhen(true, nameof(ClientSession))]
     bool IsAuthenticated { get; }
+
+    void RegisterCallback(string identifier, Func<ValueTask<IInfoQueryHandler>> callback);
+    ValueTask<IInfoQueryHandler> FinishCallback(string? identifier);
 }
 
 /// <summary>
@@ -46,4 +52,24 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public AccountName AccountName => ClientSession?.AccountName ?? ClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
     public ClientSession? ClientSession { get; set; }
     public bool IsAuthenticated => ClientSession != null;
+
+    readonly ConcurrentDictionary<string, Func<ValueTask<IInfoQueryHandler>>> callbacks = new();
+
+    public void RegisterCallback(string identifier, Func<ValueTask<IInfoQueryHandler>> callback)
+    {
+        if(!callbacks.TryAdd(identifier, callback))
+        {
+            throw new ArgumentException("The identifier was already used previously.", nameof(identifier));
+        }
+    }
+
+    public ValueTask<IInfoQueryHandler> FinishCallback(string? identifier)
+    {
+        if(identifier == null || !callbacks.TryRemove(identifier, out var callback))
+        {
+            // Unidentified response cannot be dispatched
+            return new(NullHandler.Instance);
+        }
+        return callback();
+    }
 }

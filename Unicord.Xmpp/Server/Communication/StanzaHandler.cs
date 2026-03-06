@@ -17,17 +17,17 @@ internal abstract class StanzaHandler : CommandHandler, IStanzaHandler
         Type = type?.ToEnum();
     }
 
-    protected void EnsureReceiverIsServer()
+    protected void EnsureReceiverIsUserAccount()
     {
-        if(To is { } to && to != Session.LocalResource)
+        if(To is { } to && to != Session.LocalResource?.Bare)
         {
-            throw XmppStanzaException.Forbidden("The receiving entity must be the server.");
+            throw XmppStanzaException.Forbidden("The receiving entity must be the user's account.");
         }
     }
 
-    protected void EnsureReceiverIsAccount()
+    protected void EnsureReceiverIsEmpty()
     {
-        if(To is { } to && to != Session.RemoteResource?.Bare)
+        if(To != null)
         {
             throw XmppStanzaException.Forbidden("The receiving entity must be the user's account.");
         }

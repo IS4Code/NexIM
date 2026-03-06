@@ -1,73 +1,114 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal class InfoQuery : StanzaHandler, IInfoQueryHandler
+internal abstract class GetSetInfoQuery : StanzaHandler
 {
     bool? handled;
 
-    public InfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    public GetSetInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
     {
 
+    }
+
+    protected void SetHandled()
+    {
+        SetOnce(ref handled, true);
     }
 
     public async override ValueTask DisposeAsync()
     {
-        if(handled != true && Type is not (StanzaType.Result or StanzaType.Error))
+        if(handled != true)
         {
             throw XmppStanzaException.ServiceUnavailable();
         }
     }
+}
+
+internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+{
+    public GetServerInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    {
+
+    }
 
     async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
     {
-        SetOnce(ref handled, true);
-
-        // Do not pass to other entities
-        EnsureReceiverIsServer();
-        switch(Type)
-        {
-            case StanzaType.Get:
-                return new GetAuthQuery(Server, Session, Identifier);
-            case StanzaType.Set:
-                return new SetAuthQuery(Server, Session, Identifier);
-            default:
-                return NullHandler.Instance;
-        }
+        SetHandled();
+        return new GetAuthQuery(Server, Session, Identifier);
     }
 
     async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
     {
-        SetOnce(ref handled, true);
-
-        EnsureReceiverIsServer();
-        switch(Type)
-        {
-            case StanzaType.Get:
-                throw XmppStanzaException.BadRequest();
-            case StanzaType.Set:
-                return new BindHandler(Server, Session, Identifier);
-            default:
-                return NullHandler.Instance;
-        }
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
     }
 
     async ValueTask IInfoQueryHandler.Session()
     {
-        SetOnce(ref handled, true);
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
 
-        EnsureReceiverIsServer();
-        switch(Type)
+    async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
+    {
+        SetHandled();
+
+        if(node != null)
         {
-            case StanzaType.Get:
-                throw XmppStanzaException.BadRequest();
-            case StanzaType.Set:
-                break;
-            default:
-                return;
+            throw XmppStanzaException.ItemNotFound();
         }
+
+        return new GetServerDiscoInfoQuery(Server, Session, Identifier);
+    }
+
+    async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
+    {
+        SetHandled();
+        return new GetDiscoItemsQuery(Server, Session, Identifier);
+    }
+
+    async ValueTask IInfoQueryHandler.Ping()
+    {
+        SetHandled();
+
+        // Sent to the server
+        await using var iq = await Session.InfoQuery(NewResponse());
+    }
+
+    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
+    {
+        // The server can handle the request only if it was targeted implicitly
+        SetHandled();
+        EnsureReceiverIsEmpty();
+        return new GetRosterQuery(Server, Session, Identifier, version);
+    }
+}
+
+internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+{
+    public SetServerInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    {
+
+    }
+
+    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
+    {
+        SetHandled();
+        return new SetAuthQuery(Server, Session, Identifier);
+    }
+
+    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
+    {
+        SetHandled();
+        return new BindHandler(Server, Session, Identifier);
+    }
+
+    async ValueTask IInfoQueryHandler.Session()
+    {
+        SetHandled();
 
         // Ensure authenticated and bound
         _ = RemoteResource;
@@ -78,114 +119,145 @@ internal class InfoQuery : StanzaHandler, IInfoQueryHandler
 
     async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
     {
-        SetOnce(ref handled, true);
-
-        switch(Type)
-        {
-            case StanzaType.Get:
-                break;
-            case StanzaType.Set:
-                throw XmppStanzaException.BadRequest();
-            default:
-                return NullHandler.Instance;
-        }
-
-        if(To is not { } to)
-        {
-            throw XmppStanzaException.BadRequest();
-        }
-
-        if(to == Session.LocalResource)
-        {
-            if(node != null)
-            {
-                throw XmppStanzaException.ItemNotFound();
-            }
-
-            return new GetServerDiscoInfoQuery(Server, Session, Identifier);
-        }
-        else if(to.ResourceIdentifier == null)
-        {
-            if(node != null)
-            {
-                throw XmppStanzaException.ItemNotFound();
-            }
-
-            return new GetAccountDiscoInfoQuery(to.Address, Server, Session, Identifier);
-        }
-        else
-        {
-            // TODO Query session
-            return NullHandler.Instance;
-        }
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
     }
 
     async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
     {
-        SetOnce(ref handled, true);
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
 
-        switch(Type)
+    async ValueTask IInfoQueryHandler.Ping()
+    {
+        SetHandled();
+    }
+
+    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
+    {
+        // The server can handle the request only if it was targeted implicitly
+        SetHandled();
+        EnsureReceiverIsEmpty();
+        return new SetRosterQuery(Server, Session, Identifier);
+    }
+}
+
+internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+{
+    XmppAddress Address { get; }
+
+    public GetAccountInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    {
+        Address = (To ?? session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
+    }
+
+    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask IInfoQueryHandler.Session()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
+    {
+        SetHandled();
+
+        if(node != null)
         {
-            case StanzaType.Get:
-                break;
-            case StanzaType.Set:
-                throw XmppStanzaException.BadRequest();
-            default:
-                return NullHandler.Instance;
+            throw XmppStanzaException.ItemNotFound();
         }
 
-        EnsureReceiverIsServer();
+        return new GetAccountDiscoInfoQuery(Address, Server, Session, Identifier);
+    }
 
+    async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
+    {
+        SetHandled();
         return new GetDiscoItemsQuery(Server, Session, Identifier);
     }
 
     async ValueTask IInfoQueryHandler.Ping()
     {
-        SetOnce(ref handled, true);
+        SetHandled();
 
-        if(Type != StanzaType.Get)
+        if(Server.Accounts.GetAccount(ClientSession.GetAccount(Address)) != null)
         {
-            return;
-        }
-
-        if(To is not { } to || to == Session.LocalResource)
-        {
-            // Sent to the server
+            // Account exists
             await using var iq = await Session.InfoQuery(NewResponse());
-        }
-        else if(to == to.Bare)
-        {
-            if(Server.Accounts.GetAccount(ClientSession.GetAccount(to, out _)) != null)
-            {
-                // Account exists
-                await using var iq = await Session.InfoQuery(NewResponse());
-            }
-            else
-            {
-                throw XmppStanzaException.ServiceUnavailable();
-            }
         }
         else
         {
-            // Sent to a resource, never indicate whether it exists
-            // TODO Route (check presence?)
+            throw XmppStanzaException.ServiceUnavailable();
         }
     }
 
     async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
     {
-        SetOnce(ref handled, true);
+        SetHandled();
+        EnsureReceiverIsUserAccount();
+        return new GetRosterQuery(Server, Session, Identifier, version);
+    }
+}
 
-        // Only the client's account can be the target
-        EnsureReceiverIsAccount();
-        switch(Type)
-        {
-            case StanzaType.Get:
-                return new GetRosterQuery(Server, Session, Identifier, version);
-            case StanzaType.Set:
-                return new SetRosterQuery(Server, Session, Identifier);
-            default:
-                return NullHandler.Instance;
-        }
+internal class SetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+{
+    public SetAccountInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    {
+
+    }
+
+    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask IInfoQueryHandler.Session()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask IInfoQueryHandler.Ping()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
+    {
+        SetHandled();
+        EnsureReceiverIsUserAccount();
+        return new SetRosterQuery(Server, Session, Identifier);
     }
 }

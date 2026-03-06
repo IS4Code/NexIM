@@ -152,19 +152,19 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
     ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
     {
         ValidateSender(stanza);
-        return new(new Message(Server, Session, stanza));
+        return Server.GetMessageHandler(Session, stanza);
     }
 
     ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
     {
         ValidateSender(stanza);
-        return new(new Presence(Server, Session, stanza));
+        return Server.GetPresenceHandler(Session, stanza);
     }
 
     ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
     {
         ValidateSender(stanza);
-        return new(new InfoQuery(Server, Session, stanza));
+        return Server.GetInfoQueryHandler(Session, stanza);
     }
 
     public override ValueTask DisposeAsync()
