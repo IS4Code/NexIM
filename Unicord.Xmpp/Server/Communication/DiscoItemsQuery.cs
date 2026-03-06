@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Unicord.Primitives;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -10,7 +11,7 @@ internal class GetDiscoItemsQuery : CommandHandler, IDiscoItemsQueryHandler
 
     }
 
-    async ValueTask IDiscoItemsQueryHandler.Item(XmppResource? identifier, string? name, string? node)
+    async ValueTask IDiscoItemsQueryHandler.Item(XmppResource? identifier, LanguageTaggedString? name, string? node)
     {
         throw XmppStanzaException.BadRequest();
     }

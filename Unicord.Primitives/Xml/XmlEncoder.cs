@@ -66,15 +66,28 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
 
     async ValueTask IValueXmlEncoder<LanguageTaggedString>.Encode(XmlWriter writer, LanguageTaggedString value)
     {
-        if(!String.Equals(writer.XmlLang, value.LanguageTag, StringComparison.OrdinalIgnoreCase))
+        if(String.Equals(writer.XmlLang, value.LanguageTag, StringComparison.OrdinalIgnoreCase))
         {
-            if(writer.WriteState == WriteState.Attribute)
-            {
-                throw new NotSupportedException("A language-tagged string cannot be stored in an attribute.");
-            }
-            await writer.WriteAttributeStringAsync("xml", "lang", "http://www.w3.org/XML/1998/namespace", value.LanguageTag);
+            // No need to write language
+            await writer.WriteStringAsync(value.Value);
+            return;
         }
-        await writer.WriteStringAsync(value.Value);
+
+        if(writer.WriteState == WriteState.Attribute)
+        {
+            // Write value first, then replace with the xml:lang attribute
+            await writer.WriteStringAsync(value.Value);
+            await writer.WriteEndAttributeAsync();
+
+            await writer.WriteStartAttributeAsync("xml", "lang", "http://www.w3.org/XML/1998/namespace");
+            await writer.WriteStringAsync(value.LanguageTag);
+        }
+        else
+        {
+            // Write xml:lang as the last attribute
+            await writer.WriteAttributeStringAsync("xml", "lang", "http://www.w3.org/XML/1998/namespace", value.LanguageTag);
+            await writer.WriteStringAsync(value.Value);
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 
@@ -16,7 +17,7 @@ internal abstract class GetDiscoInfoQuery : CommandHandler, IDiscoInfoQueryHandl
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask IDiscoInfoQueryHandler.Identity(string? name, Token<DiscoCategory>? category, Token<DiscoType>? type)
+    async ValueTask IDiscoInfoQueryHandler.Identity(LanguageTaggedString? name, Token<DiscoCategory>? category, Token<DiscoType>? type)
     {
         throw XmppStanzaException.BadRequest();
     }

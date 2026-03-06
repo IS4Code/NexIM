@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Grammar;
 
@@ -8,7 +9,7 @@ namespace Unicord.Xmpp.Protocol;
 public interface IDiscoInfoQueryHandler : IPayloadHandler
 {
     [Name("identity")]
-    ValueTask Identity([Name("name")] string? name, [Name("category")] Token<DiscoCategory>? category, [Name("type")] Token<DiscoType>? type);
+    ValueTask Identity([Name("name")] LanguageTaggedString? name, [Name("category")] Token<DiscoCategory>? category, [Name("type")] Token<DiscoType>? type);
 
     [Name("feature")]
     ValueTask Feature([Name("var")] Token<DiscoFeature>? feature);
@@ -18,7 +19,7 @@ public interface IDiscoInfoQueryHandler : IPayloadHandler
 public interface IDiscoItemsQueryHandler : IPayloadHandler
 {
     [Name("item")]
-    ValueTask Item([Name("jid")] XmppResource? identifier, [Name("name")] string? name, [Name("node")] string? node);
+    ValueTask Item([Name("jid")] XmppResource? identifier, [Name("name")] LanguageTaggedString? name, [Name("node")] string? node);
 }
 
 [SimpleType]
