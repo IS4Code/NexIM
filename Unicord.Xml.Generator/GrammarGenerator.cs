@@ -81,6 +81,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
             context.AddSource($"{nsName}.Encoder.Generated.cs", GenerateEncoder(ns, group));
             context.AddSource($"{nsName}.Decoder.Generated.cs", GenerateDecoder(ns, group));
             context.AddSource($"{nsName}.NullHandler.Generated.cs", GenerateNullHandler(ns, group));
+            context.AddSource($"{nsName}.CapturingHandler.Generated.cs", GenerateCapturingHandler(ns, group));
             context.AddSource($"{nsName}.Tokens.Generated.cs", GenerateTokens(ns, group));
         }
     }
@@ -268,9 +269,17 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         }
     }
 
-    private static void AnalyzeMethod(IMethodSymbol method, out bool returnsHandler, out IParameterSymbol? valueParam, out Dictionary<(string localName, string? ns), IParameterSymbol> attributeParams)
+    private static void AnalyzeMethod(IMethodSymbol method, out ITypeSymbol? handlerReturnType, out IParameterSymbol? valueParam, out Dictionary<(string localName, string? ns), IParameterSymbol> attributeParams)
     {
-        returnsHandler = !IsPlainValueTask(method.ReturnType);
+        var returnType = method.ReturnType;
+        if(returnType is INamedTypeSymbol { IsGenericType: true } namedReturnType && GetQualifiedName(returnType) == typeof(ValueTask).FullName)
+        {
+            handlerReturnType = namedReturnType.TypeArguments[0];
+        }
+        else
+        {
+            handlerReturnType = null;
+        }
         attributeParams = new();
         valueParam = null;
 
@@ -288,7 +297,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
                 {
                     throw new ApplicationException($"Element method '{method.Name}' has multiple non-attribute parameters.");
                 }
-                if(returnsHandler)
+                if(handlerReturnType != null)
                 {
                     throw new ApplicationException($"Element method '{method.Name}' cannot have both a value parameter and return a handler for the element's contents.");
                 }
@@ -314,11 +323,6 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
             return namedType.TypeArguments[0];
         }
         return type;
-    }
-
-    private static bool IsPlainValueTask(ITypeSymbol type)
-    {
-        return GetQualifiedName(type) == typeof(ValueTask).FullName && type is not INamedTypeSymbol { IsGenericType: true };
     }
 
     private static (string localName, string? ns)? GetName(ISymbol symbol)

@@ -15,7 +15,6 @@ partial class GrammarGenerator
 
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
-        writer.WriteLine("using System.Xml;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
         writer.Write("partial class NullHandler : IPayloadHandler, IStreamHandler");
@@ -72,12 +71,12 @@ partial class GrammarGenerator
                         writer.Write($"{Format(param.Type)} {param.Name}");
                     }
 
-                    AnalyzeMethod(method, out var returnsHandler, out var valueParam, out var attributeParams);
+                    AnalyzeMethod(method, out var handlerReturnType, out _, out _);
 
                     writer.Write(") => ");
 
                     // Close or leave opened
-                    if(returnsHandler)
+                    if(handlerReturnType != null)
                     {
                         writer.WriteLine("new(this);");
                     }

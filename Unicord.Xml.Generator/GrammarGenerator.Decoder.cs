@@ -212,7 +212,7 @@ partial class GrammarGenerator
 
                         int varCounter = 0;
 
-                        AnalyzeMethod(method, out var returnsHandler, out var valueParam, out var attributeParams);
+                        AnalyzeMethod(method, out var handlerReturnType, out var valueParam, out var attributeParams);
 
                         bool onAttribute = false;
                         foreach(var pair2 in attributeParams)
@@ -271,7 +271,7 @@ partial class GrammarGenerator
                             writer.WriteLine("reader.MoveToElement();");
                         }
 
-                        if(returnsHandler)
+                        if(handlerReturnType != null)
                         {
                             // Open payload
                             writer.Write("return new(true, ");

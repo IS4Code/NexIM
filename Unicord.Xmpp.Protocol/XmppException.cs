@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Primitives;
 
 namespace Unicord.Xmpp.Protocol;
 
@@ -33,6 +34,8 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
 {
     readonly Func<THandler, ValueTask> details;
 
+    public LocalizedString LocalizedMessage { get; }
+
     public XmppException(Func<THandler, ValueTask> details)
     {
         this.details = details;
@@ -41,11 +44,35 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
     public XmppException(string? message, Func<THandler, ValueTask> details) : base(message)
     {
         this.details = details;
+
+        if(message != null)
+        {
+            LocalizedMessage = new(new LanguageTaggedString(message));
+        }
     }
 
     public XmppException(string? message, Func<THandler, ValueTask> details, Exception? innerException) : base(message, innerException)
     {
         this.details = details;
+
+        if(message != null)
+        {
+            LocalizedMessage = new(new LanguageTaggedString(message));
+        }
+    }
+
+    public XmppException(LocalizedString? message, Func<THandler, ValueTask> details) : base(message?.ToString())
+    {
+        this.details = details;
+
+        LocalizedMessage = message ?? default;
+    }
+
+    public XmppException(LocalizedString? message, Func<THandler, ValueTask> details, Exception? innerException) : base(message?.ToString(), innerException)
+    {
+        this.details = details;
+
+        LocalizedMessage = message ?? default;
     }
 
     public override string ToString()
@@ -120,12 +147,17 @@ public class XmppStreamException : XmppException<IStreamErrorHandler>
 
     }
 
+    public XmppStreamException(LocalizedString message, Func<IStreamErrorHandler, ValueTask> details) : base(message, details)
+    {
+
+    }
+
     public override async ValueTask Output(IStreamErrorHandler handler)
     {
         await base.Output(handler);
-        if(!String.IsNullOrWhiteSpace(Message))
+        foreach(var message in LocalizedMessage)
         {
-            await handler.Text(new(Message!));
+            await handler.Text(message);
         }
     }
 
@@ -177,12 +209,18 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
         Code = code;
     }
 
+    public XmppStanzaException(ErrorType? type, int? code, LocalizedString message, Func<IStanzaErrorHandler, ValueTask> details) : base(message, details)
+    {
+        Type = type;
+        Code = code;
+    }
+
     public override async ValueTask Output(IStanzaErrorHandler handler)
     {
         await base.Output(handler);
-        if(!String.IsNullOrWhiteSpace(Message))
+        foreach(var message in LocalizedMessage)
         {
-            await handler.Text(new(Message!));
+            await handler.Text(message);
         }
     }
 

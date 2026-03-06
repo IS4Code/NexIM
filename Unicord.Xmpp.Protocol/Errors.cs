@@ -15,11 +15,15 @@ public enum ErrorType
 }
 
 [ComplexType, Namespace(Streams)]
-public interface IStreamErrorHandler : IPayloadHandler
+public interface IStreamErrorTextHandler : IPayloadHandler
 {
     [Name("text")]
     ValueTask Text(LanguageTaggedString? text);
+}
 
+[ComplexType, Namespace(Streams)]
+public interface IStreamErrorHandler : IStreamErrorTextHandler
+{
     [Name("bad-format")] ValueTask BadFormat();
     [Name("bad-namespace-prefix")] ValueTask BadNamespacePrefix();
     [Name("conflict")] ValueTask Conflict();
@@ -47,11 +51,15 @@ public interface IStreamErrorHandler : IPayloadHandler
 }
 
 [ComplexType, Namespace(Stanzas)]
-public interface IStanzaErrorHandler : IPayloadHandler
+public interface IStanzaErrorTextHandler : IPayloadHandler
 {
     [Name("text")]
     ValueTask Text(LanguageTaggedString? text);
+}
 
+[ComplexType, Namespace(Stanzas)]
+public interface IStanzaErrorHandler : IStanzaErrorTextHandler
+{
     [Name("bad-request")] ValueTask BadRequest();
     [Name("conflict")] ValueTask Conflict();
     [Name("feature-not-implemented")] ValueTask FeatureNotImplemented();

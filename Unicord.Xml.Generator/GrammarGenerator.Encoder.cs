@@ -88,7 +88,7 @@ partial class GrammarGenerator
                         writer.Write($"{Format(param.Type)} {param.Name}");
                     }
 
-                    AnalyzeMethod(method, out var returnsHandler, out var valueParam, out var attributeParams);
+                    AnalyzeMethod(method, out var handlerReturnType, out var valueParam, out var attributeParams);
 
                     writer.WriteLine(")");
                     writer.WriteLine("{");
@@ -157,7 +157,7 @@ partial class GrammarGenerator
                         }
                         
                         // Close or leave opened
-                        if(returnsHandler)
+                        if(handlerReturnType != null)
                         {
                             writer.WriteLine("return await ForkInner();");
                         }
