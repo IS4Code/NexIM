@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using System.Xml.Linq;
+using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 
@@ -107,10 +107,10 @@ public abstract class XmppSendingHandler : IXmppSendingHandler
         return OnTlsFailure();
     }
 
-    protected abstract ValueTask OnOther(XElement payload);
-    ValueTask IPayloadHandler.Other(XElement payload)
+    protected abstract ValueTask OnOther(XmlReader payloadReader);
+    ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
-        return OnOther(payload);
+        return OnOther(payloadReader);
     }
 
     protected abstract ValueTask<ICompressionHandler> OnCompress();

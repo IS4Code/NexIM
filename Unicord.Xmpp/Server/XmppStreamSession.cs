@@ -124,12 +124,12 @@ public abstract class XmppStreamSession : XmppHandlerSession
                 
             case (XmlNodeType.Element, 1):
                 // Individual command
-                await EnterCommand(reader, cancellationToken);
+                await EnterCommand(reader);
                 break;
                 
             case (XmlNodeType.Element, _):
                 // Payload of a known command
-                await EnterPayload(reader, cancellationToken);
+                await EnterPayload(reader);
                 break;
 
             case (XmlNodeType.EndElement, 0):

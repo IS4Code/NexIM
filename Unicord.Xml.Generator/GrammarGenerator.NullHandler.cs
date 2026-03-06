@@ -40,7 +40,7 @@ partial class GrammarGenerator
             writer.WriteLine("ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza) => new(this);");
             writer.WriteLine("ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza) => new(this);");
             writer.WriteLine("ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza) => new(this);");
-            writer.WriteLine("ValueTask IPayloadHandler.Other(System.Xml.Linq.XElement payload) => default;");
+            writer.WriteLine("ValueTask IPayloadHandler.Other(System.Xml.XmlReader payloadReader) => default;");
 
             foreach(var type in types)
             {

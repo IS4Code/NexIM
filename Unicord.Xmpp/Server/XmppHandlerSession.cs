@@ -114,9 +114,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         await mainHandler.StreamStarted();
     }
 
-    const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
-
-    protected async ValueTask EnterCommand(XmlReader reader, CancellationToken cancellationToken)
+    protected async ValueTask EnterCommand(XmlReader reader)
     {
         bool isEmpty = reader.IsEmptyElement;
         if(await HandleCommand(reader) is (true, var commandHandler))
@@ -128,12 +126,12 @@ public abstract class XmppHandlerSession : XmppXmlSession
         {
             // Unknown type
             using var subtreeReader = reader.ReadSubtree();
-            var element = await XElement.LoadAsync(subtreeReader, elementLoadOptions, cancellationToken);
-            await mainHandler.Other(element);
+            await mainHandler.Other(subtreeReader);
+            await SkipToEnd(subtreeReader);
         }
     }
 
-    protected async ValueTask EnterPayload(XmlReader reader, CancellationToken cancellationToken)
+    protected async ValueTask EnterPayload(XmlReader reader)
     {
         bool isEmpty = reader.IsEmptyElement;
         if(await decoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
@@ -145,8 +143,17 @@ public abstract class XmppHandlerSession : XmppXmlSession
         {
             // Unknown element
             using var subtreeReader = reader.ReadSubtree();
-            var element = await XElement.LoadAsync(subtreeReader, elementLoadOptions, cancellationToken);
-            await handlers.Get<IPayloadHandler>().Other(element);
+            await handlers.Get<IPayloadHandler>().Other(subtreeReader);
+            await SkipToEnd(subtreeReader);
+        }
+    }
+
+    private static async ValueTask SkipToEnd(XmlReader subtreeReader)
+    {
+        while(await subtreeReader.ReadAsync())
+        {
+            // Skip all unread nodes
+            await subtreeReader.SkipAsync();
         }
     }
 

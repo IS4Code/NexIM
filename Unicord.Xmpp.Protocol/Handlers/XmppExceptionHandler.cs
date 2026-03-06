@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using System.Xml.Linq;
+using System.Xml;
 using Unicord.Primitives;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
@@ -21,7 +21,7 @@ public class XmppStreamExceptionHandler : XmppExceptionHandler<XmppStreamExcepti
         return default;
     }
 
-    ValueTask IPayloadHandler.Other(XElement payload)
+    ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
         return default;
     }
@@ -42,7 +42,7 @@ public class XmppStanzaExceptionHandler : XmppExceptionHandler<XmppStanzaExcepti
         return default;
     }
 
-    ValueTask IPayloadHandler.Other(XElement payload)
+    ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
         return default;
     }
@@ -52,7 +52,7 @@ public class XmppSaslExceptionHandler : XmppExceptionHandler<XmppSaslException, 
 {
     public sealed override XmppSaslException Exception => new(Replay);
 
-    ValueTask IPayloadHandler.Other(XElement payload)
+    ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
         return default;
     }

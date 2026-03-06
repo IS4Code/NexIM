@@ -1,7 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using System.Xml.Linq;
 using Unicord.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol.Grammar;
@@ -12,10 +11,9 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IValueXmlEn
     protected abstract ValueTask<Encoder> ForkInner();
     public abstract ValueTask DisposeAsync();
 
-    async ValueTask IPayloadHandler.Other(XElement payload)
+    async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
-        using var reader = payload.CreateReader();
-        await Writer.WriteNodeAsync(reader, false);
+        await Writer.WriteNodeAsync(payloadReader, false);
     }
 
     async ValueTask IValueXmlEncoder<XmppResource>.Encode(XmlWriter writer, XmppResource value)

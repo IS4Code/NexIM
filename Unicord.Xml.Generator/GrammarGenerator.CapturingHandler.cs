@@ -17,7 +17,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
-        writer.Write("partial class CapturingHandler<THandler> : IPayloadHandler, IStreamHandler");
+        writer.Write("partial class CapturingHandler<THandler> : IStreamHandler");
 
         // Implement all interfaces
         foreach(var type in types)
@@ -63,17 +63,6 @@ partial class GrammarGenerator
                 writer.Indent--;
                 writer.WriteLine("}");
             }
-
-            writer.WriteLine("ValueTask IPayloadHandler.Other(System.Xml.Linq.XElement payload)");
-
-            writer.WriteLine("{");
-            writer.Indent++;
-
-            writer.WriteLine("this.Capture<IPayloadHandler>(h => h.Other(payload));");
-            writer.WriteLine("return default;");
-
-            writer.Indent--;
-            writer.WriteLine("}");
 
             foreach(var type in types)
             {

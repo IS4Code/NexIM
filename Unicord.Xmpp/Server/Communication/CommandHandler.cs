@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using Unicord.Server;
 using Unicord.Server.Model;
@@ -52,13 +54,15 @@ internal abstract class CommandHandler : IPayloadHandler
         return XmppStanzaException.BadRequest("Element was not expected.");
     }
 
-    public virtual ValueTask Other(XElement payload)
+    const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
+
+    public async virtual ValueTask Other(XmlReader payloadReader)
     {
+        var element = await XElement.LoadAsync(payloadReader, elementLoadOptions, CancellationToken.None);
         lock(typeof(Console))
         {
-            Console.WriteLine("Unknown payload: " + payload);
+            Console.WriteLine("Unknown payload: " + element);
         }
-        return default;
     }
 
     public abstract ValueTask DisposeAsync();

@@ -47,11 +47,11 @@ public abstract class XmppFrameSession(Stream stream) : XmppAuthSession(stream)
 
             case (XmlNodeType.Element, 0):
                 // Individual command
-                await EnterCommand(reader, cancellationToken);
+                await EnterCommand(reader);
                 break;
 
             case (XmlNodeType.Element, _):
-                await EnterPayload(reader, cancellationToken);
+                await EnterPayload(reader);
                 break;
 
             case (XmlNodeType.EndElement, _):

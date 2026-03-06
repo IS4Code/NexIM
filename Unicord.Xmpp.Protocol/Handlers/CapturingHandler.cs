@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
@@ -10,7 +11,7 @@ namespace Unicord.Xmpp.Protocol.Handlers;
 /// <typeparam name="THandler">
 /// The supported type of the handler.
 /// </typeparam>
-public partial class CapturingHandler<THandler> : IAsyncDisposable, ICapturingHandler<THandler> where THandler : IPayloadHandler
+public partial class CapturingHandler<THandler> : IPayloadHandler, ICapturingHandler<THandler> where THandler : IPayloadHandler
 {
     readonly List<Func<THandler, ValueTask>> calls = new();
     bool disposed;
@@ -41,6 +42,11 @@ public partial class CapturingHandler<THandler> : IAsyncDisposable, ICapturingHa
     void ICapturingHandler<THandler>.Capture(Func<THandler, ValueTask> call)
     {
         calls.Add(call);
+    }
+
+    ValueTask IPayloadHandler.Other(XmlReader payloadReader)
+    {
+        return default;
     }
 
     public ValueTask DisposeAsync()

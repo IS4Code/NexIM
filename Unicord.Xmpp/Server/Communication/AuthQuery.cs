@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using System.Xml.Linq;
+using System.Xml;
 using Unicord.Primitives;
 using Unicord.Xmpp.Protocol;
 
@@ -37,7 +37,7 @@ internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
         throw Unexpected();
     }
 
-    public async override ValueTask Other(XElement payload)
+    public async override ValueTask Other(XmlReader payloadReader)
     {
         throw Unexpected();
     }

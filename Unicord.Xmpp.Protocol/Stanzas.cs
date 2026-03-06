@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Xml.Linq;
+using System.Xml;
 using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Grammar;
 
@@ -39,7 +39,7 @@ public record struct Stanza(
 
 public interface IPayloadHandler : IAsyncDisposable
 {
-    ValueTask Other(XElement payload);
+    ValueTask Other(XmlReader payloadReader);
 }
 
 [ComplexType, Namespace(Client)]
@@ -53,7 +53,7 @@ public abstract class PayloadHandler : IPayloadHandler
 {
     public abstract ValueTask DisposeAsync();
 
-    public virtual ValueTask Other(XElement payload)
+    public virtual ValueTask Other(XmlReader payloadReader)
     {
         return default;
     }

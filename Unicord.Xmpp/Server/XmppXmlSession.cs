@@ -246,12 +246,12 @@ public abstract class XmppXmlSession : XmppSession
         return (THandler)(IPayloadHandler)handler;
     }
 
-    protected async sealed override ValueTask OnOther(XElement message)
+    protected async sealed override ValueTask OnOther(XmlReader payloadReader)
     {
         await semaphore.WaitAsync(CancellationToken);
         try
         {
-            await message.WriteToAsync(Writer, CancellationToken);
+            await Writer.WriteNodeAsync(payloadReader, false);
             await FlushCommand();
         }
         finally
