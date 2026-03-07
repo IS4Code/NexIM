@@ -19,31 +19,17 @@ partial class GrammarGenerator
         writer.WriteLine("using Unicord.Primitives.Xml;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
-        writer.Write("partial class Encoder");
+        writer.Write("partial class Encoder : IUniversalHandler");
 
-        // Implement all interfaces
-        bool firstImplementation = true;
+        // Implement all type encoders
         foreach(var type in types)
         {
-            if(firstImplementation)
+            if(type.TypeKind != TypeKind.Enum)
             {
-                firstImplementation = false;
-                writer.Write(" : ");
-            }
-            else
-            {
-                writer.Write(", ");
+                continue;
             }
 
-            switch(type.TypeKind)
-            {
-                case TypeKind.Interface:
-                    writer.Write(Format(type));
-                    break;
-                case TypeKind.Enum:
-                    writer.Write($"IValueXmlEncoder<Token<{Format(type)}>>");
-                    break;
-            }
+            writer.Write($", IValueXmlEncoder<Token<{Format(type)}>>");
         }
 
         writer.WriteLine();

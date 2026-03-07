@@ -171,11 +171,23 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
 
     protected async ValueTask<string> DecodeTokenAsync(XmlReader reader)
     {
+        int start, total;
+
+        if(!reader.CanReadValueChunk)
+        {
+            // Obtain value directly
+            var value = await reader.GetValueAsync();
+            await reader.ReadAsync();
+            total = value.Length;
+            Trim(value.AsSpan());
+            return reader.NameTable.Add(value.AsMemory(0, total));
+        }
+
         var pool = ArrayPool<char>.Instance;
         var array = pool.Rent(16);
         try
         {
-            int total = 0;
+            total = 0;
 
             // Read input chunks into a contiguous array
 
@@ -194,28 +206,27 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
             }
 
             // Trim whitespace
-            int start = 0;
-            Trim();
+            start = 0;
+            Trim(array.AsSpan(0, total));
 
             return reader.NameTable.Add(array, start, total);
-
-            void Trim()
-            {
-                ReadOnlySpan<char> span = array.AsSpan(0, total);
-                var trimmed = span.Trim(" \r\n\t".AsSpan());
-                if(trimmed.Length == span.Length)
-                {
-                    return;
-                }
-                if(span.Overlaps(trimmed, out start))
-                {
-                    total = trimmed.Length;
-                }
-            }
         }
         finally
         {
             pool.Return(array);
+        }
+
+        void Trim(ReadOnlySpan<char> span)
+        {
+            var trimmed = span.Trim(" \r\n\t".AsSpan());
+            if(trimmed.Length == span.Length)
+            {
+                return;
+            }
+            if(span.Overlaps(trimmed, out start))
+            {
+                total = trimmed.Length;
+            }
         }
     }
 

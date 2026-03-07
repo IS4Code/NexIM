@@ -81,7 +81,9 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
             context.AddSource($"{nsName}.Encoder.Generated.cs", GenerateEncoder(ns, group));
             context.AddSource($"{nsName}.Decoder.Generated.cs", GenerateDecoder(ns, group));
             context.AddSource($"{nsName}.NullHandler.Generated.cs", GenerateNullHandler(ns, group));
+            context.AddSource($"{nsName}.UniversalHandler.Generated.cs", GenerateUniversalHandler(ns, group));
             context.AddSource($"{nsName}.CapturingHandler.Generated.cs", GenerateCapturingHandler(ns, group));
+            context.AddSource($"{nsName}.BaseHandlers.Generated.cs", GenerateBaseHandlers(ns, group));
             context.AddSource($"{nsName}.Tokens.Generated.cs", GenerateTokens(ns, group));
         }
     }
@@ -350,6 +352,11 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     private static string? Format(ISymbol? symbol)
     {
         return symbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+    }
+
+    private static string? FormatNullable(ISymbol? symbol)
+    {
+        return symbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier));
     }
 
     private static string? FormatNonGlobal(ISymbol? symbol)

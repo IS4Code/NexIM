@@ -109,6 +109,24 @@ public static class XmlExtensions
         return read;
     }
 
+    public static XmlReader WithAsyncSupport(this XmlReader reader)
+    {
+        if(reader is XmlAsyncOverSyncReader or { Settings.Async: true })
+        {
+            return reader;
+        }
+        return new XmlAsyncOverSyncReader(reader);
+    }
+
+    public static XmlWriter WithAsyncSupport(this XmlWriter writer)
+    {
+        if(writer is XmlAsyncOverSyncWriter or { Settings.Async: true })
+        {
+            return writer;
+        }
+        return new XmlAsyncOverSyncWriter(writer);
+    }
+
     delegate Task WriteStartAttributeAsyncDelegate(XmlWriter writer, string? prefix, string localName, string? ns);
     delegate Task WriteEndAttributeAsyncDelegate(XmlWriter writer);
 

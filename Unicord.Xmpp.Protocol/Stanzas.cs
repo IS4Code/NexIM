@@ -42,19 +42,14 @@ public interface IPayloadHandler : IAsyncDisposable
     ValueTask Other(XmlReader payloadReader);
 }
 
+public partial interface IUniversalHandler : IPayloadHandler
+{
+
+}
+
 [ComplexType, Namespace(Client)]
 public interface IStanzaHandler : IPayloadHandler
 {
     [Name("error")]
     ValueTask<IStanzaErrorHandler> Error([Name("type")] Token<ErrorType>? type, [Name("code")] int? code);
-}
-
-public abstract class PayloadHandler : IPayloadHandler
-{
-    public abstract ValueTask DisposeAsync();
-
-    public virtual ValueTask Other(XmlReader payloadReader)
-    {
-        return default;
-    }
 }
