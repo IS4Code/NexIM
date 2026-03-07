@@ -82,6 +82,23 @@ public interface ISaslMechanismsHandler : IPayloadHandler
 public enum SaslMechanism
 {
     [Name("ANONYMOUS")] Anonymous,
+    [Name("DIGEST-MD5")] DigestMd5,
+    [Name("EAP-AES128")] EapAes128,
+    [Name("EAP-AES128-PLUS")] EapAes128Plus,
     [Name("EXTERNAL")] External,
-    [Name("PLAIN")] Plain
+    [Name("GS2-KRB5")] Gs2Krb5,
+    [Name("GS2-KRB5-PLUS")] Gs2Krb5Plus,
+    [Name("GSSAPI")] GssApi,
+    [Name("KERBEROS_V4")] KerberosV4,
+    [Name("KERBEROS_V5")] KerberosV5,
+    [Name("LOGIN")] Login,
+    [Name("OAUTH10A")] OAuth10A,
+    [Name("OAUTHBEARER")] OAuthBearer,
+    [Name("OPENID20")] OpenId20,
+    [Name("OTP")] Otp,
+    [Name("PLAIN")] Plain,
+    [Name("SAML20")] Saml20,
+    [Name("SECURID")] Securid,
+    [Name("SKEY")] Skey,
+    [Name("SXOVER-PLUS")] SxoverPlus
 }
