@@ -4,7 +4,7 @@ using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace Unicord.Xmpp.Server.Handlers;
 
 internal class Compression : BaseCompressionHandler, ICommandHandler
 {

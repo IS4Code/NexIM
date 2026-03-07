@@ -7,7 +7,7 @@ using Unicord.Server;
 using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace Unicord.Xmpp.Server.Handlers;
 
 internal static class CommandExtensions
 {

@@ -2,7 +2,7 @@
 using System.Xml;
 using Unicord.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace Unicord.Xmpp.Server.Handlers;
 
 internal class GetDiscoItemsQuery : DiscoItemsQueryHandler, ICommandHandler
 {

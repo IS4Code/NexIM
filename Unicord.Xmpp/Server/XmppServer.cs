@@ -2,7 +2,7 @@
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server.Communication;
+using Unicord.Xmpp.Server.Handlers;
 
 namespace Unicord.Xmpp.Server;
 
