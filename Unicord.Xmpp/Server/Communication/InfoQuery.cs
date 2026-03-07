@@ -49,19 +49,7 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
     {
         SetHandled();
-        return new GetAuthQuery() { State = State };
-    }
-
-    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    async ValueTask IInfoQueryHandler.Session()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
+        return this.GetHandler<GetAuthQuery>();
     }
 
     protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
@@ -73,13 +61,13 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
             throw XmppStanzaException.ItemNotFound();
         }
 
-        return new GetServerDiscoInfoQuery() { State = State };
+        return this.GetHandler<GetServerDiscoInfoQuery>();
     }
 
     protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
-        return new GetDiscoItemsQuery() { State = State };
+        return this.GetHandler<GetDiscoItemsQuery>();
     }
 
     protected async override ValueTask<bool> OnPing()
@@ -87,7 +75,7 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         SetHandled();
 
         // Sent to the server
-        await using var iq = await this.CreateResponse();
+        await this.SendResponse();
         return true;
     }
 
@@ -110,13 +98,13 @@ internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
     {
         SetHandled();
-        return new SetAuthQuery() { State = State };
+        return this.GetHandler<SetAuthQuery>();
     }
 
     protected async override ValueTask<IBindHandler?> OnBind()
     {
         SetHandled();
-        return new SetBindHandler() { State = State };
+        return this.GetHandler<SetBind>();
     }
 
     protected async override ValueTask<bool> OnSession()
@@ -127,20 +115,8 @@ internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         _ = this.GetRemoteResource();
 
         // Success
-        await using var iq = await this.CreateResponse();
+        await this.SendResponse();
         return true;
-    }
-
-    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
     }
 
     protected async override ValueTask<bool> OnPing()
@@ -154,7 +130,7 @@ internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         // The server can handle the request only if it was targeted implicitly
         SetHandled();
         this.EnsureReceiverIsEmpty();
-        return new SetRosterQuery() { State = State };
+        return this.GetHandler<SetRosterQuery>();
     }
 }
 
@@ -165,24 +141,6 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     public GetAccountInfoQuery(in Stanza stanza) : base(stanza)
     {
         Address = (To ?? State.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
-    }
-
-    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<IBindHandler?> OnBind()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<bool> OnSession()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
     }
 
     protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
@@ -200,7 +158,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
-        return new GetDiscoItemsQuery() { State = State };
+        return this.GetHandler<GetDiscoItemsQuery>();
     }
 
     protected async override ValueTask<bool> OnPing()
@@ -210,7 +168,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         if(State.Server.Accounts.GetAccount(ClientSession.GetAccount(Address)) != null)
         {
             // Account exists
-            await using var iq = await this.CreateResponse();
+            await this.SendResponse();
             return true;
         }
         else
@@ -234,46 +192,10 @@ internal class SetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 
     }
 
-    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<IBindHandler?> OnBind()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<bool> OnSession()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    protected async override ValueTask<bool> OnPing()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
     protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
     {
         SetHandled();
         this.EnsureReceiverIsUserAccount();
-        return new SetRosterQuery() { State = State };
+        return this.GetHandler<SetRosterQuery>();
     }
 }

@@ -7,7 +7,7 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal sealed class StreamHandler : BaseStreamHandler, IXmppReceivingHandler, ICommandHandler
+internal sealed class Stream : BaseStreamHandler, IXmppReceivingHandler, ICommandHandler
 {
     const bool supportsIqAuth = true;
 
@@ -110,7 +110,7 @@ internal sealed class StreamHandler : BaseStreamHandler, IXmppReceivingHandler, 
 
     protected async override ValueTask<ICompressionHandler?> OnCompress()
     {
-        return new Compression() { State = State };
+        return this.GetHandler<Compression>();
     }
 
     protected async override ValueTask<bool> OnSaslAuth(Token<SaslMechanism>? mechanismToken, TemporaryUtf8String? data)

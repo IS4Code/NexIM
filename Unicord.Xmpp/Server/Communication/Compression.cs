@@ -10,7 +10,7 @@ internal class Compression : BaseCompressionHandler, ICommandHandler
 {
     CompressionMethod? method;
 
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnMethod(Token<CompressionMethod>? name)
     {

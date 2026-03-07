@@ -6,11 +6,11 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal class SetBindHandler : BindHandler, ICommandHandler
+internal class SetBind : BindHandler, ICommandHandler
 {
     string? resource;
 
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnResource(string? value)
     {

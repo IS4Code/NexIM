@@ -7,7 +7,7 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal abstract class GetDiscoInfoQuery : DiscoInfoQueryHandler, ICommandHandler
 {
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {

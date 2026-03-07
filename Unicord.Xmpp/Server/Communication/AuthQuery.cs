@@ -11,7 +11,7 @@ internal sealed class GetAuthQuery : AuthQueryHandler, ICommandHandler
 {
     string? username;
 
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnUsername(string? value)
     {
@@ -52,7 +52,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
     string? username, resource, digest;
     TemporaryString? password;
 
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnUsername(string? value)
     {
@@ -154,7 +154,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
             Dispose();
         }
 
-        await using var iq = await this.CreateResponse();
+        await this.SendResponse();
     }
 
     public void Dispose()

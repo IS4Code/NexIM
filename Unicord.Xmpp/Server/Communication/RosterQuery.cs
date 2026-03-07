@@ -11,7 +11,7 @@ internal class GetRosterQuery : RosterQueryHandler, ICommandHandler
 {
     readonly string? cachedVersion;
 
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     public GetRosterQuery(string? version)
     {
@@ -54,7 +54,7 @@ internal class SetRosterQuery : BaseRosterQueryHandler, ICommandHandler
     (XmppResource id, string? name, bool remove)? item;
     string? group;
 
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     protected async override ValueTask<IRosterItemHandler?> OnItem(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
     {
@@ -66,7 +66,7 @@ internal class SetRosterQuery : BaseRosterQueryHandler, ICommandHandler
         // TODO verify?
         id = id.Bare;
 
-        this.SetOnce(ref item, (id, name, subscription?.Value == "remove"));
+        this.SetOnce(ref item, (id, name, subscription?.ToEnum() == RosterSubscriptionDirection.Remove));
         return new ItemHandler(this);
     }
 
@@ -100,7 +100,7 @@ internal class SetRosterQuery : BaseRosterQueryHandler, ICommandHandler
             }
         }
 
-        await using var iq = await this.CreateResponse();
+        await this.SendResponse();
     }
 
     sealed class ItemHandler(SetRosterQuery parent) : BaseRosterItemHandler, ICommandHandler

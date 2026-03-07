@@ -10,10 +10,9 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class Message : MessageHandler, IStanzaCommandHandler
 {
-    ConversationType? type;
+    readonly ConversationType? type;
 
     LocalizedString subject, body;
-
     string? nick;
     ChatState? state;
 

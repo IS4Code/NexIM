@@ -6,7 +6,7 @@ namespace Unicord.Xmpp.Server.Communication;
 
 internal class GetDiscoItemsQuery : DiscoItemsQueryHandler, ICommandHandler
 {
-    public required CommandState State { get; init; }
+    public CommandState State { get; init; }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {

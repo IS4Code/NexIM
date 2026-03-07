@@ -15,7 +15,7 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
 
     public ValueTask<IXmppReceivingHandler> Connected(IXmppSession session)
     {
-        return new(new Communication.StreamHandler() { State = new(this, session, null) });
+        return new(new Stream() { State = new(this, session, null) });
     }
 
     public ValueTask<IMessageHandler> GetMessageHandler(IXmppSession session, in Stanza stanza)
