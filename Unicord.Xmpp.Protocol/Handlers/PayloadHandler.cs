@@ -158,7 +158,7 @@ internal sealed class FallbackEncoder : Encoder, IStreamHandler
         return Inner();
         async ValueTask<IInfoQueryHandler> Inner()
         {
-            await WriteStanza(Vocabulary.Standard.Iq, copy);
+            await WriteStanza(Vocabulary.Standard.IQ, copy);
             return await ForkInner();
         }
     }

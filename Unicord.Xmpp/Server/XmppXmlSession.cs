@@ -63,7 +63,7 @@ public abstract class XmppXmlSession : XmppSession
 
     protected sealed override ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
-        var handler = new StanzaHandler(Vocabulary.Standard.Iq.Value, stanza, this);
+        var handler = new StanzaHandler(Vocabulary.Standard.IQ.Value, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
     }
 

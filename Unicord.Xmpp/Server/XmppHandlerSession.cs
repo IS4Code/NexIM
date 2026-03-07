@@ -275,7 +275,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         {
             switch(elementName.Length)
             {
-                case 2 when elementName == Iq:
+                case 2 when elementName == IQ:
                 {
                     var stanza = ParseStanza(reader);
                     lastStanza = new(StanzaKind.InfoQuery, stanza.Identifier);
