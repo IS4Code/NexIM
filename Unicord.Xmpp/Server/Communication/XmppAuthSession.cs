@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Server.Communication;
 
 /// <summary>
 /// Provides an implementation of <see cref="IXmppSession"/>

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Server.Communication;
 
 /// <summary>
 /// Represents an entity capable of creating XMPP sessions

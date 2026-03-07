@@ -5,6 +5,7 @@ using Unicord.Server;
 using Unicord.Server.Model;
 using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp.Server;
 

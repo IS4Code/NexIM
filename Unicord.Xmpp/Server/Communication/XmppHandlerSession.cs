@@ -4,13 +4,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using System.Xml.Linq;
 using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
 using Unicord.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Server.Communication;
 
 using static Vocabulary.Standard;
 

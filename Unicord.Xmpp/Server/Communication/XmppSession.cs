@@ -9,7 +9,7 @@ using Unicord.Server;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Server.Communication;
 
 /// <summary>
 /// Represents an outgoing XMPP session, i.e. a channel that supports

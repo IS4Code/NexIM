@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Unicord.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Server.Communication;
 
 /// <summary>
 /// Listens to TCP XMPP connections.

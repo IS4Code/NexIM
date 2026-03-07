@@ -9,7 +9,7 @@ using System.Threading;
 using System.Xml;
 using Unicord.Xmpp.Tools;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Server.Communication;
 
 /// <summary>
 /// Provides a final <see cref="IXmppSession"/> implementation

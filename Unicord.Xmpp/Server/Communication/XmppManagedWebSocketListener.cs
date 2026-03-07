@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Tools;
 
-namespace Unicord.Xmpp.Server;
+namespace Unicord.Xmpp.Server.Communication;
 
 /// <summary>
 /// Listens to WebSocket XMPP connections using a managed implementation.

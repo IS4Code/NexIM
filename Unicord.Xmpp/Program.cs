@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Server;
+using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp;
 

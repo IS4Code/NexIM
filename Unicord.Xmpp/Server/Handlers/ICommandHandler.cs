@@ -1,4 +1,5 @@
 ﻿using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
