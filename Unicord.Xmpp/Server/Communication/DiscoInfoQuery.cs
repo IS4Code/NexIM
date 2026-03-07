@@ -1,38 +1,25 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml;
+using System.Xml;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal abstract class GetDiscoInfoQuery : CommandHandler, IDiscoInfoQueryHandler
+internal abstract class GetDiscoInfoQuery : DiscoInfoQueryHandler, ICommandHandler
 {
-    public GetDiscoInfoQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-    {
+    public required CommandState State { get; init; }
 
-    }
-
-    async ValueTask IDiscoInfoQueryHandler.Feature(Token<DiscoFeature>? feature)
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
-        throw XmppStanzaException.BadRequest();
-    }
-
-    async ValueTask IDiscoInfoQueryHandler.Identity(LanguageTaggedString? name, Token<DiscoCategory>? category, Token<DiscoType>? type)
-    {
-        throw XmppStanzaException.BadRequest();
+        await this.Unexpected(payloadReader);
     }
 }
 
 internal class GetServerDiscoInfoQuery : GetDiscoInfoQuery
 {
-    public GetServerDiscoInfoQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-    {
-
-    }
-
     public async override ValueTask DisposeAsync()
     {
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
         await using var info = await iq.DiscoInfoQuery(null);
 
         // Identify the server
@@ -49,19 +36,19 @@ internal class GetAccountDiscoInfoQuery : GetDiscoInfoQuery
 {
     readonly XmppAddress address;
 
-    public GetAccountDiscoInfoQuery(XmppAddress address, XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
+    public GetAccountDiscoInfoQuery(XmppAddress address)
     {
         this.address = address;
     }
 
     public async override ValueTask DisposeAsync()
     {
-        if(Server.Accounts.GetAccount(ClientSession.GetAccount(address)) is not { } account)
+        if(State.Server.Accounts.GetAccount(ClientSession.GetAccount(address)) is not { } account)
         {
             throw XmppStanzaException.ServiceUnavailable();
         }
 
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
         await using var info = await iq.DiscoInfoQuery(null);
 
         // Identify the account

@@ -113,7 +113,7 @@ public abstract class PayloadHandler : IPayloadHandler
     public abstract ValueTask DisposeAsync();
 }
 
-internal sealed class FallbackEncoder : Encoder
+internal sealed class FallbackEncoder : Encoder, IStreamHandler
 {
     readonly PayloadHandler parent;
     readonly XElement container;
@@ -128,6 +128,62 @@ internal sealed class FallbackEncoder : Encoder
 
         // Everything will be stored as nodes in the container
         Writer = container.CreateWriter().WithAsyncSupport();
+    }
+
+    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
+    {
+        var copy = stanza;
+        return Inner();
+        async ValueTask<IMessageHandler> Inner()
+        {
+            await WriteStanza(Vocabulary.Standard.Message, copy);
+            return await ForkInner();
+        }
+    }
+
+    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
+    {
+        var copy = stanza;
+        return Inner();
+        async ValueTask<IPresenceHandler> Inner()
+        {
+            await WriteStanza(Vocabulary.Standard.Presence, copy);
+            return await ForkInner();
+        }
+    }
+
+    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
+    {
+        var copy = stanza;
+        return Inner();
+        async ValueTask<IInfoQueryHandler> Inner()
+        {
+            await WriteStanza(Vocabulary.Standard.Iq, copy);
+            return await ForkInner();
+        }
+    }
+
+    async ValueTask WriteStanza(Token<Enum> kind, Stanza stanza)
+    {
+        var writer = Writer;
+        await writer.WriteStartElementAsync(null, kind.Value, Vocabulary.Standard.JabberClientNs.Value);
+
+        if(stanza.Type is { } type)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Type.Value, null, type.Value);
+        }
+        if(stanza.From is { } from)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.From.Value, null, from.ToString());
+        }
+        if(stanza.To is { } to)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.To.Value, null, to.ToString());
+        }
+        if(stanza.Identifier is { } identifier)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier);
+        }
     }
 
     protected override ValueTask<Encoder> ForkInner()

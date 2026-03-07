@@ -1,21 +1,33 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Xml;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal abstract class GetSetInfoQuery : StanzaHandler
+internal abstract class GetSetInfoQuery : InfoQueryHandler, IStanzaCommandHandler
 {
     bool? handled;
 
-    public GetSetInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
-    {
+    public required CommandState State { get; init; }
+    public StanzaType? Type { get; }
+    public XmppResource? From { get; }
+    public XmppResource? To { get; }
 
+    public GetSetInfoQuery(in Stanza stanza)
+    {
+        (Type, From, To) = this.OpenStanza(stanza);
     }
 
     protected void SetHandled()
     {
-        SetOnce(ref handled, true);
+        this.SetOnce(ref handled, true);
+    }
+
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    {
+        await this.Unrecognized(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
@@ -29,15 +41,15 @@ internal abstract class GetSetInfoQuery : StanzaHandler
 
 internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 {
-    public GetServerInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    public GetServerInfoQuery(in Stanza stanza) : base(stanza)
     {
 
     }
 
-    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
+    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
     {
         SetHandled();
-        return new GetAuthQuery(Server, Session, Identifier);
+        return new GetAuthQuery() { State = State };
     }
 
     async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
@@ -52,7 +64,7 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
+    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
     {
         SetHandled();
 
@@ -61,85 +73,88 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
             throw XmppStanzaException.ItemNotFound();
         }
 
-        return new GetServerDiscoInfoQuery(Server, Session, Identifier);
+        return new GetServerDiscoInfoQuery() { State = State };
     }
 
-    async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
-        return new GetDiscoItemsQuery(Server, Session, Identifier);
+        return new GetDiscoItemsQuery() { State = State };
     }
 
-    async ValueTask IInfoQueryHandler.Ping()
+    protected async override ValueTask<bool> OnPing()
     {
         SetHandled();
 
         // Sent to the server
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
+        return true;
     }
 
-    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
     {
         // The server can handle the request only if it was targeted implicitly
         SetHandled();
-        EnsureReceiverIsEmpty();
-        return new GetRosterQuery(Server, Session, Identifier, version);
+        this.EnsureReceiverIsEmpty();
+        return new GetRosterQuery(version) { State = State };
     }
 }
 
 internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 {
-    public SetServerInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    public SetServerInfoQuery(in Stanza stanza) : base(stanza)
     {
 
     }
 
-    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
-    {
-        SetHandled();
-        return new SetAuthQuery(Server, Session, Identifier);
-    }
-
-    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
+    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
     {
         SetHandled();
-        return new BindHandler(Server, Session, Identifier);
+        return new SetAuthQuery() { State = State };
     }
 
-    async ValueTask IInfoQueryHandler.Session()
+    protected async override ValueTask<IBindHandler?> OnBind()
+    {
+        SetHandled();
+        return new SetBindHandler() { State = State };
+    }
+
+    protected async override ValueTask<bool> OnSession()
     {
         SetHandled();
 
         // Ensure authenticated and bound
-        _ = RemoteResource;
+        _ = this.GetRemoteResource();
 
         // Success
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
+        return true;
     }
 
-    async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
+    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask IInfoQueryHandler.Ping()
+    protected async override ValueTask<bool> OnPing()
     {
         SetHandled();
+        return true;
     }
 
-    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
     {
         // The server can handle the request only if it was targeted implicitly
         SetHandled();
-        EnsureReceiverIsEmpty();
-        return new SetRosterQuery(Server, Session, Identifier);
+        this.EnsureReceiverIsEmpty();
+        return new SetRosterQuery() { State = State };
     }
 }
 
@@ -147,30 +162,30 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 {
     XmppAddress Address { get; }
 
-    public GetAccountInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    public GetAccountInfoQuery(in Stanza stanza) : base(stanza)
     {
-        Address = (To ?? session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
+        Address = (To ?? State.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
     }
 
-    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
-    {
-        SetHandled();
-        throw XmppStanzaException.BadRequest();
-    }
-
-    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
+    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask IInfoQueryHandler.Session()
+    protected async override ValueTask<IBindHandler?> OnBind()
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
+    protected async override ValueTask<bool> OnSession()
+    {
+        SetHandled();
+        throw XmppStanzaException.BadRequest();
+    }
+
+    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
     {
         SetHandled();
 
@@ -179,23 +194,24 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
             throw XmppStanzaException.ItemNotFound();
         }
 
-        return new GetAccountDiscoInfoQuery(Address, Server, Session, Identifier);
+        return new GetAccountDiscoInfoQuery(Address) { State = State };
     }
 
-    async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
-        return new GetDiscoItemsQuery(Server, Session, Identifier);
+        return new GetDiscoItemsQuery() { State = State };
     }
 
-    async ValueTask IInfoQueryHandler.Ping()
+    protected async override ValueTask<bool> OnPing()
     {
         SetHandled();
 
-        if(Server.Accounts.GetAccount(ClientSession.GetAccount(Address)) != null)
+        if(State.Server.Accounts.GetAccount(ClientSession.GetAccount(Address)) != null)
         {
             // Account exists
-            await using var iq = await Session.InfoQuery(NewResponse());
+            await using var iq = await this.CreateResponse();
+            return true;
         }
         else
         {
@@ -203,61 +219,61 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         }
     }
 
-    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
     {
         SetHandled();
-        EnsureReceiverIsUserAccount();
-        return new GetRosterQuery(Server, Session, Identifier, version);
+        this.EnsureReceiverIsUserAccount();
+        return new GetRosterQuery(version) { State = State };
     }
 }
 
 internal class SetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 {
-    public SetAccountInfoQuery(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    public SetAccountInfoQuery(in Stanza stanza) : base(stanza)
     {
 
     }
 
-    async ValueTask<IAuthQueryHandler> IInfoQueryHandler.AuthQuery()
+    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask<IBindHandler> IInfoQueryHandler.Bind()
+    protected async override ValueTask<IBindHandler?> OnBind()
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask IInfoQueryHandler.Session()
+    protected async override ValueTask<bool> OnSession()
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask<IDiscoInfoQueryHandler> IInfoQueryHandler.DiscoInfoQuery(string? node)
+    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask<IDiscoItemsQueryHandler> IInfoQueryHandler.DiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask IInfoQueryHandler.Ping()
+    protected async override ValueTask<bool> OnPing()
     {
         SetHandled();
         throw XmppStanzaException.BadRequest();
     }
 
-    async ValueTask<IRosterQueryHandler> IInfoQueryHandler.RosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
     {
         SetHandled();
-        EnsureReceiverIsUserAccount();
-        return new SetRosterQuery(Server, Session, Identifier);
+        this.EnsureReceiverIsUserAccount();
+        return new SetRosterQuery() { State = State };
     }
 }

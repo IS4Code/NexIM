@@ -15,17 +15,17 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
 
     public ValueTask<IXmppReceivingHandler> Connected(IXmppSession session)
     {
-        return new(new StreamHandler(this, session));
+        return new(new Communication.StreamHandler() { State = new(this, session, null) });
     }
 
     public ValueTask<IMessageHandler> GetMessageHandler(IXmppSession session, in Stanza stanza)
     {
-        return new(new Message(this, session, stanza));
+        return new(new Message(stanza) { State = new(this, session, stanza.Identifier) });
     }
 
     public ValueTask<IPresenceHandler> GetPresenceHandler(IXmppSession session, in Stanza stanza)
     {
-        return new(new Presence(this, session, stanza));
+        return new(new Presence(stanza) { State = new(this, session, stanza.Identifier) });
     }
 
     public ValueTask<IInfoQueryHandler> GetInfoQueryHandler(IXmppSession session, in Stanza stanza)
@@ -37,10 +37,10 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
             {
                 case StanzaType.Get:
                     // Information retrieval
-                    return new(new GetServerInfoQuery(this, session, stanza));
+                    return new(new GetServerInfoQuery(stanza) { State = new(this, session, stanza.Identifier) });
                 case StanzaType.Set:
                     // Information update
-                    return new(new SetServerInfoQuery(this, session, stanza));
+                    return new(new SetServerInfoQuery(stanza) { State = new(this, session, stanza.Identifier) });
                 case StanzaType.Error:
                 case StanzaType.Result:
                     // Response to an earlier inquiry must be handled by the session
@@ -57,10 +57,10 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
             {
                 case StanzaType.Get:
                     // Information retrieval
-                    return new(new GetAccountInfoQuery(this, session, stanza));
+                    return new(new GetAccountInfoQuery(stanza) { State = new(this, session, stanza.Identifier) });
                 case StanzaType.Set:
                     // Information update
-                    return new(new SetAccountInfoQuery(this, session, stanza));
+                    return new(new SetAccountInfoQuery(stanza) { State = new(this, session, stanza.Identifier) });
                 // TODO Consider responses to account's inquiries
                 default:
                     // Ignore unknown types

@@ -1,35 +1,38 @@
-﻿using System;
-using System.Threading.Tasks;
-using Unicord.Server.Model;
+﻿using System.Threading.Tasks;
+using System.Xml;
 using Unicord.Primitives.Xml;
+using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
+internal class GetRosterQuery : RosterQueryHandler, ICommandHandler
 {
     readonly string? cachedVersion;
 
-    public GetRosterQuery(XmppServer server, IXmppSession session, string? identifier, string? version) : base(server, session, identifier)
-    {
-        Session.ClientSession?.SubscribeToRosterUpdates();
+    public required CommandState State { get; init; }
 
+    public GetRosterQuery(string? version)
+    {
         cachedVersion = version;
     }
 
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
-        throw Unexpected();
+        await this.Unexpected(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
     {
-        var contacts = Account.Contacts;
+        State.Session.ClientSession?.SubscribeToRosterUpdates();
+
+        var contacts = this.GetAccount().Contacts;
 
         // Compute the version
         var newVersion = ClientSession.GetContactsVersion(contacts);
 
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
 
         if(newVersion == cachedVersion)
         {
@@ -46,17 +49,14 @@ internal class GetRosterQuery : CommandHandler, IRosterQueryHandler
     }
 }
 
-internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
+internal class SetRosterQuery : BaseRosterQueryHandler, ICommandHandler
 {
     (XmppResource id, string? name, bool remove)? item;
     string? group;
 
-    public SetRosterQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-    {
+    public required CommandState State { get; init; }
 
-    }
-
-    async ValueTask<IRosterItemHandler> IRosterQueryHandler.Item(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
+    protected async override ValueTask<IRosterItemHandler?> OnItem(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
     {
         if(identifier is not { } id)
         {
@@ -66,8 +66,13 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
         // TODO verify?
         id = id.Bare;
 
-        SetOnce(ref item, (id, name, subscription?.Value == "remove"));
-        return new ItemHandler(this, Server, Session, null);
+        this.SetOnce(ref item, (id, name, subscription?.Value == "remove"));
+        return new ItemHandler(this);
+    }
+
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    {
+        await this.Unrecognized(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
@@ -77,39 +82,40 @@ internal class SetRosterQuery : CommandHandler, IRosterQueryHandler
             throw XmppStanzaException.BadRequest("Item is missing.");
         }
 
-        var account = Account;
+        var account = this.GetAccount();
 
         var target = ClientSession.GetAccount(id.Address);
         if(remove)
         {
-            if(!await Server.RemoveContact(account, target))
+            if(!await State.Server.RemoveContact(account, target))
             {
                 throw XmppStanzaException.ItemNotFound();
             }
         }
         else
         {
-            if(!await Server.SetContact(account, new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
+            if(!await State.Server.SetContact(account, new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
             {
                 throw XmppStanzaException.ItemNotFound();
             }
         }
 
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
     }
 
-    class ItemHandler : CommandHandler, IRosterItemHandler
+    sealed class ItemHandler(SetRosterQuery parent) : BaseRosterItemHandler, ICommandHandler
     {
-        readonly SetRosterQuery parent;
+        public CommandState State { get; init; } = parent.State;
 
-        public ItemHandler(SetRosterQuery parent, XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
+        protected async override ValueTask<bool> OnGroup(string? name)
         {
-            this.parent = parent;
+            this.SetOnce(ref parent.group, name);
+            return true;
         }
 
-        async ValueTask IRosterItemHandler.Group(string? name)
+        protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
         {
-            SetOnce(ref parent.group, name);
+            await this.Unrecognized(payloadReader);
         }
 
         public override ValueTask DisposeAsync()

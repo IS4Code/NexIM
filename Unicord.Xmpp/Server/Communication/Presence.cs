@@ -1,62 +1,83 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Unicord.Server.Model;
+using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
+using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal class Presence : StanzaHandler, IPresenceHandler
+internal class Presence : PresenceHandler, IStanzaCommandHandler
 {
     StatusType? show;
     LocalizedString statusText;
     string? nick;
     sbyte? priority;
 
-    public Presence(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
-    {
+    public required CommandState State { get; init; }
+    public StanzaType? Type { get; }
+    public XmppResource? From { get; }
+    public XmppResource? To { get; }
 
+    public Presence(in Stanza stanza)
+    {
+        (Type, From, To) = this.OpenStanza(stanza);
     }
 
-    async ValueTask IPresenceHandler.Show(Token<StatusType>? text)
+    protected async override ValueTask<bool> OnShow(Token<StatusType>? text)
     {
-        SetOnce(ref show, text?.ToEnum());
+        this.SetOnce(ref show, text?.ToEnum());
+        return true;
     }
 
-    async ValueTask IPresenceHandler.Status(LanguageTaggedString? text)
+    protected async override ValueTask<bool> OnStatus(LanguageTaggedString? text)
     {
-        statusText.Add(text, Session.RemoteLanguage);
+        statusText.Add(text, State.Session.RemoteLanguage);
+        return true;
     }
 
-    async ValueTask ISenderPresentation.Nickname(string? text)
+    protected async override ValueTask<bool> OnNickname(string? text)
     {
-        SetOnce(ref nick, text);
+        this.SetOnce(ref nick, text);
+        return true;
     }
 
-    async ValueTask IPresenceHandler.Priority(sbyte? value)
+    protected async override ValueTask<bool> OnPriority(sbyte? value)
     {
-        SetOnce(ref priority, value);
+        this.SetOnce(ref priority, value);
+        return true;
     }
 
-    ValueTask IPresenceHandler.Delay(DateTimeOffset? stamp)
+    protected async override ValueTask<bool> OnDelay(DateTimeOffset? stamp)
     {
-        return default;
+        return true;
+    }
+
+    protected override ValueTask OnUnrecognized(XmlReader payloadReader)
+    {
+        return this.Unrecognized(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
     {
-        if(priority is { } newPriority && Session.ClientSession is { } clientSession)
+        var session = State.Session;
+        var server = State.Server;
+
+        if(priority is { } newPriority && session.ClientSession is { } clientSession)
         {
             var currentPriority = clientSession.Priority;
             if(currentPriority != newPriority)
             {
                 clientSession.Priority = newPriority;
-                Server.Sessions.AddOrUpdateSession(Session.AccountName, Session.ClientSession);
+                server.Sessions.AddOrUpdateSession(session.AccountName, session.ClientSession);
             }
         }
 
-        var sender = new SenderPresentation(Nickname: nick);
+        var sender = new Unicord.Server.Model.SenderPresentation(Nickname: nick);
+
+        var account = this.GetAccount();
 
         if(Type is null or StanzaType.Unavailable)
         {
@@ -71,11 +92,11 @@ internal class Presence : StanzaHandler, IPresenceHandler
                 },
                 statusText
             );
-            if(Session.ClientSession?.UpdatePresence(sender, status) == true)
+            if(session.ClientSession?.UpdatePresence(sender, status) == true)
             {
-                await Server.SendStatusProbe(Account, sender);
+                await server.SendStatusProbe(account, sender);
             }
-            await Server.StatusUpdate(Account, RemoteResource.ResourceIdentifier, sender, status);
+            await server.StatusUpdate(account, this.GetRemoteResource().ResourceIdentifier, sender, status);
             return;
         }
 
@@ -89,16 +110,16 @@ internal class Presence : StanzaHandler, IPresenceHandler
         switch(Type)
         {
             case StanzaType.Subscribe:
-                await Server.SendSubscribeRequest(Account, sender, target);
+                await server.SendSubscribeRequest(account, sender, target);
                 break;
             case StanzaType.Subscribed:
-                await Server.SendSubscribeResponse(Account, sender, target);
+                await server.SendSubscribeResponse(account, sender, target);
                 break;
             case StanzaType.Unsubscribe:
-                await Server.SendUnsubscribeNotification(Account, sender, target);
+                await server.SendUnsubscribeNotification(account, sender, target);
                 break;
             case StanzaType.Unsubscribed:
-                await Server.SendSubscribeCancellation(Account, sender, target);
+                await server.SendSubscribeCancellation(account, sender, target);
                 break;
             default:
                 throw XmppStanzaException.FeatureNotImplemented();

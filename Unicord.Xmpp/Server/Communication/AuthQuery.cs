@@ -1,59 +1,42 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
+internal sealed class GetAuthQuery : AuthQueryHandler, ICommandHandler
 {
     string? username;
 
-    public GetAuthQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-    {
+    public required CommandState State { get; init; }
 
+    protected async override ValueTask<bool> OnUsername(string? value)
+    {
+        this.SetOnce(ref username, value);
+        return true;
     }
 
-    ValueTask IAuthQueryHandler.Username(string? value)
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
-        SetOnce(ref username, value);
-        return default;
-    }
-
-    // Other elements are not expected
-
-    async ValueTask IAuthQueryHandler.Password(TemporaryString? value)
-    {
-        throw Unexpected();
-    }
-
-    async ValueTask IAuthQueryHandler.Digest(string? value)
-    {
-        throw Unexpected();
-    }
-
-    async ValueTask IAuthQueryHandler.Resource(string? value)
-    {
-        throw Unexpected();
-    }
-
-    public async override ValueTask Other(XmlReader payloadReader)
-    {
-        throw Unexpected();
+        // Other elements are not expected
+        await this.Unexpected(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
     {
         // TODO Consider username auth preferences (but may be empty)
 
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
 
         await using var query = await iq.AuthQuery();
         await query.Username(null);
         await query.Resource(null);
 
         // Never request plaintext password over insecure connection
-        if(Session.IsSecure)
+        if(State.Session.IsSecure)
         {
             await query.Password(null);
         }
@@ -64,24 +47,22 @@ internal sealed class GetAuthQuery : CommandHandler, IAuthQueryHandler
     }
 }
 
-internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
+internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
 {
     string? username, resource, digest;
     TemporaryString? password;
 
-    public SetAuthQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-    {
+    public required CommandState State { get; init; }
 
+    protected async override ValueTask<bool> OnUsername(string? value)
+    {
+        this.SetOnce(ref username, value);
+        return true;
     }
 
-    async ValueTask IAuthQueryHandler.Username(string? value)
+    protected async override ValueTask<bool> OnPassword(TemporaryString? value)
     {
-        SetOnce(ref username, value);
-    }
-
-    async ValueTask IAuthQueryHandler.Password(TemporaryString? value)
-    {
-        if(!Session.IsSecure)
+        if(!State.Session.IsSecure)
         {
             // Password was not requested
             throw XmppStanzaException.BadRequest();
@@ -89,18 +70,20 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
 
         if(value == null)
         {
-            return;
+            return true;
         }
 
         var copy = TemporaryString.MoveFrom(value);
 
         try
         {
-            SetOnce(ref password, copy);
+            this.SetOnce(ref password, copy);
+            return true;
         }
         catch when(Dispose())
         {
             // Dispose the string when not set
+            throw;
         }
 
         bool Dispose()
@@ -110,26 +93,34 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
         }
     }
 
-    async ValueTask IAuthQueryHandler.Digest(string? value)
+    protected async override ValueTask<bool> OnDigest(string? value)
     {
-        if(Session.IsSecure)
+        if(State.Session.IsSecure)
         {
             // Digest was not requested
             throw XmppStanzaException.BadRequest();
         }
-        SetOnce(ref digest, value);
+        this.SetOnce(ref digest, value);
+        return true;
     }
 
-    async ValueTask IAuthQueryHandler.Resource(string? value)
+    protected async override ValueTask<bool> OnResource(string? value)
     {
-        SetOnce(ref resource, value);
+        this.SetOnce(ref resource, value);
+        return true;
+    }
+
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    {
+        // All elements must be recognized
+        await this.Unexpected(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
     {
         try
         {
-            if(username == null || resource == null || Session.IsSecure ? password == null : digest == null)
+            if(username == null || resource == null || State.Session.IsSecure ? password == null : digest == null)
             {
                 throw XmppStanzaException.BadRequest();
             }
@@ -140,29 +131,34 @@ internal class SetAuthQuery : CommandHandler, IAuthQueryHandler
                 throw XmppStanzaException.NotAuthorized();
             }
 
-            var identifier = new XmppResource(username, LocalResource.Address.Host, resource);
+            var identifier = new XmppResource(username, this.GetLocalResource().Address.Host, resource);
 
             var accountName = ClientSession.GetAccount(identifier, out _);
 
-            var clientSession = new ClientSession(Session)
+            var clientSession = new ClientSession(State.Session)
             {
                 Identifier = resource,
                 AccountName = accountName
             };
 
-            if(!await Server.Authenticate(accountName, password, clientSession))
+            if(!await State.Server.Authenticate(accountName, password, clientSession))
             {
                 throw XmppStanzaException.NotAuthorized();
             }
 
-            Session.RemoteResource = identifier;
-            Session.ClientSession = clientSession;
+            State.Session.RemoteResource = identifier;
+            State.Session.ClientSession = clientSession;
         }
         finally
         {
-            password?.Dispose();
+            Dispose();
         }
 
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
+    }
+
+    public void Dispose()
+    {
+        password?.Dispose();
     }
 }

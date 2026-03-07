@@ -1,28 +1,29 @@
 ﻿using System.Threading.Tasks;
+using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
+internal sealed class StreamHandler : BaseStreamHandler, IXmppReceivingHandler, ICommandHandler
 {
     const bool supportsIqAuth = true;
 
-    public StreamHandler(XmppServer server, IXmppSession session) : base(server, session, session.StreamIdentifier)
-    {
-
-    }
+    public required CommandState State { get; init; }
 
     async ValueTask IXmppReceivingHandler.StreamStarted()
     {
+        var session = State.Session;
+
         // Send features
-        await using(var features = await Session.Features())
+        await using(var features = await session.Features())
         {
-            if(!Session.IsAuthenticated && Session.CanUpgradeTls)
+            if(!session.IsAuthenticated && session.CanUpgradeTls)
             {
                 await using var tls = await features.StartTls();
-                if(!Session.IsSecure)
+                if(!session.IsSecure)
                 {
                     // Require secure channel before proceeding
                     await tls.Required();
@@ -30,15 +31,15 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
                 }
             }
             
-            if(Session.CanCompress)
+            if(session.CanCompress)
             {
                 await using var comp = await features.Compression();
                 await comp.Method(CompressionMethod.ZLib.ToToken());
             }
 
-            if(Session.IsAuthenticated)
+            if(session.IsAuthenticated)
             {
-                if(Session.RemoteResource == null)
+                if(session.RemoteResource == null)
                 {
                     // Binding is required
                     await features.Bind();
@@ -50,19 +51,19 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
 
                 await using(var sasl = await features.SaslMechanisms())
                 {
-                    if(Session.RemoteCertificate != null)
+                    if(session.RemoteCertificate != null)
                     {
                         // Certificate could be used
                         await sasl.Mechanism(SaslMechanism.External.ToToken());
                     }
-                    if(Session.IsSecure)
+                    if(session.IsSecure)
                     {
                         // Plaintext password requires a secure connection
                         await sasl.Mechanism(SaslMechanism.Plain.ToToken());
                     }
                 }
 
-                if(Session.IsSecure && supportsIqAuth)
+                if(session.IsSecure && supportsIqAuth)
                 {
                     // Only plaintext is supported for this method
                     await features.IqAuth();
@@ -75,9 +76,9 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
             }
 
             // Support session as no-op
-            await using(var session = await features.Session())
+            await using(var sessionFeature = await features.Session())
             {
-                await session.Optional();
+                await sessionFeature.Optional();
             }
 
             // Normal server features
@@ -89,28 +90,30 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
 
     async ValueTask IXmppReceivingHandler.StreamStopped()
     {
-        if(Session.ClientSession is { } session)
+        if(State.Session.ClientSession is { } session)
         {
-            Server.Sessions.RemoveSession(AccountName, session);
+            State.Server.Sessions.RemoveSession(this.GetAccountName(), session);
         }
     }
 
-    async ValueTask ITransportHandler.TlsStart()
+    protected async override ValueTask<bool> OnTlsStart()
     {
-        if(!Session.CanUpgradeTls)
+        var session = State.Session;
+        if(!session.CanUpgradeTls)
         {
-            await Session.TlsFailure();
-            return;
+            await session.TlsFailure();
+            return true;
         }
-        await Session.TlsProceed();
+        await session.TlsProceed();
+        return true;
     }
 
-    async ValueTask<ICompressionHandler> ITransportHandler.Compress()
+    protected async override ValueTask<ICompressionHandler?> OnCompress()
     {
-        return new Compression(Server, Session, null);
+        return new Compression() { State = State };
     }
 
-    async ValueTask ITransportHandler.SaslAuth(Token<SaslMechanism>? mechanismToken, TemporaryUtf8String? data)
+    protected async override ValueTask<bool> OnSaslAuth(Token<SaslMechanism>? mechanismToken, TemporaryUtf8String? data)
     {
         if(mechanismToken?.ToEnum() is not { } mechanism || mechanism is not (SaslMechanism.Plain or SaslMechanism.Anonymous or SaslMechanism.External))
         {
@@ -123,48 +126,56 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
             throw XmppSaslException.NotAuthorized();
         }
 
-        if(await Server.AuthenticatePlain(data, username => ClientSession.GetAccount(new XmppAddress(username, LocalResource.Address.Host))) is not { } accountName)
+        if(await State.Server.AuthenticatePlain(data, username => ClientSession.GetAccount(new XmppAddress(username, this.GetLocalResource().Address.Host))) is not { } accountName)
         {
             throw XmppSaslException.NotAuthorized();
         }
 
+        var session = State.Session;
+
         // Not bound yet
-        Session.ClientSession = new ClientSession(Session)
+        session.ClientSession = new ClientSession(session)
         {
             Identifier = null,
             AccountName = accountName
         };
 
-        await Session.SaslSuccess();
+        await session.SaslSuccess();
+        return true;
     }
 
-    async ValueTask ITransportHandler.SaslResponse(TemporaryUtf8String? data)
+    protected override ValueTask<bool> OnSaslResponse(TemporaryUtf8String? data)
     {
-        await Program.NotImplemented<object>();
+        return Program.NotImplemented<bool>();
     }
 
-    async ValueTask ITransportHandler.SaslAbort()
+    protected async override ValueTask<bool> OnSaslAbort()
     {
         // TODO Abort
         throw XmppSaslException.Aborted();
     }
 
-    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
+    protected override ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
     {
-        ValidateSender(stanza);
-        return Server.GetMessageHandler(Session, stanza);
+        this.ValidateSender(stanza);
+        return State.Server.GetMessageHandler(State.Session, stanza)!;
     }
 
-    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
+    protected override ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
     {
-        ValidateSender(stanza);
-        return Server.GetPresenceHandler(Session, stanza);
+        this.ValidateSender(stanza);
+        return State.Server.GetPresenceHandler(State.Session, stanza)!;
     }
 
-    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
+    protected override ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
     {
-        ValidateSender(stanza);
-        return Server.GetInfoQueryHandler(Session, stanza);
+        this.ValidateSender(stanza);
+        return State.Server.GetInfoQueryHandler(State.Session, stanza)!;
+    }
+
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    {
+        await this.Unrecognized(payloadReader);
     }
 
     public override ValueTask DisposeAsync()
@@ -172,48 +183,48 @@ internal sealed class StreamHandler : CommandHandler, IXmppReceivingHandler
         return default;
     }
 
-    ValueTask<IFeaturesHandler> ITransportHandler.Features()
+    protected override ValueTask<IFeaturesHandler?> OnFeatures()
     {
-        return Program.NotImplemented<IFeaturesHandler>();
+        return Program.NotImplemented<IFeaturesHandler?>();
     }
 
-    ValueTask<IStreamErrorHandler> ITransportHandler.Error()
+    protected override ValueTask<IStreamErrorHandler?> OnError()
     {
-        return Program.NotImplemented<IStreamErrorHandler>();
+        return Program.NotImplemented<IStreamErrorHandler?>();
     }
 
-    async ValueTask ITransportHandler.TlsProceed()
+    protected override ValueTask<bool> OnTlsProceed()
     {
-        await Program.NotImplemented<object>();
+        return Program.NotImplemented<bool>();
     }
 
-    async ValueTask ITransportHandler.TlsFailure()
+    protected override ValueTask<bool> OnTlsFailure()
     {
-        await Program.NotImplemented<object>();
+        return Program.NotImplemented<bool>();
     }
 
-    ValueTask<ICompressionFailureHandler> ITransportHandler.CompressionFailure()
+    protected override ValueTask<ICompressionFailureHandler?> OnCompressionFailure()
     {
-        return Program.NotImplemented<ICompressionFailureHandler>();
+        return Program.NotImplemented<ICompressionFailureHandler?>();
     }
 
-    async ValueTask ITransportHandler.Compressed()
+    protected override ValueTask<bool> OnCompressed()
     {
-        await Program.NotImplemented<object>();
+        return Program.NotImplemented<bool>();
     }
 
-    async ValueTask ITransportHandler.SaslChallenge(TemporaryUtf8String? data)
+    protected override ValueTask<bool> OnSaslChallenge(TemporaryUtf8String? data)
     {
-        await Program.NotImplemented<object>();
+        return Program.NotImplemented<bool>();
     }
 
-    ValueTask<ISaslFailureHandler> ITransportHandler.SaslFailure()
+    protected override ValueTask<ISaslFailureHandler?> OnSaslFailure()
     {
-        return Program.NotImplemented<ISaslFailureHandler>();
+        return Program.NotImplemented<ISaslFailureHandler?>();
     }
 
-    async ValueTask ITransportHandler.SaslSuccess()
+    protected override ValueTask<bool> OnSaslSuccess()
     {
-        await Program.NotImplemented<object>();
+        return Program.NotImplemented<bool>();
     }
 }

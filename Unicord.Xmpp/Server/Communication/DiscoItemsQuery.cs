@@ -1,24 +1,21 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Primitives;
-using Unicord.Xmpp.Protocol;
+using System.Xml;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal class GetDiscoItemsQuery : CommandHandler, IDiscoItemsQueryHandler
+internal class GetDiscoItemsQuery : DiscoItemsQueryHandler, ICommandHandler
 {
-    public GetDiscoItemsQuery(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-    {
+    public required CommandState State { get; init; }
 
-    }
-
-    async ValueTask IDiscoItemsQueryHandler.Item(XmppResource? identifier, LanguageTaggedString? name, string? node)
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
-        throw XmppStanzaException.BadRequest();
+        await this.Unexpected(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
     {
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
         await using var list = await iq.DiscoInfoQuery(null);
 
         // No items

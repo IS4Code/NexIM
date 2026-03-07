@@ -53,14 +53,15 @@ partial class GrammarGenerator
             writer.Indent++;
 
             // Implement all methods having NameAttribute
-            foreach(var method in type.GetMembers().Concat(interfaces.Skip(1).SelectMany(i => i.GetMembers())).OfType<IMethodSymbol>())
+            var methods = type.GetMembers().Concat(interfaces.Skip(1).SelectMany(i => i.GetMembers())).OfType<IMethodSymbol>();
+            foreach(var method in methods)
             {
                 AnalyzeMethod(method, out var handlerReturnType, out _, out _);
 
                 // Generate a handler method that to indicate success
                 writer.WriteLineNoTabs("#nullable enable");
                 writer.Write($"protected virtual {(handlerReturnType != null ? $"ValueTask<{FormatNullable(handlerReturnType.WithNullableAnnotation(NullableAnnotation.Annotated))}>" : "ValueTask<bool>")} On{method.Name}(");
-                WriteParameters(FormatNullable);
+                WriteParameters(method, FormatNullable);
                 writer.WriteLine(")");
                 writer.WriteLine("{");
                 writer.Indent++;
@@ -72,7 +73,7 @@ partial class GrammarGenerator
 
                 // Explicit implementation
                 writer.Write($"async {Format(method.ReturnType)} {Format(method.ContainingType)}.{method.Name}(");
-                WriteParameters(Format);
+                WriteParameters(method, Format);
                 writer.WriteLine(")");
 
                 writer.WriteLine("{");
@@ -80,7 +81,7 @@ partial class GrammarGenerator
                 if(handlerReturnType == null)
                 {
                     writer.Write($"if(await this.On{method.Name}(");
-                    WriteArguments();
+                    WriteArguments(method);
                     writer.WriteLine(") || this.Decoding)");
                     writer.WriteLine("{");
                     writer.Indent++;
@@ -95,13 +96,13 @@ partial class GrammarGenerator
                     writer.WriteLine("await using var _encoder = new FallbackEncoder(this);");
                     writer.WriteLine($"{Format(type)} _impl = _encoder;");
                     writer.Write($"await _impl.{method.Name}(");
-                    WriteArguments();
+                    WriteArguments(method);
                     writer.WriteLine(");");
                 }
                 else
                 {
                     writer.Write($"if(await this.On{method.Name}(");
-                    WriteArguments();
+                    WriteArguments(method);
                     writer.WriteLine(") is { } _handler)");
                     writer.WriteLine("{");
                     writer.Indent++;
@@ -125,52 +126,72 @@ partial class GrammarGenerator
                     writer.WriteLine("var _encoder = new FallbackEncoder(this);");
                     writer.WriteLine($"{Format(type)} _impl = _encoder;");
                     writer.Write($"return await _impl.{method.Name}(");
-                    WriteArguments();
+                    WriteArguments(method);
                     writer.WriteLine(");");
                 }
 
                 writer.Indent--;
                 writer.WriteLine("}");
-
-                void WriteParameters(Func<ISymbol?, string?> format)
-                {
-                    bool firstParameter = true;
-                    foreach(var param in method.Parameters)
-                    {
-                        if(firstParameter)
-                        {
-                            firstParameter = false;
-                        }
-                        else
-                        {
-                            writer.Write(", ");
-                        }
-
-                        writer.Write($"{format(param.Type)} {param.Name}");
-                    }
-                }
-
-                void WriteArguments()
-                {
-                    bool firstParameter = true;
-                    foreach(var param in method.Parameters)
-                    {
-                        if(firstParameter)
-                        {
-                            firstParameter = false;
-                        }
-                        else
-                        {
-                            writer.Write(", ");
-                        }
-
-                        writer.Write(param.Name);
-                    }
-                }
             }
 
             writer.Indent--;
             writer.WriteLine("}");
+
+            // Require all methods to be overridden
+            writer.WriteLine($"public abstract class Base{name} : {name}");
+            writer.WriteLine("{");
+            writer.Indent++;
+
+            writer.WriteLineNoTabs("#nullable enable");
+            foreach(var method in methods)
+            {
+                AnalyzeMethod(method, out var handlerReturnType, out _, out _);
+
+                // Generate a handler method that to indicate success
+                writer.Write($"protected abstract override {(handlerReturnType != null ? $"ValueTask<{FormatNullable(handlerReturnType.WithNullableAnnotation(NullableAnnotation.Annotated))}>" : "ValueTask<bool>")} On{method.Name}(");
+                WriteParameters(method, FormatNullable);
+                writer.WriteLine(");");
+            }
+            writer.WriteLineNoTabs("#nullable disable");
+
+            writer.Indent--;
+            writer.WriteLine("}");
+
+            void WriteParameters(IMethodSymbol method, Func<ISymbol?, string?> format)
+            {
+                bool firstParameter = true;
+                foreach(var param in method.Parameters)
+                {
+                    if(firstParameter)
+                    {
+                        firstParameter = false;
+                    }
+                    else
+                    {
+                        writer.Write(", ");
+                    }
+
+                    writer.Write($"{format(param.Type)} {param.Name}");
+                }
+            }
+
+            void WriteArguments(IMethodSymbol method)
+            {
+                bool firstParameter = true;
+                foreach(var param in method.Parameters)
+                {
+                    if(firstParameter)
+                    {
+                        firstParameter = false;
+                    }
+                    else
+                    {
+                        writer.Write(", ");
+                    }
+
+                    writer.Write(param.Name);
+                }
+            }
         }
 
         writer.Dispose();

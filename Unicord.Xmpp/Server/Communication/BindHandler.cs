@@ -1,56 +1,58 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Xml;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal class BindHandler : CommandHandler, IBindHandler
+internal class SetBindHandler : BindHandler, ICommandHandler
 {
     string? resource;
 
-    public BindHandler(XmppServer server, IXmppSession session, string? identifier) : base(server, session, identifier)
-    {
+    public required CommandState State { get; init; }
 
+    protected async override ValueTask<bool> OnResource(string? value)
+    {
+        this.SetOnce(ref resource, value);
+        return true;
     }
 
-    async ValueTask IBindHandler.Resource(string? value)
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
-        SetOnce(ref resource, value);
-    }
-
-    async ValueTask IBindHandler.Identifier(XmppResource? value)
-    {
-        throw XmppStanzaException.BadRequest();
+        await this.Unexpected(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
     {
-        if(Session.RemoteResource != null)
+        var session = State.Session;
+
+        if(session.RemoteResource != null)
         {
             // Already bound
             throw XmppStanzaException.NotAllowed();
         }
 
-        if(!Session.IsAuthenticated)
+        if(!session.IsAuthenticated)
         {
             throw XmppStanzaException.NotAuthorized();
         }
 
-        var clientSession = Session.ClientSession;
+        var clientSession = session.ClientSession;
         var accountName = clientSession.AccountName;
 
         // Auto-generate resource name if missing
         resource ??= Guid.NewGuid().ToString("N");
 
-        Session.RemoteResource = new XmppResource(ClientSession.GetAddress(accountName), resource);
+        session.RemoteResource = new XmppResource(ClientSession.GetAddress(accountName), resource);
         clientSession.Identifier = resource;
 
         // TODO Handle when already exists (conflict)
-        Server.Sessions.AddSession(accountName, clientSession);
+        State.Server.Sessions.AddSession(accountName, clientSession);
 
         // Inform of the full resource
-        await using var iq = await Session.InfoQuery(NewResponse());
+        await using var iq = await this.CreateResponse();
         await using var bind = await iq.Bind();
-        await bind.Identifier(Session.RemoteResource);
+        await bind.Identifier(session.RemoteResource);
     }
 }

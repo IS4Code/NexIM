@@ -1,12 +1,14 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Unicord.Server.Model;
+using System.Xml;
 using Unicord.Primitives;
+using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
-internal class Message : StanzaHandler, IMessageHandler
+internal class Message : MessageHandler, IStanzaCommandHandler
 {
     ConversationType? type;
 
@@ -15,58 +17,77 @@ internal class Message : StanzaHandler, IMessageHandler
     string? nick;
     ChatState? state;
 
-    public Message(XmppServer server, IXmppSession session, in Stanza stanza) : base(server, session, stanza)
+    public required CommandState State { get; init; }
+    public StanzaType? Type { get; }
+    public XmppResource? From { get; }
+    public XmppResource? To { get; }
+
+    public Message(in Stanza stanza)
     {
-        type = stanza.Type?.Value switch
-        {
+        (Type, From, To) = this.OpenStanza(stanza);
+
+        type = Type switch {
             null => null,
-            "normal" => ConversationType.Normal,
-            "chat" => ConversationType.Chat,
-            "groupchat" => ConversationType.GroupChat,
-            "headline" => ConversationType.Headline,
-            "error" => ConversationType.Error,
+            StanzaType.Normal => ConversationType.Normal,
+            StanzaType.Chat => ConversationType.Chat,
+            StanzaType.GroupChat => ConversationType.GroupChat,
+            StanzaType.Headline => ConversationType.Headline,
+            StanzaType.Error => ConversationType.Error,
             _ => throw XmppStanzaException.BadRequest("Invalid message type.")
         };
     }
 
-    async ValueTask IMessageHandler.Body(LanguageTaggedString? text)
+    protected async override ValueTask<bool> OnBody(LanguageTaggedString? text)
     {
-        body = body.Add(text, Session.RemoteLanguage);
+        body = body.Add(text, State.Session.RemoteLanguage);
+        return true;
     }
 
-    async ValueTask IMessageHandler.Subject(LanguageTaggedString? text)
+    protected async override ValueTask<bool> OnSubject(LanguageTaggedString? text)
     {
-        subject = subject.Add(text, Session.RemoteLanguage);
+        subject = subject.Add(text, State.Session.RemoteLanguage);
+        return true;
     }
 
-    async ValueTask ISenderPresentation.Nickname(string? text)
+    protected async override ValueTask<bool> OnNickname(string? text)
     {
-        SetOnce(ref nick, text);
+        this.SetOnce(ref nick, text);
+        return true;
     }
 
-    async ValueTask IMessageHandler.Active()
+    protected async override ValueTask<bool> OnActive()
     {
-        SetOnce(ref state, ChatState.Active);
+        this.SetOnce(ref state, ChatState.Active);
+        return true;
     }
 
-    async ValueTask IMessageHandler.Inactive()
+    protected async override ValueTask<bool> OnInactive()
     {
-        SetOnce(ref state, ChatState.Inactive);
+        this.SetOnce(ref state, ChatState.Inactive);
+        return true;
     }
 
-    async ValueTask IMessageHandler.Composing()
+    protected async override ValueTask<bool> OnComposing()
     {
-        SetOnce(ref state, ChatState.Composing);
+        this.SetOnce(ref state, ChatState.Composing);
+        return true;
     }
 
-    async ValueTask IMessageHandler.Paused()
+    protected async override ValueTask<bool> OnPaused()
     {
-        SetOnce(ref state, ChatState.Paused);
+        this.SetOnce(ref state, ChatState.Paused);
+        return true;
     }
 
-    async ValueTask IMessageHandler.Gone()
+    protected async override ValueTask<bool> OnGone()
     {
-        SetOnce(ref state, ChatState.Gone);
+        this.SetOnce(ref state, ChatState.Gone);
+        return true;
+    }
+
+    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    {
+        await this.Unrecognized(payloadReader);
     }
 
     public async override ValueTask DisposeAsync()
@@ -76,15 +97,15 @@ internal class Message : StanzaHandler, IMessageHandler
             throw XmppStanzaException.BadRequest("Receiver of a message is empty.");
         }
         var targetAccount = ClientSession.GetAccount(to, out var targetIdentifier);
-        if(Server.Sessions.GetSessions(targetAccount, targetIdentifier, false).FirstOrDefault() is not { } target)
+        if(State.Server.Sessions.GetSessions(targetAccount, targetIdentifier, false).FirstOrDefault() is not { } target)
         {
             throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");
         }
 
         var sender = new Sender(
-            Account: AccountName,
-            Identifier: RemoteResource.ResourceIdentifier,
-            Presentation: new SenderPresentation(Nickname: nick)
+            Account: this.GetAccountName(),
+            Identifier: this.GetRemoteResource().ResourceIdentifier,
+            Presentation: new Unicord.Server.Model.SenderPresentation(Nickname: nick)
         );
 
         var message =

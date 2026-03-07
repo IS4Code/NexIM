@@ -125,9 +125,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         else
         {
             // Unknown type
-            using var subtreeReader = reader.ReadSubtree();
-            await mainHandler.Other(subtreeReader);
-            await SkipToEnd(subtreeReader);
+            await ReadUnknown(mainHandler, reader);
         }
     }
 
@@ -142,14 +140,15 @@ public abstract class XmppHandlerSession : XmppXmlSession
         else
         {
             // Unknown element
-            using var subtreeReader = reader.ReadSubtree();
-            await handlers.Get<IPayloadHandler>().Other(subtreeReader);
-            await SkipToEnd(subtreeReader);
+            await ReadUnknown(handlers.Get<IPayloadHandler>(), reader);
         }
     }
 
-    private static async ValueTask SkipToEnd(XmlReader subtreeReader)
+    private static async ValueTask ReadUnknown(IPayloadHandler handler, XmlReader reader)
     {
+        using var subtreeReader = reader.ReadSubtree();
+        // The reader is deliberately not positioned at an element because it was already decoded
+        await handler.Other(subtreeReader);
         while(await subtreeReader.ReadAsync())
         {
             // Skip all unread nodes
