@@ -84,6 +84,14 @@ public interface IStanzaErrorHandler : IStanzaErrorTextHandler
     [Name("unexpected-request")] ValueTask UnexpectedRequest();
 }
 
+[ComplexType, Namespace(Compression)]
+public interface ICompressionFailureHandler : IStanzaErrorHandler
+{
+    [Name("unsupported-method")] ValueTask UnsupportedMethod();
+    [Name("setup-failed")] ValueTask SetupFailed();
+    [Name("processing-failed")] ValueTask ProcessingFailed();
+}
+
 [ComplexType, Namespace(XmppSasl)]
 public interface ISaslFailureHandler : IPayloadHandler
 {

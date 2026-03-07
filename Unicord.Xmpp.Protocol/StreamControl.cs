@@ -71,19 +71,6 @@ public enum CompressionMethod
     [Name("zlib")] ZLib
 }
 
-[ComplexType, Namespace(Compression)]
-public interface ICompressionFailureHandler : IPayloadHandler, IStanzaErrorHandler
-{
-    [Name("unsupported-method")]
-    ValueTask UnsupportedMethod();
-
-    [Name("setup-failed")]
-    ValueTask SetupFailed();
-
-    [Name("processing-failed")]
-    ValueTask ProcessingFailed();
-}
-
 [ComplexType, Namespace(XmppSasl)]
 public interface ISaslMechanismsHandler : IPayloadHandler
 {
