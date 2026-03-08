@@ -99,7 +99,7 @@ partial class GrammarGenerator
                             writer.WriteLine($"if({param.Name} is {{ }} {paramVar})");
                             writer.WriteLine("{");
                             writer.Indent++;
-                            if(typeName.StartsWith("System."))
+                            if(typeName.StartsWith("System.", System.StringComparison.Ordinal) && !UseCustomEncodingForSystemType(paramType))
                             {
                                 writer.Write($"await writer.WriteAttributeStringAsync(null, {FormatLiteral(attrLocalName)}, {FormatLiteral(attrNs)}, ");
                                 ParamToString(paramVar, param.Type);
@@ -127,7 +127,7 @@ partial class GrammarGenerator
                             writer.WriteLine($"if({valueParam.Name} is {{ }} {paramVar})");
                             writer.WriteLine("{");
                             writer.Indent++;
-                            if(typeName.StartsWith("System."))
+                            if(typeName.StartsWith("System.") && !UseCustomEncodingForSystemType(paramType))
                             {
                                 writer.Write("await writer.WriteStringAsync(");
                                 ParamToString(paramVar, valueParam.Type);

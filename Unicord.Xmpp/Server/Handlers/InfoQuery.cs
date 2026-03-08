@@ -86,6 +86,12 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         this.EnsureReceiverIsEmpty();
         return new GetRosterQuery(version) { State = State };
     }
+
+    protected async override ValueTask<ITimeHandler?> OnTime()
+    {
+        SetHandled();
+        return this.GetHandler<GetTime>();
+    }
 }
 
 internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler

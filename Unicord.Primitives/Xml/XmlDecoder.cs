@@ -8,7 +8,7 @@ namespace Unicord.Primitives.Xml;
 /// <summary>
 /// Provides support for decoding from XML.
 /// </summary>
-public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<TemporaryUtf8String>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token<Enum>>, IValueXmlDecoder<LanguageTaggedString>
+public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<TemporaryUtf8String>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token<Enum>>, IValueXmlDecoder<LanguageTaggedString>, IValueXmlDecoder<DateTime>, IValueXmlDecoder<DateTimeOffset>, IValueXmlDecoder<TimeZoneOffset>
 {
     protected abstract void ThrowElementNotEmpty();
     protected abstract void ThrowElementNotSimple();
@@ -239,6 +239,28 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
     {
         var language = reader.XmlLang;
         return new(await reader.ReadContentAsStringAsync(), language);
+    }
+
+    async ValueTask<DateTime> IValueXmlDecoder<DateTime>.Decode(XmlReader reader)
+    {
+        var dateTime = XmlConvert.ToDateTime(await reader.ReadContentAsStringAsync(), XmlDateTimeSerializationMode.RoundtripKind);
+        if(dateTime.Kind != DateTimeKind.Utc)
+        {
+            throw new FormatException("Date must be in UTC.");
+        }
+        return dateTime;
+    }
+
+    async ValueTask<DateTimeOffset> IValueXmlDecoder<DateTimeOffset>.Decode(XmlReader reader)
+    {
+        return XmlConvert.ToDateTimeOffset(await reader.ReadContentAsStringAsync());
+    }
+
+    async ValueTask<TimeZoneOffset> IValueXmlDecoder<TimeZoneOffset>.Decode(XmlReader reader)
+    {
+        var offset = await reader.ReadContentAsStringAsync();
+        if(offset == "Z") return default;
+        return new(XmlConvert.ToDateTimeOffset(offset, "zzzzzzz").Offset);
     }
 
     static class ArrayPool<T>

@@ -29,6 +29,7 @@ internal class GetServerDiscoInfoQuery : GetDiscoInfoQuery
         await info.Feature(DiscoFeature.DiscoInfo.ToToken());
         await info.Feature(DiscoFeature.DiscoItems.ToToken());
         await info.Feature(DiscoFeature.Ping.ToToken());
+        await info.Feature(DiscoFeature.Time.ToToken());
     }
 }
 

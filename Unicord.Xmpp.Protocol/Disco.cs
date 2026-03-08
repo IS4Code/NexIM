@@ -28,7 +28,8 @@ public enum DiscoFeature
     [Name(Constants.DiscoInfo)] DiscoInfo,
     [Name(Constants.DiscoItems)] DiscoItems,
     [Name(Constants.ChatStates)] ChatStates,
-    [Name(XmppPing)] Ping
+    [Name(XmppPing)] Ping,
+    [Name(XmppTime)] Time
 }
 
 [SimpleType]

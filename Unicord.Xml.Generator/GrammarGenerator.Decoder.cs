@@ -232,7 +232,7 @@ partial class GrammarGenerator
                                 // Just use the default as fallback
                                 writer.Write($"reader.GetAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ?? ");
                             }
-                            else if(typeName.StartsWith("System.", StringComparison.Ordinal))
+                            else if(typeName.StartsWith("System.", StringComparison.Ordinal) && !UseCustomEncodingForSystemType(paramType))
                             {
                                 // Standard support
                                 var readerMethod = $"ReadContentAs{paramType.Name switch
@@ -297,7 +297,7 @@ partial class GrammarGenerator
                                 {
                                     writer.Write($"await reader.ReadContentAsObjectAsync()");
                                 }
-                                else if(typeName.StartsWith("System.", StringComparison.Ordinal))
+                                else if(typeName.StartsWith("System.", StringComparison.Ordinal) && !UseCustomEncodingForSystemType(paramType))
                                 {
                                     // Always through converter
                                     writer.Write($"XmlConvert.To{paramType.Name}(await reader.ReadContentAsStringAsync())");

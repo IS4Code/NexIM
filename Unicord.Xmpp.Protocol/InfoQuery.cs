@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Grammar;
@@ -28,6 +29,9 @@ public interface IInfoQueryHandler : IStanzaHandler
 
     [Name("ping", XmppPing)]
     ValueTask Ping();
+
+    [Name("time", XmppTime)]
+    ValueTask<ITimeHandler> Time();
 }
 
 [ComplexType, Namespace(IqRoster)]
@@ -90,4 +94,14 @@ public interface IBindHandler : IPayloadHandler
 
     [Name("jid")]
     ValueTask Identifier(XmppResource? value);
+}
+
+[ComplexType, Namespace(XmppTime)]
+public interface ITimeHandler : IPayloadHandler
+{
+    [Name("tzo")]
+    ValueTask TimeZoneOffset(TimeZoneOffset? offset);
+
+    [Name("utc")]
+    ValueTask UtcTime(DateTime? time);
 }

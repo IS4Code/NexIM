@@ -7,7 +7,7 @@ namespace Unicord.Primitives.Xml;
 /// <summary>
 /// Provides support for encoding to XML.
 /// </summary>
-public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>
+public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>, IValueXmlEncoder<DateTime>, IValueXmlEncoder<DateTimeOffset>, IValueXmlEncoder<TimeZoneOffset>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -88,6 +88,26 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
             await writer.WriteAttributeStringAsync("xml", "lang", "http://www.w3.org/XML/1998/namespace", value.LanguageTag);
             await writer.WriteStringAsync(value.Value);
         }
+    }
+
+    async ValueTask IValueXmlEncoder<DateTime>.Encode(XmlWriter writer, DateTime value)
+    {
+        if(value.Kind != DateTimeKind.Utc)
+        {
+            throw new ArgumentException("Date must be in UTC.", nameof(value));
+        }
+        await writer.WriteStringAsync(XmlConvert.ToString(value, XmlDateTimeSerializationMode.Utc));
+    }
+
+    ValueTask IValueXmlEncoder<DateTimeOffset>.Encode(XmlWriter writer, DateTimeOffset value)
+    {
+        return new(writer.WriteStringAsync(XmlConvert.ToString(value)));
+    }
+
+    async ValueTask IValueXmlEncoder<TimeZoneOffset>.Encode(XmlWriter writer, TimeZoneOffset value)
+    {
+        var dateTime = new DateTimeOffset(62135596800 * TimeSpan.TicksPerSecond, value.Value);
+        await writer.WriteStringAsync(XmlConvert.ToString(dateTime, "zzzzzzz"));
     }
 }
 
