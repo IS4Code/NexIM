@@ -47,7 +47,7 @@ public partial interface IUniversalHandler : IPayloadHandler
 
 }
 
-[ComplexType, Namespace(Client)]
+[ComplexType]
 public interface IStanzaHandler : IPayloadHandler
 {
     [Name("error")]

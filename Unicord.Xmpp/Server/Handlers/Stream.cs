@@ -7,15 +7,13 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal sealed class Stream : BaseStreamHandler, IXmppReceivingHandler, ICommandHandler
+internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceivingHandler
 {
     const bool supportsIqAuth = true;
 
-    public required CommandState State { get; init; }
-
     async ValueTask IXmppReceivingHandler.StreamStarted()
     {
-        var session = State.Session;
+        var session = Context.Session;
 
         // Send features
         await using(var features = await session.Features())
@@ -90,15 +88,15 @@ internal sealed class Stream : BaseStreamHandler, IXmppReceivingHandler, IComman
 
     async ValueTask IXmppReceivingHandler.StreamStopped()
     {
-        if(State.Session.ClientSession is { } session)
+        if(Context.Session.ClientSession is { } session)
         {
-            State.Server.Sessions.RemoveSession(this.GetAccountName(), session);
+            Context.Server.Sessions.RemoveSession(this.GetAccountName(), session);
         }
     }
 
     protected async override ValueTask<bool> OnTlsStart()
     {
-        var session = State.Session;
+        var session = Context.Session;
         if(!session.CanUpgradeTls)
         {
             await session.TlsFailure();
@@ -126,12 +124,12 @@ internal sealed class Stream : BaseStreamHandler, IXmppReceivingHandler, IComman
             throw XmppSaslException.NotAuthorized();
         }
 
-        if(await State.Server.AuthenticatePlain(data, username => ClientSession.GetAccount(new XmppAddress(username, this.GetLocalResource().Address.Host))) is not { } accountName)
+        if(await Context.Server.AuthenticatePlain(data, username => ClientSession.GetAccount(new XmppAddress(username, this.GetLocalResource().Address.Host))) is not { } accountName)
         {
             throw XmppSaslException.NotAuthorized();
         }
 
-        var session = State.Session;
+        var session = Context.Session;
 
         // Not bound yet
         session.ClientSession = new ClientSession(session)
@@ -158,19 +156,19 @@ internal sealed class Stream : BaseStreamHandler, IXmppReceivingHandler, IComman
     protected override ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return State.Server.GetMessageHandler(State.Session, stanza)!;
+        return Context.Server.GetMessageHandler(Context.Session, stanza)!;
     }
 
     protected override ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return State.Server.GetPresenceHandler(State.Session, stanza)!;
+        return Context.Server.GetPresenceHandler(Context.Session, stanza)!;
     }
 
     protected override ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return State.Server.GetInfoQueryHandler(State.Session, stanza)!;
+        return Context.Server.GetInfoQueryHandler(Context.Session, stanza)!;
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)

@@ -9,14 +9,14 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class Presence : PresenceHandler, IStanzaCommandHandler
+internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
 {
     StatusType? show;
     LocalizedString statusText;
     string? nick;
     sbyte? priority;
 
-    public required CommandState State { get; init; }
+    public required override CommandContext Context { get => base.Context; init => base.Context = value; }
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
     public XmppResource? To { get; }
@@ -34,7 +34,7 @@ internal class Presence : PresenceHandler, IStanzaCommandHandler
 
     protected async override ValueTask<bool> OnStatus(LanguageTaggedString? text)
     {
-        statusText.Add(text, State.Session.RemoteLanguage);
+        statusText.Add(text, Context.Session.RemoteLanguage);
         return true;
     }
 
@@ -62,8 +62,8 @@ internal class Presence : PresenceHandler, IStanzaCommandHandler
 
     public async override ValueTask DisposeAsync()
     {
-        var session = State.Session;
-        var server = State.Server;
+        var session = Context.Session;
+        var server = Context.Server;
 
         if(priority is { } newPriority && session.ClientSession is { } clientSession)
         {

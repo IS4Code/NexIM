@@ -2,7 +2,7 @@
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
-public abstract class StreamHandler : TransportHandler, IStreamHandler
+public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStreamHandler where TContext : struct, IPayloadHandlerContext
 {
     protected virtual ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
     {
@@ -38,7 +38,7 @@ public abstract class StreamHandler : TransportHandler, IStreamHandler
                 return handler;
             }
 
-            var encoder = new FallbackEncoder(this);
+            var encoder = new FallbackEncoder<TContext>(this);
             IStreamHandler impl = encoder;
             return await impl.Message(copy);
         }
@@ -63,7 +63,7 @@ public abstract class StreamHandler : TransportHandler, IStreamHandler
                 return handler;
             }
 
-            var encoder = new FallbackEncoder(this);
+            var encoder = new FallbackEncoder<TContext>(this);
             IStreamHandler impl = encoder;
             return await impl.Presence(copy);
         }
@@ -88,14 +88,14 @@ public abstract class StreamHandler : TransportHandler, IStreamHandler
                 return handler;
             }
 
-            var encoder = new FallbackEncoder(this);
+            var encoder = new FallbackEncoder<TContext>(this);
             IStreamHandler impl = encoder;
             return await impl.InfoQuery(copy);
         }
     }
 }
 
-public abstract class BaseStreamHandler : BaseTransportHandler, IStreamHandler
+public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContext>, IStreamHandler where TContext : struct, IPayloadHandlerContext
 {
     protected abstract ValueTask<IMessageHandler?> OnMessage(in Stanza stanza);
     protected abstract ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza);
@@ -120,7 +120,7 @@ public abstract class BaseStreamHandler : BaseTransportHandler, IStreamHandler
                 return handler;
             }
 
-            var encoder = new FallbackEncoder(this);
+            var encoder = new FallbackEncoder<TContext>(this);
             IStreamHandler impl = encoder;
             return await impl.Message(copy);
         }
@@ -145,7 +145,7 @@ public abstract class BaseStreamHandler : BaseTransportHandler, IStreamHandler
                 return handler;
             }
 
-            var encoder = new FallbackEncoder(this);
+            var encoder = new FallbackEncoder<TContext>(this);
             IStreamHandler impl = encoder;
             return await impl.Presence(copy);
         }
@@ -170,7 +170,7 @@ public abstract class BaseStreamHandler : BaseTransportHandler, IStreamHandler
                 return handler;
             }
 
-            var encoder = new FallbackEncoder(this);
+            var encoder = new FallbackEncoder<TContext>(this);
             IStreamHandler impl = encoder;
             return await impl.InfoQuery(copy);
         }

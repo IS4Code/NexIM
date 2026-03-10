@@ -6,11 +6,11 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal abstract class GetSetInfoQuery : InfoQueryHandler, IStanzaCommandHandler
+internal abstract class GetSetInfoQuery : InfoQueryHandler<CommandContext>, IStanzaCommandHandler
 {
     bool? handled;
 
-    public required CommandState State { get; init; }
+    public required override CommandContext Context { get => base.Context; init => base.Context = value; }
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
     public XmppResource? To { get; }
@@ -84,7 +84,7 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         // The server can handle the request only if it was targeted implicitly
         SetHandled();
         this.EnsureReceiverIsEmpty();
-        return new GetRosterQuery(version) { State = State };
+        return new GetRosterQuery(version) { Context = Context };
     }
 
     protected async override ValueTask<ITimeHandler?> OnTime()
@@ -146,7 +146,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 
     public GetAccountInfoQuery(in Stanza stanza) : base(stanza)
     {
-        Address = (To ?? State.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
+        Address = (To ?? Context.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
     }
 
     protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
@@ -158,7 +158,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
             throw XmppStanzaException.ItemNotFound();
         }
 
-        return new GetAccountDiscoInfoQuery(Address) { State = State };
+        return new GetAccountDiscoInfoQuery(Address) { Context = Context };
     }
 
     protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
@@ -171,7 +171,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     {
         SetHandled();
 
-        if(State.Server.Accounts.GetAccount(ClientSession.GetAccount(Address)) != null)
+        if(Context.Server.Accounts.GetAccount(ClientSession.GetAccount(Address)) != null)
         {
             // Account exists
             await this.SendResponse();
@@ -187,7 +187,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     {
         SetHandled();
         this.EnsureReceiverIsUserAccount();
-        return new GetRosterQuery(version) { State = State };
+        return new GetRosterQuery(version) { Context = Context };
     }
 }
 

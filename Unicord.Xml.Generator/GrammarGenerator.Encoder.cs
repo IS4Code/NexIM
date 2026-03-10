@@ -84,7 +84,7 @@ partial class GrammarGenerator
                         writer.WriteLine("var writer = this.Writer;");
 
                         // Element start
-                        writer.WriteLine($"await writer.WriteStartElementAsync(null, {FormatLiteral(localName)}, {FormatLiteral(ns)});");
+                        writer.WriteLine($"await writer.WriteStartElementAsync(null, {FormatLiteral(localName)}, {(ns != null ? FormatLiteral(ns) : "this.DefaultNamespace")});");
 
                         foreach(var pair in attributeParams)
                         {

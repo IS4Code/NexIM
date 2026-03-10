@@ -4,7 +4,6 @@ namespace Unicord.Xmpp.Protocol;
 
 static class Constants
 {
-    public const string Client = "jabber:client";
     public const string IqRoster = "jabber:iq:roster";
     public const string IqAuth = "jabber:iq:auth";
     public const string ChatStates = "http://jabber.org/protocol/chatstates";

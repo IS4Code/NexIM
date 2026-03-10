@@ -11,27 +11,27 @@ namespace Unicord.Xmpp.Server.Handlers;
 
 internal static class CommandExtensions
 {
-    public static XmppResource GetLocalResource(this ICommandHandler handler) => handler.State.Session.LocalResource ?? throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
-    public static XmppResource GetRemoteResource(this ICommandHandler handler) => handler.State.Session.RemoteResource ?? throw XmppStanzaException.NotAuthorized();
+    public static XmppResource GetLocalResource(this ICommandHandler handler) => handler.Context.Session.LocalResource ?? throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
+    public static XmppResource GetRemoteResource(this ICommandHandler handler) => handler.Context.Session.RemoteResource ?? throw XmppStanzaException.NotAuthorized();
     public static AccountName GetAccountName(this ICommandHandler handler) => ClientSession.GetAccount(GetRemoteResource(handler), out _);
-    public static Account GetAccount(this ICommandHandler handler) => handler.State.Server.Accounts.GetAccount(GetAccountName(handler)) ?? throw XmppStanzaException.NotAuthorized();
+    public static Account GetAccount(this ICommandHandler handler) => handler.Context.Server.Accounts.GetAccount(GetAccountName(handler)) ?? throw XmppStanzaException.NotAuthorized();
 
     public static THandler GetHandler<THandler>(this ICommandHandler handler) where THandler : ICommandHandler, new()
     {
         return new THandler()
         {
-            State = handler.State
+            Context = handler.Context
         };
     }
 
     public static Stanza NewResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null)
     {
-        return new Stanza(Type: type?.ToToken(), Identifier: handler.State.Identifier, From: from ?? handler.State.Session.LocalResource, To: handler.State.Session.RemoteResource);
+        return new Stanza(Type: type?.ToToken(), Identifier: handler.Context.Identifier, From: from ?? handler.Context.Session.LocalResource, To: handler.Context.Session.RemoteResource);
     }
 
     public static ValueTask<IInfoQueryHandler> CreateResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null)
     {
-        return handler.State.Session.InfoQuery(NewResponse(handler, type: type, from: from));
+        return handler.Context.Session.InfoQuery(NewResponse(handler, type: type, from: from));
     }
 
     public static async ValueTask SendResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null, Func<IInfoQueryHandler, ValueTask>? contentProvider = null)
@@ -54,7 +54,7 @@ internal static class CommandExtensions
 
     public static void ValidateSender(this ICommandHandler handler, in Stanza stanza)
     {
-        if(stanza.From is { } from && !from.IsNarrowerThan(handler.State.Session.RemoteResource))
+        if(stanza.From is { } from && !from.IsNarrowerThan(handler.Context.Session.RemoteResource))
         {
             throw XmppStreamException.InvalidFrom();
         }

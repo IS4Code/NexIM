@@ -7,11 +7,9 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class GetRosterQuery : RosterQueryHandler, ICommandHandler
+internal class GetRosterQuery : RosterQueryHandler<CommandContext>
 {
     readonly string? cachedVersion;
-
-    public CommandState State { get; init; }
 
     public GetRosterQuery(string? version)
     {
@@ -25,7 +23,7 @@ internal class GetRosterQuery : RosterQueryHandler, ICommandHandler
 
     public async override ValueTask DisposeAsync()
     {
-        State.Session.ClientSession?.SubscribeToRosterUpdates();
+        Context.Session.ClientSession?.SubscribeToRosterUpdates();
 
         var contacts = this.GetAccount().Contacts;
 
@@ -49,12 +47,10 @@ internal class GetRosterQuery : RosterQueryHandler, ICommandHandler
     }
 }
 
-internal class SetRosterQuery : BaseRosterQueryHandler, ICommandHandler
+internal class SetRosterQuery : BaseRosterQueryHandler<CommandContext>
 {
     (XmppResource id, string? name, bool remove)? item;
     string? group;
-
-    public CommandState State { get; init; }
 
     protected async override ValueTask<IRosterItemHandler?> OnItem(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
     {
@@ -87,14 +83,14 @@ internal class SetRosterQuery : BaseRosterQueryHandler, ICommandHandler
         var target = ClientSession.GetAccount(id.Address);
         if(remove)
         {
-            if(!await State.Server.RemoveContact(account, target))
+            if(!await Context.Server.RemoveContact(account, target))
             {
                 throw XmppStanzaException.ItemNotFound();
             }
         }
         else
         {
-            if(!await State.Server.SetContact(account, new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
+            if(!await Context.Server.SetContact(account, new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
             {
                 throw XmppStanzaException.ItemNotFound();
             }
@@ -103,9 +99,15 @@ internal class SetRosterQuery : BaseRosterQueryHandler, ICommandHandler
         await this.SendResponse();
     }
 
-    sealed class ItemHandler(SetRosterQuery parent) : BaseRosterItemHandler, ICommandHandler
+    sealed class ItemHandler : BaseRosterItemHandler<CommandContext>
     {
-        public CommandState State { get; init; } = parent.State;
+        readonly SetRosterQuery parent;
+
+        public ItemHandler(SetRosterQuery parent)
+        {
+            this.parent = parent;
+            Context = parent.Context;
+        }
 
         protected async override ValueTask<bool> OnGroup(string? name)
         {

@@ -11,6 +11,8 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
 {
     protected abstract XmlWriter Writer { get; }
 
+    public abstract string DefaultNamespace { get; }
+
     protected ValueTask Encode<T, TEncoder>(XmlWriter writer, T value, TEncoder encoder) where TEncoder : IValueXmlEncoder<T>
     {
         return encoder.Encode(writer, value);

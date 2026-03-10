@@ -21,3 +21,8 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IValueXmlEn
         await writer.WriteStringAsync(value.ToString());
     }
 }
+
+public abstract class ClientEncoder : Encoder
+{
+    public override string DefaultNamespace => Vocabulary.Standard.JabberClientNs.Value;
+}

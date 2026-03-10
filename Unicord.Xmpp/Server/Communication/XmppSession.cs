@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Grammar;
 using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -33,6 +34,12 @@ public interface IXmppSession : IXmppSendingHandler
 
     void RegisterCallback(string identifier, Func<ValueTask<IInfoQueryHandler>> callback);
     ValueTask<IInfoQueryHandler> FinishCallback(string? identifier);
+}
+
+public interface IXmppXmlSession : IXmppSession
+{
+    Decoder Decoder { get; }
+    string EncoderDefaultNamespace { get; }
 }
 
 /// <summary>

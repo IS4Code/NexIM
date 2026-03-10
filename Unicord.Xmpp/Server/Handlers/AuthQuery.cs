@@ -7,11 +7,9 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal sealed class GetAuthQuery : AuthQueryHandler, ICommandHandler
+internal sealed class GetAuthQuery : AuthQueryHandler<CommandContext>
 {
     string? username;
-
-    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnUsername(string? value)
     {
@@ -36,7 +34,7 @@ internal sealed class GetAuthQuery : AuthQueryHandler, ICommandHandler
         await query.Resource(null);
 
         // Never request plaintext password over insecure connection
-        if(State.Session.IsSecure)
+        if(Context.Session.IsSecure)
         {
             await query.Password(null);
         }
@@ -47,12 +45,10 @@ internal sealed class GetAuthQuery : AuthQueryHandler, ICommandHandler
     }
 }
 
-internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
+internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
 {
     string? username, resource, digest;
     TemporaryString? password;
-
-    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnUsername(string? value)
     {
@@ -62,7 +58,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
 
     protected async override ValueTask<bool> OnPassword(TemporaryString? value)
     {
-        if(!State.Session.IsSecure)
+        if(!Context.Session.IsSecure)
         {
             // Password was not requested
             throw XmppStanzaException.BadRequest();
@@ -95,7 +91,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
 
     protected async override ValueTask<bool> OnDigest(string? value)
     {
-        if(State.Session.IsSecure)
+        if(Context.Session.IsSecure)
         {
             // Digest was not requested
             throw XmppStanzaException.BadRequest();
@@ -120,7 +116,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
     {
         try
         {
-            if(username == null || resource == null || State.Session.IsSecure ? password == null : digest == null)
+            if(username == null || resource == null || Context.Session.IsSecure ? password == null : digest == null)
             {
                 throw XmppStanzaException.BadRequest();
             }
@@ -135,19 +131,19 @@ internal class SetAuthQuery : BaseAuthQueryHandler, ICommandHandler, IDisposable
 
             var accountName = ClientSession.GetAccount(identifier, out _);
 
-            var clientSession = new ClientSession(State.Session)
+            var clientSession = new ClientSession(Context.Session)
             {
                 Identifier = resource,
                 AccountName = accountName
             };
 
-            if(!await State.Server.Authenticate(accountName, password, clientSession))
+            if(!await Context.Server.Authenticate(accountName, password, clientSession))
             {
                 throw XmppStanzaException.NotAuthorized();
             }
 
-            State.Session.RemoteResource = identifier;
-            State.Session.ClientSession = clientSession;
+            Context.Session.RemoteResource = identifier;
+            Context.Session.ClientSession = clientSession;
         }
         finally
         {

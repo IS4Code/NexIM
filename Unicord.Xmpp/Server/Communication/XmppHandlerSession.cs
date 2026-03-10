@@ -20,9 +20,10 @@ using static Vocabulary.Standard;
 /// </summary>
 public abstract class XmppHandlerSession : XmppXmlSession
 {
-    static readonly Decoder decoder = new();
-
     protected abstract int TopLevelReaderDepth { get; }
+
+    public override ClientDecoder Decoder { get; } = new();
+    public override string EncoderDefaultNamespace => ClientDecoder.Namespace;
 
     IXmppReceivingHandler mainHandler = NullHandler.Instance;
     readonly PayloadHandlers handlers = new();
@@ -131,7 +132,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
     protected async ValueTask EnterPayload(XmlReader reader)
     {
         bool isEmpty = reader.IsEmptyElement;
-        if(await decoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
+        if(await Decoder.DecodePayload(reader, handlers.Get<IPayloadHandler>()) is (true, var payloadHandler))
         {
             // Recognized payload type
             await EnterHandler(payloadHandler, isEmpty);
@@ -303,7 +304,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
 
         // Not a stanza - decode normally
         lastStanza = null;
-        return decoder.DecodePayload(reader, mainHandler);
+        return Decoder.DecodePayload(reader, mainHandler);
 
         static async ValueTask<Decoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
         {

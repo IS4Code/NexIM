@@ -13,6 +13,8 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
     protected abstract void ThrowElementNotEmpty();
     protected abstract void ThrowElementNotSimple();
 
+    public abstract string GetDefaultNamespace(XmlNameTable nameTable);
+
     protected async ValueTask EmptyElement(XmlReader reader)
     {
         if(reader.IsEmptyElement)

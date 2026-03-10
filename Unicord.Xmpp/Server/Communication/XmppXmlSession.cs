@@ -13,13 +13,16 @@ namespace Unicord.Xmpp.Server.Communication;
 /// Provides an implementation of <see cref="IXmppSession"/> capable of
 /// sending synchronized XMPP commands as XML data.
 /// </summary>
-public abstract class XmppXmlSession : XmppSession
+public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
     readonly CommandHandler commandHandler;
 
     public abstract XmlReader Reader { get; }
     public abstract XmlWriter Writer { get; }
+
+    public abstract Decoder Decoder { get; }
+    public abstract string EncoderDefaultNamespace { get; }
 
     public XmppXmlSession()
     {
@@ -265,6 +268,7 @@ public abstract class XmppXmlSession : XmppSession
 
         protected override XmlWriter Writer => Session.Writer;
         protected override CancellationToken CancellationToken => Session.CancellationToken;
+        public override string DefaultNamespace => Session.EncoderDefaultNamespace;
 
         public PayloadHandler(XmppXmlSession session)
         {

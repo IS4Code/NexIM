@@ -4,10 +4,8 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class GetDiscoItemsQuery : DiscoItemsQueryHandler, ICommandHandler
+internal class GetDiscoItemsQuery : DiscoItemsQueryHandler<CommandContext>
 {
-    public CommandState State { get; init; }
-
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
         await this.Unexpected(payloadReader);

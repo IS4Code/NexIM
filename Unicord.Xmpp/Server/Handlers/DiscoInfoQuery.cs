@@ -5,10 +5,8 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal abstract class GetDiscoInfoQuery : DiscoInfoQueryHandler, ICommandHandler
+internal abstract class GetDiscoInfoQuery : DiscoInfoQueryHandler<CommandContext>
 {
-    public CommandState State { get; init; }
-
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
         await this.Unexpected(payloadReader);
@@ -44,7 +42,7 @@ internal class GetAccountDiscoInfoQuery : GetDiscoInfoQuery
 
     public async override ValueTask DisposeAsync()
     {
-        if(State.Server.Accounts.GetAccount(ClientSession.GetAccount(address)) is not { } account)
+        if(Context.Server.Accounts.GetAccount(ClientSession.GetAccount(address)) is not { } account)
         {
             throw XmppStanzaException.ServiceUnavailable();
         }

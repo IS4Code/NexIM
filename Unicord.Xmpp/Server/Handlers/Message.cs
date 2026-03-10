@@ -8,7 +8,7 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class Message : MessageHandler, IStanzaCommandHandler
+internal class Message : MessageHandler<CommandContext>, IStanzaCommandHandler
 {
     readonly ConversationType? type;
 
@@ -16,7 +16,7 @@ internal class Message : MessageHandler, IStanzaCommandHandler
     string? nick;
     ChatState? state;
 
-    public required CommandState State { get; init; }
+    public required override CommandContext Context { get => base.Context; init => base.Context = value; }
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
     public XmppResource? To { get; }
@@ -38,13 +38,13 @@ internal class Message : MessageHandler, IStanzaCommandHandler
 
     protected async override ValueTask<bool> OnBody(LanguageTaggedString? text)
     {
-        body = body.Add(text, State.Session.RemoteLanguage);
+        body = body.Add(text, Context.Session.RemoteLanguage);
         return true;
     }
 
     protected async override ValueTask<bool> OnSubject(LanguageTaggedString? text)
     {
-        subject = subject.Add(text, State.Session.RemoteLanguage);
+        subject = subject.Add(text, Context.Session.RemoteLanguage);
         return true;
     }
 
@@ -96,7 +96,7 @@ internal class Message : MessageHandler, IStanzaCommandHandler
             throw XmppStanzaException.BadRequest("Receiver of a message is empty.");
         }
         var targetAccount = ClientSession.GetAccount(to, out var targetIdentifier);
-        if(State.Server.Sessions.GetSessions(targetAccount, targetIdentifier, false).FirstOrDefault() is not { } target)
+        if(Context.Server.Sessions.GetSessions(targetAccount, targetIdentifier, false).FirstOrDefault() is not { } target)
         {
             throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");
         }

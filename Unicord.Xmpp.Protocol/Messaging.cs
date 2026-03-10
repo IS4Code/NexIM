@@ -4,7 +4,7 @@ using Unicord.Primitives.Xml.Grammar;
 
 namespace Unicord.Xmpp.Protocol;
 
-[ComplexType, Namespace(Client)]
+[ComplexType]
 public interface IMessageHandler : IStanzaHandler, ISenderPresentation
 {
     [Name("subject")]

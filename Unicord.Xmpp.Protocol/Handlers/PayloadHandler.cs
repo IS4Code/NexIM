@@ -8,11 +8,16 @@ using Unicord.Xmpp.Protocol.Grammar;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
-public abstract class PayloadHandler : IPayloadHandler
+public interface IPayloadHandler<TContext> : IPayloadHandler where TContext : struct, IPayloadHandlerContext
+{
+    TContext Context { get; init; }
+}
+
+public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where TContext : struct, IPayloadHandlerContext
 {
     private protected bool Decoding { get; private set; }
 
-    static readonly Decoder decoder = new();
+    public virtual TContext Context { get; init; }
 
     protected internal abstract ValueTask OnUnrecognized(XmlReader payloadReader);
 
@@ -52,10 +57,10 @@ public abstract class PayloadHandler : IPayloadHandler
         await result;
     }
 
-    private static async ValueTask<ValueTask> Decode(XmlReader reader, IPayloadHandler handler)
+    private async ValueTask<ValueTask> Decode(XmlReader reader, IPayloadHandler handler)
     {
         bool isEmpty = reader.IsEmptyElement;
-        var result = await decoder.DecodePayload(reader, handler);
+        var result = await Context.Decoder.DecodePayload(reader, handler);
 
         if(result is (true, var inner))
         {
@@ -100,7 +105,7 @@ public abstract class PayloadHandler : IPayloadHandler
                 }
             }
         }
-        else if(handler is PayloadHandler topHandler)
+        else if(handler is PayloadHandler<TContext> topHandler)
         {
             return topHandler.OnUnrecognized(reader);
         }
@@ -113,15 +118,17 @@ public abstract class PayloadHandler : IPayloadHandler
     public abstract ValueTask DisposeAsync();
 }
 
-internal sealed class FallbackEncoder : Encoder, IStreamHandler
+internal sealed class FallbackEncoder<TContext> : Encoder, IStreamHandler where TContext : struct, IPayloadHandlerContext
 {
-    readonly PayloadHandler parent;
+    readonly PayloadHandler<TContext> parent;
     readonly XElement container;
+
+    public override string DefaultNamespace => parent.Context.DefaultNamespace;
 
     protected override CancellationToken CancellationToken => default;
     protected override XmlWriter Writer { get; }
 
-    public FallbackEncoder(PayloadHandler parent)
+    public FallbackEncoder(PayloadHandler<TContext> parent)
     {
         this.parent = parent;
         container = new XElement("_");
@@ -215,15 +222,15 @@ internal sealed class FallbackEncoder : Encoder, IStreamHandler
         }
     }
 
-    sealed class Forked(FallbackEncoder encoder) : Encoder
+    sealed class Forked(FallbackEncoder<TContext> encoder) : Encoder
     {
+        public override string DefaultNamespace => encoder.DefaultNamespace;
         protected override CancellationToken CancellationToken => default;
-
         protected override XmlWriter Writer => encoder.Writer;
 
         protected override ValueTask<Encoder> ForkInner()
         {
-            return new(new Nested(Writer));
+            return new(new Nested(encoder));
         }
 
         public async override ValueTask DisposeAsync()
@@ -233,11 +240,11 @@ internal sealed class FallbackEncoder : Encoder, IStreamHandler
             await encoder.DisposeAsync();
         }
 
-        sealed class Nested(XmlWriter writer) : Encoder
+        sealed class Nested(FallbackEncoder<TContext> encoder) : Encoder
         {
+            public override string DefaultNamespace => encoder.DefaultNamespace;
             protected override CancellationToken CancellationToken => default;
-
-            protected override XmlWriter Writer => writer;
+            protected override XmlWriter Writer => encoder.Writer;
 
             protected override ValueTask<Encoder> ForkInner()
             {

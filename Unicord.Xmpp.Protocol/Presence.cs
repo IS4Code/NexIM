@@ -13,7 +13,7 @@ public interface ISenderPresentation : IPayloadHandler
     ValueTask Nickname(string? text);
 }
 
-[ComplexType, Namespace(Client)]
+[ComplexType]
 public interface IPresenceHandler : IStanzaHandler, ISenderPresentation
 {
     [Name("show")]

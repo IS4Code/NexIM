@@ -6,10 +6,8 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class GetTime : TimeHandler, ICommandHandler
+internal class GetTime : TimeHandler<CommandContext>
 {
-    public CommandState State { get; init; }
-
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
         await this.Unrecognized(payloadReader);

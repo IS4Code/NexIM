@@ -6,11 +6,9 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class SetBind : BindHandler, ICommandHandler
+internal class SetBind : BindHandler<CommandContext>
 {
     string? resource;
-
-    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnResource(string? value)
     {
@@ -25,7 +23,7 @@ internal class SetBind : BindHandler, ICommandHandler
 
     public async override ValueTask DisposeAsync()
     {
-        var session = State.Session;
+        var session = Context.Session;
 
         if(session.RemoteResource != null)
         {
@@ -48,7 +46,7 @@ internal class SetBind : BindHandler, ICommandHandler
         clientSession.Identifier = resource;
 
         // TODO Handle when already exists (conflict)
-        State.Server.Sessions.AddSession(accountName, clientSession);
+        Context.Server.Sessions.AddSession(accountName, clientSession);
 
         // Inform of the full resource
         await using var iq = await this.CreateResponse();

@@ -78,7 +78,7 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
     public override string ToString()
     {
         var output = new StringBuilder();
-        var encoder = new Encoder(output);
+        var encoder = new StringEncoder(output);
         if(encoder is not THandler handler)
         {
             return base.ToString();
@@ -94,8 +94,10 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
 
     public virtual ValueTask Output(THandler handler) => details(handler);
 
-    sealed class Encoder : Grammar.Encoder
+    sealed class StringEncoder : Grammar.Encoder
     {
+        public override string DefaultNamespace => String.Empty;
+
         static readonly XmlWriterSettings settings = new()
         {
             Async = true,
@@ -113,7 +115,7 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
 
         protected override CancellationToken CancellationToken => default;
 
-        public Encoder(StringBuilder output)
+        public StringEncoder(StringBuilder output)
         {
             Writer = XmlWriter.Create(output, settings);
         }

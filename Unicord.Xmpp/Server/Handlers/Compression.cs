@@ -6,11 +6,9 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class Compression : BaseCompressionHandler, ICommandHandler
+internal class Compression : BaseCompressionHandler<CommandContext>
 {
     CompressionMethod? method;
-
-    public CommandState State { get; init; }
 
     protected async override ValueTask<bool> OnMethod(Token<CompressionMethod>? name)
     {
@@ -25,7 +23,7 @@ internal class Compression : BaseCompressionHandler, ICommandHandler
 
     public async override ValueTask DisposeAsync()
     {
-        var session = State.Session;
+        var session = Context.Session;
 
         if(!session.CanCompress)
         {

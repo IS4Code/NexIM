@@ -204,7 +204,7 @@ partial class GrammarGenerator
                         writer.Write("else ");
                     }
 
-                    writer.WriteLine($"if(elementNs == (object){FormatLiteral(ns ?? "")} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
+                    writer.WriteLine($"if(elementNs == (object){(ns != null ? FormatLiteral(ns) : "this.GetDefaultNamespace(reader.NameTable)")} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
                     writer.WriteLine("{");
                     writer.Indent++;
                     {

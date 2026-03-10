@@ -5,7 +5,7 @@ using Unicord.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol.Grammar;
 
-public partial class Decoder : XmlDecoder, IValueXmlDecoder<XmppResource>
+public abstract partial class Decoder : XmlDecoder, IValueXmlDecoder<XmppResource>
 {
     public readonly record struct Result(bool Success, IPayloadHandler? InnerHandler);
 
@@ -25,5 +25,18 @@ public partial class Decoder : XmlDecoder, IValueXmlDecoder<XmppResource>
     {
         var token = await DecodeTokenAsync(reader);
         return XmppResource.Parse(token.AsMemory(), reader.NameTable);
+    }
+}
+
+public class ClientDecoder : Decoder
+{
+    public static readonly string Namespace = Vocabulary.Standard.JabberClientNs.Value;
+
+    public override string GetDefaultNamespace(XmlNameTable nameTable)
+    {
+        return nameTable switch {
+            Vocabulary => Namespace,
+            _ => nameTable.Add(Namespace)
+        };
     }
 }
