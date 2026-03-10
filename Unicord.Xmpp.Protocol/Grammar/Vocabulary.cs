@@ -26,7 +26,7 @@ public abstract partial class Vocabulary : XmlMemoryNameTable
 
         public static readonly Token<Enum> Message = Token<Enum>.FromAtomized("message");
         public static readonly Token<Enum> Presence = Token<Enum>.FromAtomized("presence");
-        public static readonly Token<Enum> IQ = Token<Enum>.FromAtomized("iq");
+        public static readonly Token<Enum> InfoQuery = Token<Enum>.FromAtomized("iq");
 
         public static readonly Token<Enum> Type = Token<Enum>.FromAtomized("type");
         public static readonly Token<Enum> Id = Token<Enum>.FromAtomized("id");
@@ -63,7 +63,7 @@ public abstract partial class Vocabulary : XmlMemoryNameTable
 
         AddKey(Standard.Message.Value);
         AddKey(Standard.Presence.Value);
-        AddKey(Standard.IQ.Value);
+        AddKey(Standard.InfoQuery.Value);
 
         AddKey(Standard.Type.Value);
         AddKey(Standard.Id.Value);

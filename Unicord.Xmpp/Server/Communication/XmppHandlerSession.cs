@@ -271,11 +271,11 @@ public abstract class XmppHandlerSession : XmppXmlSession
     ValueTask<Decoder.Result> HandleCommand(XmlReader reader)
     {
         var elementName = reader.LocalName;
-        if(reader.NamespaceURI == JabberClientNs)
+        if(reader.NamespaceURI == (object)DefaultNamespace)
         {
             switch(elementName.Length)
             {
-                case 2 when elementName == IQ:
+                case 2 when elementName == InfoQuery:
                 {
                     var stanza = ParseStanza(reader);
                     lastStanza = new(StanzaKind.InfoQuery, stanza.Identifier);

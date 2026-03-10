@@ -8,6 +8,14 @@ using Unicord.Primitives.Xml.Grammar;
 namespace Unicord.Xmpp.Protocol;
 
 [SimpleType]
+public enum StanzaKind
+{
+    [Name("message")] Message,
+    [Name("presence")] Presence,
+    [Name("iq")] InfoQuery
+}
+
+[SimpleType]
 public enum StanzaType
 {
     [Name("error")] Error,

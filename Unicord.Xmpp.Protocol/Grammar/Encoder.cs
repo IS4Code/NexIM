@@ -20,6 +20,29 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IValueXmlEn
     {
         await writer.WriteStringAsync(value.ToString());
     }
+
+    protected async ValueTask WriteStanza(Token<StanzaKind> kind, Stanza stanza)
+    {
+        var writer = Writer;
+        await writer.WriteStartElementAsync(null, kind.Value, DefaultNamespace);
+
+        if(stanza.Type is { } type)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Type.Value, null, type.Value);
+        }
+        if(stanza.From is { } from)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.From.Value, null, from.ToString());
+        }
+        if(stanza.To is { } to)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.To.Value, null, to.ToString());
+        }
+        if(stanza.Identifier is { } identifier)
+        {
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier);
+        }
+    }
 }
 
 public abstract class ClientEncoder : Encoder

@@ -160,7 +160,7 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
             return Inner();
             async ValueTask<IMessageHandler> Inner()
             {
-                await WriteStanza(Vocabulary.Standard.Message, copy);
+                await WriteStanza(StanzaKind.Message.ToToken(), copy);
                 return await ForkInner();
             }
         }
@@ -171,7 +171,7 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
             return Inner();
             async ValueTask<IPresenceHandler> Inner()
             {
-                await WriteStanza(Vocabulary.Standard.Presence, copy);
+                await WriteStanza(StanzaKind.Presence.ToToken(), copy);
                 return await ForkInner();
             }
         }
@@ -182,31 +182,8 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
             return Inner();
             async ValueTask<IInfoQueryHandler> Inner()
             {
-                await WriteStanza(Vocabulary.Standard.IQ, copy);
+                await WriteStanza(StanzaKind.InfoQuery.ToToken(), copy);
                 return await ForkInner();
-            }
-        }
-
-        async ValueTask WriteStanza(Token<Enum> kind, Stanza stanza)
-        {
-            var writer = Writer;
-            await writer.WriteStartElementAsync(null, kind.Value, Vocabulary.Standard.JabberClientNs.Value);
-
-            if(stanza.Type is { } type)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Type.Value, null, type.Value);
-            }
-            if(stanza.From is { } from)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.From.Value, null, from.ToString());
-            }
-            if(stanza.To is { } to)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.To.Value, null, to.ToString());
-            }
-            if(stanza.Identifier is { } identifier)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier);
             }
         }
 

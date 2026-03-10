@@ -50,19 +50,19 @@ public abstract class XmppXmlSession : XmppSession
 
     protected sealed override ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
     {
-        var handler = new StanzaHandler(Vocabulary.Standard.Message.Value, stanza, this);
+        var handler = new StanzaHandler(StanzaKind.Message, stanza, this);
         return Enter<IMessageHandler>(handler);
     }
 
     protected sealed override ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
     {
-        var handler = new StanzaHandler(Vocabulary.Standard.Presence.Value, stanza, this);
+        var handler = new StanzaHandler(StanzaKind.Presence, stanza, this);
         return Enter<IPresenceHandler>(handler);
     }
 
     protected sealed override ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
     {
-        var handler = new StanzaHandler(Vocabulary.Standard.IQ.Value, stanza, this);
+        var handler = new StanzaHandler(StanzaKind.InfoQuery, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
     }
 
@@ -344,36 +344,18 @@ public abstract class XmppXmlSession : XmppSession
 
     sealed class StanzaHandler : SynchronizedHandler
     {
-        readonly string kind;
+        readonly Token<StanzaKind> kind;
         readonly Stanza stanza;
 
-        public StanzaHandler(string kind, in Stanza stanza, XmppXmlSession session) : base(session)
+        public StanzaHandler(StanzaKind kind, in Stanza stanza, XmppXmlSession session) : base(session)
         {
-            this.kind = kind;
+            this.kind = kind.ToToken();
             this.stanza = stanza;
         }
 
-        protected async override ValueTask AcquireImpl()
+        protected override ValueTask AcquireImpl()
         {
-            var writer = Writer;
-            await writer.WriteStartElementAsync(null, kind, Vocabulary.Standard.JabberClientNs.Value);
-
-            if(stanza.Type is { } type)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Type.Value, null, type.Value);
-            }
-            if(stanza.From is { } from)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.From.Value, null, from.ToString());
-            }
-            if(stanza.To is { } to)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.To.Value, null, to.ToString());
-            }
-            if(stanza.Identifier is { } identifier)
-            {
-                await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier);
-            }
+            return WriteStanza(kind, stanza);
         }
     }
 
