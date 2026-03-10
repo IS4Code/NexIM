@@ -13,16 +13,13 @@ namespace Unicord.Xmpp.Server.Communication;
 /// Provides an implementation of <see cref="IXmppSession"/> capable of
 /// sending synchronized XMPP commands as XML data.
 /// </summary>
-public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
+public abstract class XmppXmlSession : XmppSession
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
     readonly CommandHandler commandHandler;
 
     public abstract XmlReader Reader { get; }
     public abstract XmlWriter Writer { get; }
-
-    public abstract Decoder Decoder { get; }
-    public abstract string EncoderDefaultNamespace { get; }
 
     public XmppXmlSession()
     {
@@ -37,39 +34,39 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
     public abstract ValueTask FlushCommand();
     public abstract ValueTask<bool> CheckFinished();
 
-    protected async sealed override ValueTask<IFeaturesHandler> OnFeatures()
+    protected async sealed override ValueTask<IFeaturesHandler?> OnFeatures()
     {
         var handler = new FeaturesHandler(this);
         await handler.Acquire();
         return handler;
     }
 
-    protected async sealed override ValueTask<IStreamErrorHandler> OnError()
+    protected async sealed override ValueTask<IStreamErrorHandler?> OnError()
     {
         var handler = new ErrorHandler(this);
         await handler.Acquire();
         return handler;
     }
 
-    protected sealed override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
+    protected sealed override ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
     {
         var handler = new StanzaHandler(Vocabulary.Standard.Message.Value, stanza, this);
         return Enter<IMessageHandler>(handler);
     }
 
-    protected sealed override ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
+    protected sealed override ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
     {
         var handler = new StanzaHandler(Vocabulary.Standard.Presence.Value, stanza, this);
         return Enter<IPresenceHandler>(handler);
     }
 
-    protected sealed override ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
+    protected sealed override ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
     {
         var handler = new StanzaHandler(Vocabulary.Standard.IQ.Value, stanza, this);
         return Enter<IInfoQueryHandler>(handler);
     }
 
-    protected async sealed override ValueTask OnTlsStart()
+    protected async sealed override ValueTask<bool> OnTlsStart()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -77,6 +74,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
             ITransportHandler handler = commandHandler;
             await handler.TlsStart();
             await FlushCommand();
+            return true;
         }
         finally
         {
@@ -84,7 +82,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async sealed override ValueTask OnTlsProceed()
+    protected async sealed override ValueTask<bool> OnTlsProceed()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -95,6 +93,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
 
             // Swap to TLS while locked
             await UpgradeTls();
+            return true;
         }
         finally
         {
@@ -102,7 +101,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async sealed override ValueTask OnTlsFailure()
+    protected async sealed override ValueTask<bool> OnTlsFailure()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -112,6 +111,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
                 ITransportHandler handler = commandHandler;
                 await handler.TlsFailure();
                 await FlushCommand();
+                return true;
             }
             finally
             {
@@ -125,21 +125,21 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async sealed override ValueTask<ICompressionHandler> OnCompress()
+    protected async sealed override ValueTask<ICompressionHandler?> OnCompress()
     {
         var handler = new CompressionHandler(this);
         await handler.Acquire();
         return handler;
     }
 
-    protected async sealed override ValueTask<ICompressionFailureHandler> OnCompressionFailure()
+    protected async sealed override ValueTask<ICompressionFailureHandler?> OnCompressionFailure()
     {
         var handler = new CompressionFailureHandler(this);
         await handler.Acquire();
         return handler;
     }
 
-    protected async sealed override ValueTask OnCompressed()
+    protected async sealed override ValueTask<bool> OnCompressed()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -150,6 +150,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
 
             // Enable compression while locked
             await EnableCompression();
+            return true;
         }
         finally
         {
@@ -157,7 +158,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async override ValueTask OnSaslAuth(Token<SaslMechanism>? mechanism, TemporaryUtf8String? data)
+    protected async sealed override ValueTask<bool> OnSaslAuth(Token<SaslMechanism>? mechanism, TemporaryUtf8String? data)
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -165,6 +166,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
             ITransportHandler handler = commandHandler;
             await handler.SaslAuth(mechanism, data);
             await FlushCommand();
+            return true;
         }
         finally
         {
@@ -172,7 +174,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async override ValueTask OnSaslAbort()
+    protected async sealed override ValueTask<bool> OnSaslAbort()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -180,6 +182,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
             ITransportHandler handler = commandHandler;
             await handler.SaslAbort();
             await FlushCommand();
+            return true;
         }
         finally
         {
@@ -187,7 +190,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async override ValueTask OnSaslChallenge(TemporaryUtf8String? data)
+    protected async sealed override ValueTask<bool> OnSaslChallenge(TemporaryUtf8String? data)
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -195,6 +198,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
             ITransportHandler handler = commandHandler;
             await handler.SaslChallenge(data);
             await FlushCommand();
+            return true;
         }
         finally
         {
@@ -202,14 +206,14 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async override ValueTask<ISaslFailureHandler> OnSaslFailure()
+    protected async sealed override ValueTask<ISaslFailureHandler?> OnSaslFailure()
     {
         var handler = new SaslFailureHandler(this);
         await handler.Acquire();
         return handler;
     }
 
-    protected async override ValueTask OnSaslResponse(TemporaryUtf8String? data)
+    protected async sealed override ValueTask<bool> OnSaslResponse(TemporaryUtf8String? data)
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -217,6 +221,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
             ITransportHandler handler = commandHandler;
             await handler.SaslResponse(data);
             await FlushCommand();
+            return true;
         }
         finally
         {
@@ -224,7 +229,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    protected async override ValueTask OnSaslSuccess()
+    protected async sealed override ValueTask<bool> OnSaslSuccess()
     {
         await semaphore.WaitAsync(CancellationToken);
         try
@@ -235,6 +240,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
 
             // Finish authentication while locked
             await Authenticated();
+            return true;
         }
         finally
         {
@@ -242,24 +248,31 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
         }
     }
 
-    private static async ValueTask<THandler> Enter<THandler>(StanzaHandler handler) where THandler : IPayloadHandler
+    private static async ValueTask<THandler?> Enter<THandler>(StanzaHandler handler) where THandler : IPayloadHandler
     {
         await handler.Acquire();
         return (THandler)(IPayloadHandler)handler;
     }
 
-    protected async sealed override ValueTask OnOther(XmlReader payloadReader)
+    protected async sealed override ValueTask<bool> OnOther(XmlReader payloadReader)
     {
         await semaphore.WaitAsync(CancellationToken);
         try
         {
             await Writer.WriteNodeAsync(payloadReader, false);
             await FlushCommand();
+            return true;
         }
         finally
         {
             semaphore.Release();
         }
+    }
+
+    protected sealed override ValueTask OnUnrecognized(XmlReader payloadReader)
+    {
+        // Not called because everything is handled
+        return default;
     }
 
     abstract class PayloadHandler : Encoder
@@ -268,7 +281,7 @@ public abstract class XmppXmlSession : XmppSession, IXmppXmlSession
 
         protected override XmlWriter Writer => Session.Writer;
         protected override CancellationToken CancellationToken => Session.CancellationToken;
-        public override string DefaultNamespace => Session.EncoderDefaultNamespace;
+        public override string DefaultNamespace => Session.DefaultNamespace;
 
         public PayloadHandler(XmppXmlSession session)
         {

@@ -15,6 +15,7 @@ public partial class NullHandler : IAsyncDisposable, IXmppReceivingHandler, IXmp
     XmppResource? IXmppSendingHandler.RemoteResource { get => null; set { } }
     string? IXmppSendingHandler.LocalLanguage { get => null; set { } }
     string? IXmppSendingHandler.RemoteLanguage { get => null; set { } }
+    string IXmppHandler.DefaultNamespace => String.Empty;
 
     protected NullHandler()
     {

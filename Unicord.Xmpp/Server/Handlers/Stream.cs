@@ -11,6 +11,8 @@ internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceiving
 {
     const bool supportsIqAuth = true;
 
+    string IXmppHandler.DefaultNamespace => Context.Session.DefaultNamespace;
+
     async ValueTask IXmppReceivingHandler.StreamStarted()
     {
         var session = Context.Session;

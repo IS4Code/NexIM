@@ -7,29 +7,29 @@ using Unicord.Xmpp.Server.Handlers;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppXmlSession>
+public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
 {
     public XmppServer(SessionsManager sessions, AccountsManager accounts) : base(sessions, accounts)
     {
 
     }
 
-    public ValueTask<IXmppReceivingHandler> Connected(IXmppXmlSession session)
+    public ValueTask<IXmppReceivingHandler> Connected(IXmppSession session)
     {
         return new(new Stream() { Context = new(this, session, null) });
     }
 
-    public ValueTask<IMessageHandler> GetMessageHandler(IXmppXmlSession session, in Stanza stanza)
+    public ValueTask<IMessageHandler> GetMessageHandler(IXmppSession session, in Stanza stanza)
     {
         return new(new Message(stanza) { Context = new(this, session, stanza.Identifier) });
     }
 
-    public ValueTask<IPresenceHandler> GetPresenceHandler(IXmppXmlSession session, in Stanza stanza)
+    public ValueTask<IPresenceHandler> GetPresenceHandler(IXmppSession session, in Stanza stanza)
     {
         return new(new Presence(stanza) { Context = new(this, session, stanza.Identifier) });
     }
 
-    public ValueTask<IInfoQueryHandler> GetInfoQueryHandler(IXmppXmlSession session, in Stanza stanza)
+    public ValueTask<IInfoQueryHandler> GetInfoQueryHandler(IXmppSession session, in Stanza stanza)
     {
         if(stanza.To is not { } to || to == session.LocalResource)
         {

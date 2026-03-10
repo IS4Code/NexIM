@@ -47,7 +47,7 @@ partial class GrammarGenerator
                 writer.Write($"{Format(interfaceType)}, ");
             }
             // And the current interface
-            writer.WriteLine($"{Format(type)} where TContext : struct, IPayloadHandlerContext");
+            writer.WriteLine($"{Format(type)} where TContext : IPayloadHandlerContext");
 
             writer.WriteLine("{");
             writer.Indent++;
@@ -93,7 +93,7 @@ partial class GrammarGenerator
                     writer.WriteLine("}");
 
                     // Copy the instruction to Other
-                    writer.WriteLine("await using var _encoder = new FallbackEncoder<TContext>(this);");
+                    writer.WriteLine("await using var _encoder = this.GetEncoder();");
                     writer.WriteLine($"{Format(type)} _impl = _encoder;");
                     writer.Write($"await _impl.{method.Name}(");
                     WriteArguments(method);
@@ -123,9 +123,8 @@ partial class GrammarGenerator
                     writer.WriteLine("}");
 
                     // Return a handler that copies the contents to Other (encoder must not be disposed)
-                    writer.WriteLine("var _encoder = new FallbackEncoder<TContext>(this);");
-                    writer.WriteLine($"{Format(type)} _impl = _encoder;");
-                    writer.Write($"return await _impl.{method.Name}(");
+                    writer.WriteLine($"{Format(type)} _encoder = this.GetEncoder();");
+                    writer.Write($"return await _encoder.{method.Name}(");
                     WriteArguments(method);
                     writer.WriteLine(");");
                 }
@@ -138,7 +137,7 @@ partial class GrammarGenerator
             writer.WriteLine("}");
 
             // Require all methods to be overridden
-            writer.WriteLine($"public abstract class Base{name}<TContext> : {name}<TContext> where TContext : struct, IPayloadHandlerContext");
+            writer.WriteLine($"public abstract class Base{name}<TContext> : {name}<TContext> where TContext : IPayloadHandlerContext");
             writer.WriteLine("{");
             writer.Indent++;
 

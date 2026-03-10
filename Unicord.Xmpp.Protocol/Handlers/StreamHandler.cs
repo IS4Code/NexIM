@@ -2,7 +2,7 @@
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
-public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStreamHandler where TContext : struct, IPayloadHandlerContext
+public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStreamHandler where TContext : IPayloadHandlerContext
 {
     protected virtual ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
     {
@@ -38,9 +38,8 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
                 return handler;
             }
 
-            var encoder = new FallbackEncoder<TContext>(this);
-            IStreamHandler impl = encoder;
-            return await impl.Message(copy);
+            IStreamHandler encoder = GetEncoder();
+            return await encoder.Message(copy);
         }
     }
 
@@ -63,9 +62,8 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
                 return handler;
             }
 
-            var encoder = new FallbackEncoder<TContext>(this);
-            IStreamHandler impl = encoder;
-            return await impl.Presence(copy);
+            IStreamHandler encoder = GetEncoder();
+            return await encoder.Presence(copy);
         }
     }
 
@@ -88,14 +86,13 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
                 return handler;
             }
 
-            var encoder = new FallbackEncoder<TContext>(this);
-            IStreamHandler impl = encoder;
-            return await impl.InfoQuery(copy);
+            IStreamHandler encoder = GetEncoder();
+            return await encoder.InfoQuery(copy);
         }
     }
 }
 
-public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContext>, IStreamHandler where TContext : struct, IPayloadHandlerContext
+public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContext>, IStreamHandler where TContext : IPayloadHandlerContext
 {
     protected abstract ValueTask<IMessageHandler?> OnMessage(in Stanza stanza);
     protected abstract ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza);
@@ -120,9 +117,8 @@ public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContex
                 return handler;
             }
 
-            var encoder = new FallbackEncoder<TContext>(this);
-            IStreamHandler impl = encoder;
-            return await impl.Message(copy);
+            IStreamHandler encoder = GetEncoder();
+            return await encoder.Message(copy);
         }
     }
 
@@ -145,9 +141,8 @@ public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContex
                 return handler;
             }
 
-            var encoder = new FallbackEncoder<TContext>(this);
-            IStreamHandler impl = encoder;
-            return await impl.Presence(copy);
+            IStreamHandler encoder = GetEncoder();
+            return await encoder.Presence(copy);
         }
     }
 
@@ -170,9 +165,8 @@ public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContex
                 return handler;
             }
 
-            var encoder = new FallbackEncoder<TContext>(this);
-            IStreamHandler impl = encoder;
-            return await impl.InfoQuery(copy);
+            IStreamHandler encoder = GetEncoder();
+            return await encoder.InfoQuery(copy);
         }
     }
 }
