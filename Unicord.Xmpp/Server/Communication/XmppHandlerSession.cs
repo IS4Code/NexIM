@@ -55,10 +55,6 @@ public abstract class XmppHandlerSession : XmppXmlSession
                 {
                     await HandleException(xe);
                 }
-                finally
-                {
-                    await FlushCommand();
-                }
             }
         }
         catch(XmlException e)

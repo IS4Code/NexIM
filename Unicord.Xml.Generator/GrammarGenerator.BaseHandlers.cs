@@ -40,8 +40,10 @@ partial class GrammarGenerator
 
             // The first interface becomes the base class
             var primaryInterface = interfaces[0];
-            writer.Write($"{primaryInterface.Name.Substring(1)}<TContext>, ");
-            foreach(var interfaceType in interfaces.Skip(1))
+            interfaces.RemoveAt(0);
+            var primaryInterfaceName = primaryInterface.Name.Substring(1);
+            writer.Write($"{primaryInterfaceName}<TContext>, ");
+            foreach(var interfaceType in interfaces)
             {
                 // Implement remaining interfaces
                 writer.Write($"{Format(interfaceType)}, ");
@@ -53,7 +55,7 @@ partial class GrammarGenerator
             writer.Indent++;
 
             // Implement all methods having NameAttribute
-            var methods = type.GetMembers().Concat(interfaces.Skip(1).SelectMany(i => i.GetMembers())).OfType<IMethodSymbol>();
+            var methods = type.GetMembers().Concat(interfaces.SelectMany(i => i.GetMembers())).OfType<IMethodSymbol>();
             foreach(var method in methods)
             {
                 AnalyzeMethod(method, out var handlerReturnType, out _, out _);
@@ -78,8 +80,15 @@ partial class GrammarGenerator
 
                 writer.WriteLine("{");
                 writer.Indent++;
+                
+                writer.WriteLine("bool _exit = await this.OnEnter();");
+                writer.WriteLine("try");
+                writer.WriteLine("{");
+                writer.Indent++;
+
                 if(handlerReturnType == null)
                 {
+                    // No return type
                     writer.Write($"if(await this.On{method.Name}(");
                     WriteArguments(method);
                     writer.WriteLine(") || this.Decoding)");
@@ -93,7 +102,7 @@ partial class GrammarGenerator
                     writer.WriteLine("}");
 
                     // Copy the instruction to Other
-                    writer.WriteLine("await using var _encoder = this.GetEncoder();");
+                    writer.WriteLine("await using var _encoder = this.GetEncoder(false);");
                     writer.WriteLine($"{Format(type)} _impl = _encoder;");
                     writer.Write($"await _impl.{method.Name}(");
                     WriteArguments(method);
@@ -108,10 +117,21 @@ partial class GrammarGenerator
                     writer.Indent++;
 
                     // Handler produced
+                    writer.WriteLine("if(_exit)");
+                    writer.WriteLine("{");
+                    writer.Indent++;
+
+                    writer.WriteLine("_exit = false;");
+                    writer.WriteLine($"return new Delegating{handlerReturnType.Name.Substring(1)}<ExitDisposable>(_handler, new ExitDisposable(this));");
+
+                    writer.Indent--;
+                    writer.WriteLine("}");
+
                     writer.WriteLine("return _handler;");
 
                     writer.Indent--;
                     writer.WriteLine("}");
+
                     writer.WriteLine("if(this.Decoding)");
                     writer.WriteLine("{");
                     writer.Indent++;
@@ -123,11 +143,31 @@ partial class GrammarGenerator
                     writer.WriteLine("}");
 
                     // Return a handler that copies the contents to Other (encoder must not be disposed)
-                    writer.WriteLine($"{Format(type)} _encoder = this.GetEncoder();");
-                    writer.Write($"return await _encoder.{method.Name}(");
+                    writer.WriteLine($"{Format(type)} _encoder = this.GetEncoder(_exit);");
+                    writer.Write($"_handler = await _encoder.{method.Name}(");
                     WriteArguments(method);
                     writer.WriteLine(");");
+                    writer.WriteLine("_exit = false;");
+                    writer.WriteLine("return _handler;");
                 }
+
+                writer.Indent--;
+                writer.WriteLine("}");
+                writer.WriteLine("finally");
+                writer.WriteLine("{");
+                writer.Indent++;
+
+                writer.WriteLine("if(_exit)");
+                writer.WriteLine("{");
+                writer.Indent++;
+
+                writer.WriteLine("await this.OnExit();");
+
+                writer.Indent--;
+                writer.WriteLine("}");
+
+                writer.Indent--;
+                writer.WriteLine("}");
 
                 writer.Indent--;
                 writer.WriteLine("}");
@@ -152,6 +192,43 @@ partial class GrammarGenerator
                 writer.WriteLine(");");
             }
             writer.WriteLineNoTabs("#nullable disable");
+
+            writer.Indent--;
+            writer.WriteLine("}");
+
+            // Delegate to another handler
+            writer.Write($"public class Delegating{name}<TDisposable>({Format(type)} _inner, TDisposable _disposable) : Delegating{primaryInterfaceName}<TDisposable>(_inner, _disposable), ");
+            foreach(var interfaceType in interfaces)
+            {
+                // Implement remaining interfaces
+                writer.Write($"{Format(interfaceType)}, ");
+            }
+            // And the current interface
+            writer.WriteLine($"{Format(type)} where TDisposable : IAsyncDisposable");
+
+            writer.WriteLine("{");
+            writer.Indent++;
+
+            foreach(var method in methods)
+            {
+                AnalyzeMethod(method, out var handlerReturnType, out _, out _);
+
+                // Explicit implementation
+                writer.Write($"{Format(method.ReturnType)} {Format(method.ContainingType)}.{method.Name}(");
+                WriteParameters(method, Format);
+                writer.WriteLine(")");
+
+                writer.WriteLine("{");
+                writer.Indent++;
+
+                // Call inner handler
+                writer.Write($"return _inner.{method.Name}(");
+                WriteArguments(method);
+                writer.WriteLine(");");
+
+                writer.Indent--;
+                writer.WriteLine("}");
+            }
 
             writer.Indent--;
             writer.WriteLine("}");

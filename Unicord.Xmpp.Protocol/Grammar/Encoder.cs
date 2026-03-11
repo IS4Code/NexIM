@@ -5,11 +5,10 @@ using Unicord.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol.Grammar;
 
-public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IValueXmlEncoder<XmppResource>
+public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHandler, IValueXmlEncoder<XmppResource>
 {
     protected abstract CancellationToken CancellationToken { get; }
     protected abstract ValueTask<Encoder> ForkInner();
-    public abstract ValueTask DisposeAsync();
 
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
@@ -21,7 +20,46 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IValueXmlEn
         await writer.WriteStringAsync(value.ToString());
     }
 
-    protected async ValueTask WriteStanza(Token<StanzaKind> kind, Stanza stanza)
+    public virtual ValueTask DisposeAsync()
+    {
+        // Finalize element
+        return new(Writer.WriteEndElementAsync());
+    }
+
+    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
+    {
+        var copy = stanza;
+        return Inner();
+        async ValueTask<IMessageHandler> Inner()
+        {
+            await WriteStanza(StanzaKind.Message.ToToken(), copy);
+            return await ForkInner();
+        }
+    }
+
+    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
+    {
+        var copy = stanza;
+        return Inner();
+        async ValueTask<IPresenceHandler> Inner()
+        {
+            await WriteStanza(StanzaKind.Presence.ToToken(), copy);
+            return await ForkInner();
+        }
+    }
+
+    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
+    {
+        var copy = stanza;
+        return Inner();
+        async ValueTask<IInfoQueryHandler> Inner()
+        {
+            await WriteStanza(StanzaKind.InfoQuery.ToToken(), copy);
+            return await ForkInner();
+        }
+    }
+
+    async ValueTask WriteStanza(Token<StanzaKind> kind, Stanza stanza)
     {
         var writer = Writer;
         await writer.WriteStartElementAsync(null, kind.Value, DefaultNamespace);

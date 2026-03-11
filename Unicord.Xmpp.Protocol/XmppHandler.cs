@@ -44,7 +44,7 @@ public interface IXmppSendingHandler : IXmppHandler
 /// <summary>
 /// Provides a basic implementation of <see cref="IXmppSendingHandler"/>.
 /// </summary>
-public abstract class XmppSendingHandler : StreamHandler<XmppSendingHandler>, IXmppSendingHandler, IPayloadHandlerContext
+public abstract class XmppSendingHandler : BaseStreamHandler<XmppSendingHandler>, IXmppSendingHandler, IPayloadHandlerContext
 {
     public string? StreamIdentifier { get; set; }
     public XmppResource? LocalResource { get; set; }

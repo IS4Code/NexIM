@@ -115,7 +115,7 @@ public abstract class XmppStreamSession : XmppHandlerSession
                 var writer = Writer;
                 await writer.WriteStartElementAsync(Xmpp.Stream.Value, Xmpp.Stream.Value, Xmpp.StreamsNs.Value);
                 await writer.WriteAttributeStringAsync(Xmpp.Xmlns.Value, Xmpp.Stream.Value, Xmpp.XmlnsNs.Value, Xmpp.StreamsNs.Value);
-                await writer.WriteAttributeStringAsync(null, Xmpp.Xmlns.Value, null, Xmpp.JabberClientNs.Value);
+                await writer.WriteAttributeStringAsync(null, Xmpp.Xmlns.Value, null, DefaultNamespace);
                 await StreamsConnected(reader, writer);
 
                 // Stream is ready
