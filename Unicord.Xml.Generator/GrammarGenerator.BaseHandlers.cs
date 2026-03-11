@@ -17,6 +17,7 @@ partial class GrammarGenerator
 
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
+        writer.WriteLine("using System.Xml;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
 
@@ -122,7 +123,7 @@ partial class GrammarGenerator
                     writer.Indent++;
 
                     writer.WriteLine("_exit = false;");
-                    writer.WriteLine($"return new Delegating{handlerReturnType.Name.Substring(1)}<ExitDisposable>(_handler, new ExitDisposable(this));");
+                    writer.WriteLine($"return new Delegating{handlerReturnType.Name.Substring(1)}<{Format(handlerReturnType)}, ExitDisposable, EmptyPayloadHandlerContext>(_handler, new ExitDisposable(this));");
 
                     writer.Indent--;
                     writer.WriteLine("}");
@@ -197,38 +198,99 @@ partial class GrammarGenerator
             writer.WriteLine("}");
 
             // Delegate to another handler
-            writer.Write($"public class Delegating{name}<TDisposable>({Format(type)} _inner, TDisposable _disposable) : Delegating{primaryInterfaceName}<TDisposable>(_inner, _disposable), ");
-            foreach(var interfaceType in interfaces)
-            {
-                // Implement remaining interfaces
-                writer.Write($"{Format(interfaceType)}, ");
-            }
-            // And the current interface
-            writer.WriteLine($"{Format(type)} where TDisposable : IAsyncDisposable");
-
+            writer.WriteLine($"public abstract class BaseDelegating{name}<THandler, TDisposable, TContext> : Base{name}<TContext> where THandler : {Format(type)} where TDisposable : IAsyncDisposable where TContext : IPayloadHandlerContext");
             writer.WriteLine("{");
             writer.Indent++;
 
+            writer.WriteLineNoTabs("#nullable enable");
+            writer.WriteLine("protected abstract THandler InnerHandler { get; }");
+            writer.WriteLine("protected abstract TDisposable Disposable { get; }");
             foreach(var method in methods)
             {
                 AnalyzeMethod(method, out var handlerReturnType, out _, out _);
 
                 // Explicit implementation
-                writer.Write($"{Format(method.ReturnType)} {Format(method.ContainingType)}.{method.Name}(");
-                WriteParameters(method, Format);
+                writer.Write("protected ");
+                if(handlerReturnType == null)
+                {
+                    writer.Write("async ");
+                }
+                writer.Write($"override {(handlerReturnType != null ? $"ValueTask<{FormatNullable(handlerReturnType.WithNullableAnnotation(NullableAnnotation.Annotated))}>" : "ValueTask<bool>")} On{method.Name}(");
+                WriteParameters(method, FormatNullable);
                 writer.WriteLine(")");
 
                 writer.WriteLine("{");
                 writer.Indent++;
 
-                // Call inner handler
-                writer.Write($"return _inner.{method.Name}(");
-                WriteArguments(method);
-                writer.WriteLine(");");
+                if(handlerReturnType != null)
+                {
+                    // Just return from inner
+                    writer.Write($"return this.InnerHandler.{method.Name}(");
+                    WriteArguments(method);
+                    writer.WriteLine(")!;");
+                }
+                else
+                {
+                    // Await and return true
+                    writer.Write($"await this.InnerHandler.{method.Name}(");
+                    WriteArguments(method);
+                    writer.WriteLine(");");
+                    writer.WriteLine("return true;");
+                }
 
                 writer.Indent--;
                 writer.WriteLine("}");
             }
+
+            writer.WriteLine("protected async override ValueTask<bool> OnOther(XmlReader payloadReader)");
+            writer.WriteLine("{");
+            writer.Indent++;
+            {
+                writer.WriteLine("await this.InnerHandler.Other(payloadReader);");
+                writer.WriteLine("return true;");
+            }
+            writer.Indent--;
+            writer.WriteLine("}");
+
+            writer.WriteLine("protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;");
+
+            writer.WriteLine("public async override ValueTask DisposeAsync()");
+            writer.WriteLine("{");
+            writer.Indent++;
+            {
+                writer.WriteLine("try");
+                writer.WriteLine("{");
+                writer.Indent++;
+                {
+                    writer.WriteLine("await this.InnerHandler.DisposeAsync();");
+                }
+                writer.Indent--;
+                writer.WriteLine("}");
+                writer.WriteLine("finally");
+                writer.WriteLine("{");
+                writer.Indent++;
+                {
+                    writer.WriteLine("await this.Disposable.DisposeAsync();");
+                }
+                writer.Indent--;
+                writer.WriteLine("}");
+            }
+            writer.Indent--;
+            writer.WriteLine("}");
+            writer.WriteLineNoTabs("#nullable disable");
+
+            writer.Indent--;
+            writer.WriteLine("}");
+
+            // Pass in the constructor
+            writer.WriteLine($"public class Delegating{name}<THandler, TDisposable, TContext>(THandler handler, TDisposable disposable) : BaseDelegating{name}<THandler, TDisposable, TContext> where THandler : {Format(type)} where TDisposable : IAsyncDisposable where TContext : IPayloadHandlerContext");
+            writer.WriteLine("{");
+            writer.Indent++;
+
+            writer.WriteLineNoTabs("#nullable enable");
+            writer.WriteLine("protected sealed override THandler InnerHandler => handler;");
+            writer.WriteLine("protected sealed override TDisposable Disposable => disposable;");
+            writer.WriteLineNoTabs("#nullable disable");
 
             writer.Indent--;
             writer.WriteLine("}");

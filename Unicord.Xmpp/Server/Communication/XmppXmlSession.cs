@@ -2,8 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
 
@@ -16,14 +14,15 @@ namespace Unicord.Xmpp.Server.Communication;
 public abstract class XmppXmlSession : XmppSession
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
-    readonly IStreamHandler commandHandler;
+
+    protected sealed override IStreamHandler InnerHandler { get; }
 
     public abstract XmlReader Reader { get; }
     public abstract XmlWriter Writer { get; }
 
     public XmppXmlSession()
     {
-        commandHandler = new CommandHandler(this);
+        InnerHandler = new CommandHandler(this);
     }
 
     protected async sealed override ValueTask<bool> OnEnter()
@@ -46,40 +45,9 @@ public abstract class XmppXmlSession : XmppSession
     public abstract ValueTask FlushCommand();
     public abstract ValueTask<bool> CheckFinished();
 
-    protected sealed override ValueTask<IFeaturesHandler?> OnFeatures()
-    {
-        return commandHandler.Features()!;
-    }
-
-    protected sealed override ValueTask<IStreamErrorHandler?> OnError()
-    {
-        return commandHandler.Error()!;
-    }
-
-    protected sealed override ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
-    {
-        return commandHandler.Message(stanza)!;
-    }
-
-    protected sealed override ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
-    {
-        return commandHandler.Presence(stanza)!;
-    }
-
-    protected sealed override ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
-    {
-        return commandHandler.InfoQuery(stanza)!;
-    }
-
-    protected async sealed override ValueTask<bool> OnTlsStart()
-    {
-        await commandHandler.TlsStart();
-        return true;
-    }
-
     protected async sealed override ValueTask<bool> OnTlsProceed()
     {
-        await commandHandler.TlsProceed();
+        await base.OnTlsProceed();
         await FlushCommand();
 
         // Swap to TLS while locked
@@ -91,7 +59,7 @@ public abstract class XmppXmlSession : XmppSession
     {
         try
         {
-            await commandHandler.TlsFailure();
+            await base.OnTlsFailure();
             await FlushCommand();
             return true;
         }
@@ -102,19 +70,9 @@ public abstract class XmppXmlSession : XmppSession
         }
     }
 
-    protected sealed override ValueTask<ICompressionHandler?> OnCompress()
-    {
-        return commandHandler.Compress()!;
-    }
-
-    protected sealed override ValueTask<ICompressionFailureHandler?> OnCompressionFailure()
-    {
-        return commandHandler.CompressionFailure()!;
-    }
-
     protected async sealed override ValueTask<bool> OnCompressed()
     {
-        await commandHandler.Compressed();
+        await base.OnCompressed();
         await FlushCommand();
 
         // Enable compression while locked
@@ -122,55 +80,14 @@ public abstract class XmppXmlSession : XmppSession
         return true;
     }
 
-    protected async sealed override ValueTask<bool> OnSaslAuth(Token<SaslMechanism>? mechanism, TemporaryUtf8String? data)
-    {
-        await commandHandler.SaslAuth(mechanism, data);
-        return true;
-    }
-
-    protected async sealed override ValueTask<bool> OnSaslAbort()
-    {
-        await commandHandler.SaslAbort();
-        return true;
-    }
-
-    protected async sealed override ValueTask<bool> OnSaslChallenge(TemporaryUtf8String? data)
-    {
-        await commandHandler.SaslChallenge(data);
-        return true;
-    }
-
-    protected sealed override ValueTask<ISaslFailureHandler?> OnSaslFailure()
-    {
-        return commandHandler.SaslFailure()!;
-    }
-
-    protected async sealed override ValueTask<bool> OnSaslResponse(TemporaryUtf8String? data)
-    {
-        await commandHandler.SaslResponse(data);
-        return true;
-    }
-
     protected async sealed override ValueTask<bool> OnSaslSuccess()
     {
-        await commandHandler.SaslSuccess();
+        await base.OnSaslSuccess();
         await FlushCommand();
 
         // Finish authentication while locked
         await Authenticated();
         return true;
-    }
-
-    protected async sealed override ValueTask<bool> OnOther(XmlReader payloadReader)
-    {
-        await commandHandler.Other(payloadReader);
-        return true;
-    }
-
-    protected sealed override ValueTask OnUnrecognized(XmlReader payloadReader)
-    {
-        // Not called because everything is handled
-        return default;
     }
 
     class CommandHandler(XmppXmlSession session) : Encoder

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
-public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStreamHandler where TContext : IPayloadHandlerContext
+public abstract partial class StreamHandler<TContext> : TransportHandler<TContext> where TContext : IPayloadHandlerContext
 {
     protected virtual ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
     {
@@ -19,8 +19,42 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
     {
         return default;
     }
+}
 
-    #region Implementation
+public abstract partial class BaseStreamHandler<TContext> : BaseTransportHandler<TContext> where TContext : IPayloadHandlerContext
+{
+    protected abstract ValueTask<IMessageHandler?> OnMessage(in Stanza stanza);
+    protected abstract ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza);
+    protected abstract ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza);
+}
+
+public abstract partial class BaseDelegatingStreamHandler<THandler, TDisposable, TContext> : BaseDelegatingTransportHandler<THandler, TDisposable, TContext> where THandler : IStreamHandler where TDisposable : IAsyncDisposable where TContext : IPayloadHandlerContext
+{
+    protected virtual ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
+    {
+        return InnerHandler.Message(stanza)!;
+    }
+
+    protected virtual ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
+    {
+        return InnerHandler.Presence(stanza)!;
+    }
+
+    protected virtual ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
+    {
+        return InnerHandler.InfoQuery(stanza)!;
+    }
+}
+
+public class DelegatingStreamHandler<THandler, TDisposable, TContext>(THandler handler, TDisposable disposable) : BaseDelegatingStreamHandler<THandler, TDisposable, TContext> where THandler : IStreamHandler where TDisposable : IAsyncDisposable where TContext : IPayloadHandlerContext
+{
+    protected override THandler InnerHandler => handler;
+    protected override TDisposable Disposable => disposable;
+}
+
+#region Implementation
+abstract partial class StreamHandler<TContext> : IStreamHandler
+{
     ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
     {
         return StanzaHelper<IMessageHandler>.Handle(stanza, new MessageReceiver(this));
@@ -50,7 +84,7 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
 
         public IMessageHandler OnExitHandler(IMessageHandler handler)
         {
-            return new DelegatingMessageHandler<ExitDisposable>(handler, new ExitDisposable(parent));
+            return new DelegatingMessageHandler<IMessageHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
         public ValueTask<IMessageHandler?> OnReceived(in Stanza stanza)
@@ -79,7 +113,7 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
 
         public IPresenceHandler OnExitHandler(IPresenceHandler handler)
         {
-            return new DelegatingPresenceHandler<ExitDisposable>(handler, new ExitDisposable(parent));
+            return new DelegatingPresenceHandler<IPresenceHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
         public ValueTask<IPresenceHandler?> OnReceived(in Stanza stanza)
@@ -108,7 +142,7 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
 
         public IInfoQueryHandler OnExitHandler(IInfoQueryHandler handler)
         {
-            return new DelegatingInfoQueryHandler<ExitDisposable>(handler, new ExitDisposable(parent));
+            return new DelegatingInfoQueryHandler<IInfoQueryHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
         public ValueTask<IInfoQueryHandler?> OnReceived(in Stanza stanza)
@@ -122,16 +156,10 @@ public abstract class StreamHandler<TContext> : TransportHandler<TContext>, IStr
             return encoder.InfoQuery(stanza);
         }
     }
-    #endregion
 }
 
-public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContext>, IStreamHandler where TContext : IPayloadHandlerContext
+partial class BaseStreamHandler<TContext> : IStreamHandler
 {
-    protected abstract ValueTask<IMessageHandler?> OnMessage(in Stanza stanza);
-    protected abstract ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza);
-    protected abstract ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza);
-
-    #region Implementation
     ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
     {
         return StanzaHelper<IMessageHandler>.Handle(stanza, new MessageReceiver(this));
@@ -161,7 +189,7 @@ public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContex
 
         public IMessageHandler OnExitHandler(IMessageHandler handler)
         {
-            return new DelegatingMessageHandler<ExitDisposable>(handler, new ExitDisposable(parent));
+            return new DelegatingMessageHandler<IMessageHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
         public ValueTask<IMessageHandler?> OnReceived(in Stanza stanza)
@@ -190,7 +218,7 @@ public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContex
 
         public IPresenceHandler OnExitHandler(IPresenceHandler handler)
         {
-            return new DelegatingPresenceHandler<ExitDisposable>(handler, new ExitDisposable(parent));
+            return new DelegatingPresenceHandler<IPresenceHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
         public ValueTask<IPresenceHandler?> OnReceived(in Stanza stanza)
@@ -219,7 +247,7 @@ public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContex
 
         public IInfoQueryHandler OnExitHandler(IInfoQueryHandler handler)
         {
-            return new DelegatingInfoQueryHandler<ExitDisposable>(handler, new ExitDisposable(parent));
+            return new DelegatingInfoQueryHandler<IInfoQueryHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
         public ValueTask<IInfoQueryHandler?> OnReceived(in Stanza stanza)
@@ -233,8 +261,113 @@ public abstract class BaseStreamHandler<TContext> : BaseTransportHandler<TContex
             return encoder.InfoQuery(stanza);
         }
     }
-    #endregion
 }
+
+partial class BaseDelegatingStreamHandler<THandler, TDisposable, TContext> : IStreamHandler
+{
+    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
+    {
+        return StanzaHelper<IMessageHandler>.Handle(stanza, new MessageReceiver(this));
+    }
+
+    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
+    {
+        return StanzaHelper<IPresenceHandler>.Handle(stanza, new PresenceReceiver(this));
+    }
+
+    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
+    {
+        return StanzaHelper<IInfoQueryHandler>.Handle(stanza, new InfoQueryReceiver(this));
+    }
+
+    readonly struct MessageReceiver(BaseDelegatingStreamHandler<THandler, TDisposable, TContext> parent) : IStanzaReceiver<IMessageHandler>
+    {
+        public ValueTask<bool> OnEnter()
+        {
+            return parent.OnEnter();
+        }
+
+        public ValueTask OnExit()
+        {
+            return parent.OnExit();
+        }
+
+        public IMessageHandler OnExitHandler(IMessageHandler handler)
+        {
+            return new DelegatingMessageHandler<IMessageHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
+        }
+
+        public ValueTask<IMessageHandler?> OnReceived(in Stanza stanza)
+        {
+            return parent.OnMessage(stanza);
+        }
+
+        public ValueTask<IMessageHandler> Encode(in Stanza stanza, bool exit)
+        {
+            IStreamHandler encoder = parent.GetEncoder(exit);
+            return encoder.Message(stanza);
+        }
+    }
+
+    readonly struct PresenceReceiver(BaseDelegatingStreamHandler<THandler, TDisposable, TContext> parent) : IStanzaReceiver<IPresenceHandler>
+    {
+        public ValueTask<bool> OnEnter()
+        {
+            return parent.OnEnter();
+        }
+
+        public ValueTask OnExit()
+        {
+            return parent.OnExit();
+        }
+
+        public IPresenceHandler OnExitHandler(IPresenceHandler handler)
+        {
+            return new DelegatingPresenceHandler<IPresenceHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
+        }
+
+        public ValueTask<IPresenceHandler?> OnReceived(in Stanza stanza)
+        {
+            return parent.OnPresence(stanza);
+        }
+
+        public ValueTask<IPresenceHandler> Encode(in Stanza stanza, bool exit)
+        {
+            IStreamHandler encoder = parent.GetEncoder(exit);
+            return encoder.Presence(stanza);
+        }
+    }
+
+    readonly struct InfoQueryReceiver(BaseDelegatingStreamHandler<THandler, TDisposable, TContext> parent) : IStanzaReceiver<IInfoQueryHandler>
+    {
+        public ValueTask<bool> OnEnter()
+        {
+            return parent.OnEnter();
+        }
+
+        public ValueTask OnExit()
+        {
+            return parent.OnExit();
+        }
+
+        public IInfoQueryHandler OnExitHandler(IInfoQueryHandler handler)
+        {
+            return new DelegatingInfoQueryHandler<IInfoQueryHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
+        }
+
+        public ValueTask<IInfoQueryHandler?> OnReceived(in Stanza stanza)
+        {
+            return parent.OnInfoQuery(stanza);
+        }
+
+        public ValueTask<IInfoQueryHandler> Encode(in Stanza stanza, bool exit)
+        {
+            IStreamHandler encoder = parent.GetEncoder(exit);
+            return encoder.InfoQuery(stanza);
+        }
+    }
+}
+#endregion
 
 file interface IStanzaReceiver<THandler> where THandler : IStanzaHandler
 {
