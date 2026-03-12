@@ -16,10 +16,10 @@ public interface IInfoQueryHandler : IStanzaHandler
     ValueTask<IAuthQueryHandler> AuthQuery();
 
     [Name("query", DiscoInfo)]
-    ValueTask<IDiscoInfoQueryHandler> DiscoInfoQuery([Name("node")] string? node);
+    ValueTask<IDiscoInfoQueryHandler> DiscoInfoQuery([Name("node")] Token<DiscoNode>? node);
 
     [Name("query", DiscoItems)]
-    ValueTask<IDiscoItemsQueryHandler> DiscoItemsQuery([Name("node")] string? node);
+    ValueTask<IDiscoItemsQueryHandler> DiscoItemsQuery([Name("node")] Token<DiscoNode>? node);
 
     [Name("bind", XmppBind)]
     ValueTask<IBindHandler> Bind();

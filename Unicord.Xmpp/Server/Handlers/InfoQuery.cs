@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 
@@ -52,22 +53,28 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         return this.GetHandler<GetAuthQuery>();
     }
 
-    protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(string? node)
+    protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
     {
         SetHandled();
 
         if(node != null)
         {
-            throw XmppStanzaException.ItemNotFound();
+            throw XmppStanzaException.ServiceUnavailable();
         }
 
         return this.GetHandler<GetServerDiscoInfoQuery>();
     }
 
-    protected async override ValueTask<IDiscoItemsQueryHandler> OnDiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler> OnDiscoItemsQuery(Token<DiscoNode>? node)
     {
         SetHandled();
-        return this.GetHandler<GetDiscoItemsQuery>();
+
+        if(node != null)
+        {
+            throw XmppStanzaException.ServiceUnavailable();
+        }
+
+        return this.GetHandler<GetServerDiscoItemsQuery>();
     }
 
     protected async override ValueTask OnPing()
@@ -146,22 +153,28 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         Address = (To ?? Context.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
     }
 
-    protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(string? node)
+    protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
     {
         SetHandled();
 
         if(node != null)
         {
-            throw XmppStanzaException.ItemNotFound();
+            throw XmppStanzaException.ServiceUnavailable();
         }
 
         return new GetAccountDiscoInfoQuery(Address) { Context = Context };
     }
 
-    protected async override ValueTask<IDiscoItemsQueryHandler> OnDiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler> OnDiscoItemsQuery(Token<DiscoNode>? node)
     {
         SetHandled();
-        return this.GetHandler<GetDiscoItemsQuery>();
+
+        if(node != null)
+        {
+            throw XmppStanzaException.ServiceUnavailable();
+        }
+
+        return new GetAccountDiscoItemsQuery(Address) { Context = Context };
     }
 
     protected async override ValueTask OnPing()

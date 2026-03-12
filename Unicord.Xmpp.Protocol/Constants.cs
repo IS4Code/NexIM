@@ -19,4 +19,7 @@ static class Constants
     public const string DiscoInfo = "http://jabber.org/protocol/disco#info";
     public const string DiscoItems = "http://jabber.org/protocol/disco#items";
     public const string XmppTime = "urn:xmpp:time";
+    public const string Amp = "http://jabber.org/protocol/amp";
+    public const string AmpAction = Amp + "?action=";
+    public const string AmpCondition = Amp + "?condition=";
 }

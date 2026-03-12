@@ -29,7 +29,20 @@ public enum DiscoFeature
     [Name(Constants.DiscoItems)] DiscoItems,
     [Name(Constants.ChatStates)] ChatStates,
     [Name(XmppPing)] Ping,
-    [Name(XmppTime)] Time
+    [Name(XmppTime)] Time,
+    [Name(AmpAction + "alert")] AmpActionAlert,
+    [Name(AmpAction + "drop")] AmpActionDrop,
+    [Name(AmpAction + "error")] AmpActionError,
+    [Name(AmpAction + "notify")] AmpActionNotify,
+    [Name(AmpCondition + "deliver")] AmpConditionDeliver,
+    [Name(AmpCondition + "expire-at")] AmpConditionExpireAt,
+    [Name(AmpCondition + "match-resource")] AmpConditionMatchResource
+}
+
+[SimpleType]
+public enum DiscoNode
+{
+    [Name(Constants.Amp)] Amp
 }
 
 [SimpleType]

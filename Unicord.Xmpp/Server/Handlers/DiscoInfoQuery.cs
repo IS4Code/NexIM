@@ -31,15 +31,8 @@ internal class GetServerDiscoInfoQuery : GetDiscoInfoQuery
     }
 }
 
-internal class GetAccountDiscoInfoQuery : GetDiscoInfoQuery
+internal class GetAccountDiscoInfoQuery(XmppAddress address) : GetDiscoInfoQuery
 {
-    readonly XmppAddress address;
-
-    public GetAccountDiscoInfoQuery(XmppAddress address)
-    {
-        this.address = address;
-    }
-
     public async override ValueTask DisposeAsync()
     {
         if(Context.Server.Accounts.GetAccount(ClientSession.GetAccount(address)) is not { } account)
