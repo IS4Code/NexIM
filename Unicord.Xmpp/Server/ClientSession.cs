@@ -149,7 +149,7 @@ public class ClientSession : IClientSession
         }
     }
 
-    async ValueTask WriteSender(SenderPresentation sender, ISenderPresentation presence)
+    async ValueTask WriteSender(SenderPresentation sender, IPresentationHandler presence)
     {
         if(sender.Nickname is { } nick)
         {

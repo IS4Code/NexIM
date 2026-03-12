@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Grammar;
@@ -7,14 +6,14 @@ using Unicord.Primitives.Xml.Grammar;
 namespace Unicord.Xmpp.Protocol;
 
 [ComplexType]
-public interface ISenderPresentation : IPayloadHandler
+public interface IPresentationHandler : IPayloadHandler
 {
     [Name("nick", "http://jabber.org/protocol/nick")]
     ValueTask Nickname(string? text);
 }
 
 [ComplexType]
-public interface IPresenceHandler : IStanzaHandler, ISenderPresentation
+public interface IPresenceHandler : IStanzaHandler, IPresentationHandler, IDeliveryHandler
 {
     [Name("show")]
     ValueTask Show(Token<StatusType>? text);
@@ -24,9 +23,6 @@ public interface IPresenceHandler : IStanzaHandler, ISenderPresentation
 
     [Name("priority")]
     ValueTask Priority(sbyte? value);
-
-    [Name("delay", "urn:xmpp:delay")]
-    ValueTask Delay([Name("stamp")] DateTimeOffset? stamp);
 }
 
 [SimpleType]

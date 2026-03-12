@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
@@ -49,6 +50,11 @@ internal class Message : MessageHandler<CommandContext>, IStanzaCommandHandler
     protected async override ValueTask OnNickname(string? text)
     {
         this.SetOnce(ref nick, text);
+    }
+
+    protected async override ValueTask OnDelay(DateTimeOffset? stamp, XmppResource? from, LanguageTaggedString? reason)
+    {
+        // Ignore
     }
 
     protected async override ValueTask OnActive()

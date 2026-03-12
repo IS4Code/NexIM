@@ -46,7 +46,7 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
         this.SetOnce(ref priority, value);
     }
 
-    protected async override ValueTask OnDelay(DateTimeOffset? stamp)
+    protected async override ValueTask OnDelay(DateTimeOffset? stamp, XmppResource? from, LanguageTaggedString? reason)
     {
         // Ignore
     }

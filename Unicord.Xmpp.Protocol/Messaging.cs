@@ -1,11 +1,19 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml.Grammar;
 
 namespace Unicord.Xmpp.Protocol;
 
 [ComplexType]
-public interface IMessageHandler : IStanzaHandler, ISenderPresentation
+public interface IDeliveryHandler : IPayloadHandler
+{
+    [Name("delay", "urn:xmpp:delay")]
+    ValueTask Delay([Name("stamp")] DateTimeOffset? stamp, [Name("from")] XmppResource? from, LanguageTaggedString? reason);
+}
+
+[ComplexType]
+public interface IMessageHandler : IStanzaHandler, IPresentationHandler, IDeliveryHandler
 {
     [Name("subject")]
     ValueTask Subject(LanguageTaggedString? text);
