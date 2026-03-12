@@ -175,6 +175,9 @@ partial class GrammarGenerator
             writer.Indent--;
             writer.WriteLine("}");
 
+            // Affect methods to include those from base
+            interfaces.Insert(0, primaryInterface);
+
             // Require all methods to be overridden
             writer.WriteLine($"public abstract class Base{name}<TContext> : {name}<TContext> where TContext : IPayloadHandlerContext");
             writer.WriteLine("{");
@@ -183,6 +186,11 @@ partial class GrammarGenerator
             writer.WriteLineNoTabs("#nullable enable");
             foreach(var method in methods)
             {
+                if(method.Name == "Other")
+                {
+                    continue;
+                }
+
                 // Remove default implementation
                 writer.Write($"protected abstract override {FormatNullable(method.ReturnType)} On{method.Name}(");
                 WriteParameters(method, FormatNullable);
@@ -219,15 +227,6 @@ partial class GrammarGenerator
                 writer.Indent--;
                 writer.WriteLine("}");
             }
-
-            writer.WriteLine("protected override ValueTask OnOther(XmlReader payloadReader)");
-            writer.WriteLine("{");
-            writer.Indent++;
-            {
-                writer.WriteLine("return this.InnerHandler.Other(payloadReader);");
-            }
-            writer.Indent--;
-            writer.WriteLine("}");
 
             writer.WriteLine("protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;");
 
