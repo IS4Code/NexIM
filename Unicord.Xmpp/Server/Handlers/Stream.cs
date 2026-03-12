@@ -96,24 +96,23 @@ internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceiving
         }
     }
 
-    protected async override ValueTask<bool> OnTlsStart()
+    protected async override ValueTask OnTlsStart()
     {
         var session = Context.Session;
         if(!session.CanUpgradeTls)
         {
             await session.TlsFailure();
-            return true;
+            return;
         }
         await session.TlsProceed();
-        return true;
     }
 
-    protected async override ValueTask<ICompressionHandler?> OnCompress()
+    protected async override ValueTask<ICompressionHandler> OnCompress()
     {
         return this.GetHandler<Compression>();
     }
 
-    protected async override ValueTask<bool> OnSaslAuth(Token<SaslMechanism>? mechanismToken, TemporaryUtf8String? data)
+    protected async override ValueTask OnSaslAuth(Token<SaslMechanism>? mechanismToken, TemporaryUtf8String? data)
     {
         if(mechanismToken?.ToEnum() is not { } mechanism || mechanism is not (SaslMechanism.Plain or SaslMechanism.Anonymous or SaslMechanism.External))
         {
@@ -141,36 +140,35 @@ internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceiving
         };
 
         await session.SaslSuccess();
-        return true;
     }
 
-    protected override ValueTask<bool> OnSaslResponse(TemporaryUtf8String? data)
+    protected async override ValueTask OnSaslResponse(TemporaryUtf8String? data)
     {
-        return Program.NotImplemented<bool>();
+        await Program.NotImplemented<object>();
     }
 
-    protected async override ValueTask<bool> OnSaslAbort()
+    protected async override ValueTask OnSaslAbort()
     {
         // TODO Abort
         throw XmppSaslException.Aborted();
     }
 
-    protected override ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
+    protected override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return Context.Server.GetMessageHandler(Context.Session, stanza)!;
+        return Context.Server.GetMessageHandler(Context.Session, stanza);
     }
 
-    protected override ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
+    protected override ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return Context.Server.GetPresenceHandler(Context.Session, stanza)!;
+        return Context.Server.GetPresenceHandler(Context.Session, stanza);
     }
 
-    protected override ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
+    protected override ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return Context.Server.GetInfoQueryHandler(Context.Session, stanza)!;
+        return Context.Server.GetInfoQueryHandler(Context.Session, stanza);
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
@@ -183,48 +181,48 @@ internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceiving
         return default;
     }
 
-    protected override ValueTask<IFeaturesHandler?> OnFeatures()
+    protected override ValueTask<IFeaturesHandler> OnFeatures()
     {
-        return Program.NotImplemented<IFeaturesHandler?>();
+        return Program.NotImplemented<IFeaturesHandler>();
     }
 
-    protected override ValueTask<IStreamErrorHandler?> OnError()
+    protected override ValueTask<IStreamErrorHandler> OnError()
     {
-        return Program.NotImplemented<IStreamErrorHandler?>();
+        return Program.NotImplemented<IStreamErrorHandler>();
     }
 
-    protected override ValueTask<bool> OnTlsProceed()
+    protected async override ValueTask OnTlsProceed()
     {
-        return Program.NotImplemented<bool>();
+        await Program.NotImplemented<object>();
     }
 
-    protected override ValueTask<bool> OnTlsFailure()
+    protected async override ValueTask OnTlsFailure()
     {
-        return Program.NotImplemented<bool>();
+        await Program.NotImplemented<object>();
     }
 
-    protected override ValueTask<ICompressionFailureHandler?> OnCompressionFailure()
+    protected override ValueTask<ICompressionFailureHandler> OnCompressionFailure()
     {
-        return Program.NotImplemented<ICompressionFailureHandler?>();
+        return Program.NotImplemented<ICompressionFailureHandler>();
     }
 
-    protected override ValueTask<bool> OnCompressed()
+    protected async override ValueTask OnCompressed()
     {
-        return Program.NotImplemented<bool>();
+        await Program.NotImplemented<object>();
     }
 
-    protected override ValueTask<bool> OnSaslChallenge(TemporaryUtf8String? data)
+    protected async override ValueTask OnSaslChallenge(TemporaryUtf8String? data)
     {
-        return Program.NotImplemented<bool>();
+        await Program.NotImplemented<object>();
     }
 
-    protected override ValueTask<ISaslFailureHandler?> OnSaslFailure()
+    protected override ValueTask<ISaslFailureHandler> OnSaslFailure()
     {
-        return Program.NotImplemented<ISaslFailureHandler?>();
+        return Program.NotImplemented<ISaslFailureHandler>();
     }
 
-    protected override ValueTask<bool> OnSaslSuccess()
+    protected async override ValueTask OnSaslSuccess()
     {
-        return Program.NotImplemented<bool>();
+        await Program.NotImplemented<object>();
     }
 }

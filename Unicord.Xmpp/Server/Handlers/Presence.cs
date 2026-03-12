@@ -26,33 +26,29 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
         (Type, From, To) = this.OpenStanza(stanza);
     }
 
-    protected async override ValueTask<bool> OnShow(Token<StatusType>? text)
+    protected async override ValueTask OnShow(Token<StatusType>? text)
     {
         this.SetOnce(ref show, text?.ToEnum());
-        return true;
     }
 
-    protected async override ValueTask<bool> OnStatus(LanguageTaggedString? text)
+    protected async override ValueTask OnStatus(LanguageTaggedString? text)
     {
         statusText.Add(text, Context.Session.RemoteLanguage);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnNickname(string? text)
+    protected async override ValueTask OnNickname(string? text)
     {
         this.SetOnce(ref nick, text);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnPriority(sbyte? value)
+    protected async override ValueTask OnPriority(sbyte? value)
     {
         this.SetOnce(ref priority, value);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnDelay(DateTimeOffset? stamp)
+    protected async override ValueTask OnDelay(DateTimeOffset? stamp)
     {
-        return true;
+        // Ignore
     }
 
     protected override ValueTask OnUnrecognized(XmlReader payloadReader)

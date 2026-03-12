@@ -52,7 +52,7 @@ internal class SetRosterQuery : BaseRosterQueryHandler<CommandContext>
     (XmppResource id, string? name, bool remove)? item;
     string? group;
 
-    protected async override ValueTask<IRosterItemHandler?> OnItem(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
+    protected async override ValueTask<IRosterItemHandler> OnItem(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
     {
         if(identifier is not { } id)
         {
@@ -109,10 +109,9 @@ internal class SetRosterQuery : BaseRosterQueryHandler<CommandContext>
             Context = parent.Context;
         }
 
-        protected async override ValueTask<bool> OnGroup(string? name)
+        protected async override ValueTask OnGroup(string? name)
         {
             this.SetOnce(ref parent.group, name);
-            return true;
         }
 
         protected async override ValueTask OnUnrecognized(XmlReader payloadReader)

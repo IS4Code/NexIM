@@ -11,10 +11,9 @@ internal sealed class GetAuthQuery : AuthQueryHandler<CommandContext>
 {
     string? username;
 
-    protected async override ValueTask<bool> OnUsername(string? value)
+    protected async override ValueTask OnUsername(string? value)
     {
         this.SetOnce(ref username, value);
-        return true;
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
@@ -50,13 +49,12 @@ internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
     string? username, resource, digest;
     TemporaryString? password;
 
-    protected async override ValueTask<bool> OnUsername(string? value)
+    protected async override ValueTask OnUsername(string? value)
     {
         this.SetOnce(ref username, value);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnPassword(TemporaryString? value)
+    protected async override ValueTask OnPassword(TemporaryString? value)
     {
         if(!Context.Session.IsSecure)
         {
@@ -66,7 +64,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
 
         if(value == null)
         {
-            return true;
+            return;
         }
 
         var copy = TemporaryString.MoveFrom(value);
@@ -74,7 +72,6 @@ internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
         try
         {
             this.SetOnce(ref password, copy);
-            return true;
         }
         catch when(Dispose())
         {
@@ -89,7 +86,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
         }
     }
 
-    protected async override ValueTask<bool> OnDigest(string? value)
+    protected async override ValueTask OnDigest(string? value)
     {
         if(Context.Session.IsSecure)
         {
@@ -97,13 +94,11 @@ internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
             throw XmppStanzaException.BadRequest();
         }
         this.SetOnce(ref digest, value);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnResource(string? value)
+    protected async override ValueTask OnResource(string? value)
     {
         this.SetOnce(ref resource, value);
-        return true;
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)

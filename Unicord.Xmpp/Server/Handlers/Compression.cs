@@ -10,10 +10,9 @@ internal class Compression : BaseCompressionHandler<CommandContext>
 {
     CompressionMethod? method;
 
-    protected async override ValueTask<bool> OnMethod(Token<CompressionMethod>? name)
+    protected async override ValueTask OnMethod(Token<CompressionMethod>? name)
     {
         this.SetOnce(ref method, name?.ToEnum());
-        return true;
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)

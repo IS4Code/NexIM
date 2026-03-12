@@ -10,10 +10,9 @@ internal class SetBind : BindHandler<CommandContext>
 {
     string? resource;
 
-    protected async override ValueTask<bool> OnResource(string? value)
+    protected async override ValueTask OnResource(string? value)
     {
         this.SetOnce(ref resource, value);
-        return true;
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)

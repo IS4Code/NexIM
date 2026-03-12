@@ -46,13 +46,13 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 
     }
 
-    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
+    protected async override ValueTask<IAuthQueryHandler> OnAuthQuery()
     {
         SetHandled();
         return this.GetHandler<GetAuthQuery>();
     }
 
-    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
+    protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(string? node)
     {
         SetHandled();
 
@@ -64,22 +64,21 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         return this.GetHandler<GetServerDiscoInfoQuery>();
     }
 
-    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
         return this.GetHandler<GetDiscoItemsQuery>();
     }
 
-    protected async override ValueTask<bool> OnPing()
+    protected async override ValueTask OnPing()
     {
         SetHandled();
 
         // Sent to the server
         await this.SendResponse();
-        return true;
     }
 
-    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
     {
         // The server can handle the request only if it was targeted implicitly
         SetHandled();
@@ -87,7 +86,7 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         return new GetRosterQuery(version) { Context = Context };
     }
 
-    protected async override ValueTask<ITimeHandler?> OnTime()
+    protected async override ValueTask<ITimeHandler> OnTime()
     {
         SetHandled();
         return this.GetHandler<GetTime>();
@@ -101,19 +100,19 @@ internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 
     }
 
-    protected async override ValueTask<IAuthQueryHandler?> OnAuthQuery()
+    protected async override ValueTask<IAuthQueryHandler> OnAuthQuery()
     {
         SetHandled();
         return this.GetHandler<SetAuthQuery>();
     }
 
-    protected async override ValueTask<IBindHandler?> OnBind()
+    protected async override ValueTask<IBindHandler> OnBind()
     {
         SetHandled();
         return this.GetHandler<SetBind>();
     }
 
-    protected async override ValueTask<bool> OnSession()
+    protected async override ValueTask OnSession()
     {
         SetHandled();
 
@@ -122,16 +121,14 @@ internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 
         // Success
         await this.SendResponse();
-        return true;
     }
 
-    protected async override ValueTask<bool> OnPing()
+    protected async override ValueTask OnPing()
     {
         SetHandled();
-        return true;
     }
 
-    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
     {
         // The server can handle the request only if it was targeted implicitly
         SetHandled();
@@ -149,7 +146,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         Address = (To ?? Context.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
     }
 
-    protected async override ValueTask<IDiscoInfoQueryHandler?> OnDiscoInfoQuery(string? node)
+    protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(string? node)
     {
         SetHandled();
 
@@ -161,13 +158,13 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         return new GetAccountDiscoInfoQuery(Address) { Context = Context };
     }
 
-    protected async override ValueTask<IDiscoItemsQueryHandler?> OnDiscoItemsQuery(string? node)
+    protected async override ValueTask<IDiscoItemsQueryHandler> OnDiscoItemsQuery(string? node)
     {
         SetHandled();
         return this.GetHandler<GetDiscoItemsQuery>();
     }
 
-    protected async override ValueTask<bool> OnPing()
+    protected async override ValueTask OnPing()
     {
         SetHandled();
 
@@ -175,7 +172,6 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         {
             // Account exists
             await this.SendResponse();
-            return true;
         }
         else
         {
@@ -183,7 +179,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         }
     }
 
-    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
     {
         SetHandled();
         this.EnsureReceiverIsUserAccount();
@@ -198,7 +194,7 @@ internal class SetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
 
     }
 
-    protected async override ValueTask<IRosterQueryHandler?> OnRosterQuery(string? version)
+    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
     {
         SetHandled();
         this.EnsureReceiverIsUserAccount();

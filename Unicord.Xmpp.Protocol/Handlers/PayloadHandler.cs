@@ -22,9 +22,9 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
 
     protected abstract ValueTask OnUnrecognized(XmlReader payloadReader);
 
-    protected virtual ValueTask<bool> OnOther(XmlReader payloadReader)
+    protected virtual ValueTask OnOther(XmlReader payloadReader)
     {
-        return default;
+        return DefaultImplementation.ValueTask;
     }
 
     protected virtual ValueTask<bool> OnEnter() => default;
@@ -35,9 +35,11 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
         bool exit = !Decoding && await OnEnter();
         try
         {
-            if(await OnOther(payloadReader))
+            var task = OnOther(payloadReader);
+            if(!task.Equals(DefaultImplementation.ValueTask))
             {
                 // Successfully handled
+                await task;
                 return;
             }
         }
@@ -210,7 +212,12 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
                     await reader.ReadAsync();
 
                     // Present the element to the handler (directly because this is already a fallback)
-                    if(!await parent.OnOther(reader))
+                    var task = parent.OnOther(reader);
+                    if(!task.Equals(DefaultImplementation.ValueTask))
+                    {
+                        await task;
+                    }
+                    else
                     {
                         await parent.OnUnrecognized(reader);
                     }

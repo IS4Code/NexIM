@@ -63,13 +63,22 @@ partial class GrammarGenerator
 
                 // Generate a handler method that to indicate success
                 writer.WriteLineNoTabs("#nullable enable");
-                writer.Write($"protected virtual {(handlerReturnType != null ? $"ValueTask<{FormatNullable(handlerReturnType.WithNullableAnnotation(NullableAnnotation.Annotated))}>" : "ValueTask<bool>")} On{method.Name}(");
+                writer.Write($"protected virtual {FormatNullable(method.ReturnType)} On{method.Name}(");
                 WriteParameters(method, FormatNullable);
                 writer.WriteLine(")");
                 writer.WriteLine("{");
                 writer.Indent++;
-                // Returns false or null
-                writer.WriteLine("return default;");
+
+                // Return a sentinel task
+                if(handlerReturnType != null)
+                {
+                    writer.WriteLine($"return DefaultImplementation<{FormatNullable(handlerReturnType)}>.ValueTask;");
+                }
+                else
+                {
+                    writer.WriteLine("return DefaultImplementation.ValueTask;");
+                }
+
                 writer.Indent--;
                 writer.WriteLine("}");
                 writer.WriteLineNoTabs("#nullable disable");
@@ -87,20 +96,20 @@ partial class GrammarGenerator
                 writer.WriteLine("{");
                 writer.Indent++;
 
+                // Call the implementation
+                writer.Write($"var _task = this.On{method.Name}(");
+                WriteArguments(method);
+                writer.WriteLine(");");
+
                 if(handlerReturnType == null)
                 {
                     // No return type
-                    writer.Write($"if(await this.On{method.Name}(");
-                    WriteArguments(method);
-                    writer.WriteLine(") || this.Decoding)");
-                    writer.WriteLine("{");
-                    writer.Indent++;
 
-                    // Either handled or should be ignored
-                    writer.WriteLine("return;");
-
-                    writer.Indent--;
-                    writer.WriteLine("}");
+                    // Use the implementation if provided
+                    writer.WriteLine("if(!_task.Equals(DefaultImplementation.ValueTask)) { await _task; return; }");
+                    
+                    // Ignore if called from Other
+                    writer.WriteLine("if(this.Decoding) return;");
 
                     // Copy the instruction to Other
                     writer.WriteLine("await using var _encoder = this.GetEncoder(false);");
@@ -111,37 +120,34 @@ partial class GrammarGenerator
                 }
                 else
                 {
-                    writer.Write($"if(await this.On{method.Name}(");
-                    WriteArguments(method);
-                    writer.WriteLine(") is { } _handler)");
+                    // Handler expected
+                    writer.WriteLine($"{Format(handlerReturnType)} _handler;");
+
+                    writer.WriteLine($"if(!_task.Equals(DefaultImplementation<{Format(handlerReturnType)}>.ValueTask))");
                     writer.WriteLine("{");
                     writer.Indent++;
+                    {
+                        // Use the implementation
+                        writer.WriteLine("_handler = await _task;");
 
-                    // Handler produced
-                    writer.WriteLine("if(_exit)");
-                    writer.WriteLine("{");
-                    writer.Indent++;
+                        writer.WriteLine("if(_exit)");
+                        writer.WriteLine("{");
+                        writer.Indent++;
 
-                    writer.WriteLine("_exit = false;");
-                    writer.WriteLine($"return new Delegating{handlerReturnType.Name.Substring(1)}<{Format(handlerReturnType)}, ExitDisposable, EmptyPayloadHandlerContext>(_handler, new ExitDisposable(this));");
+                        // Wrap return handler
+                        writer.WriteLine("_exit = false;");
+                        writer.WriteLine($"return new Delegating{handlerReturnType.Name.Substring(1)}<{Format(handlerReturnType)}, ExitDisposable, EmptyPayloadHandlerContext>(_handler, new ExitDisposable(this));");
 
+                        writer.Indent--;
+                        writer.WriteLine("}");
+
+                        writer.WriteLine("return _handler;");
+                    }
                     writer.Indent--;
                     writer.WriteLine("}");
 
-                    writer.WriteLine("return _handler;");
-
-                    writer.Indent--;
-                    writer.WriteLine("}");
-
-                    writer.WriteLine("if(this.Decoding)");
-                    writer.WriteLine("{");
-                    writer.Indent++;
-
-                    // Should be ignored
-                    writer.WriteLine("return NullHandler.Instance;");
-
-                    writer.Indent--;
-                    writer.WriteLine("}");
+                    // Ignore if called from Other
+                    writer.WriteLine("if(this.Decoding) return NullHandler.Instance;");
 
                     // Return a handler that copies the contents to Other (encoder must not be disposed)
                     writer.WriteLine($"{Format(type)} _encoder = this.GetEncoder(_exit);");
@@ -157,16 +163,8 @@ partial class GrammarGenerator
                 writer.WriteLine("finally");
                 writer.WriteLine("{");
                 writer.Indent++;
-
-                writer.WriteLine("if(_exit)");
-                writer.WriteLine("{");
-                writer.Indent++;
-
-                writer.WriteLine("await this.OnExit();");
-
-                writer.Indent--;
-                writer.WriteLine("}");
-
+                // Exit if requested
+                writer.WriteLine("if(_exit) await this.OnExit();");
                 writer.Indent--;
                 writer.WriteLine("}");
 
@@ -185,10 +183,8 @@ partial class GrammarGenerator
             writer.WriteLineNoTabs("#nullable enable");
             foreach(var method in methods)
             {
-                AnalyzeMethod(method, out var handlerReturnType, out _, out _);
-
-                // Generate a handler method that to indicate success
-                writer.Write($"protected abstract override {(handlerReturnType != null ? $"ValueTask<{FormatNullable(handlerReturnType.WithNullableAnnotation(NullableAnnotation.Annotated))}>" : "ValueTask<bool>")} On{method.Name}(");
+                // Remove default implementation
+                writer.Write($"protected abstract override {FormatNullable(method.ReturnType)} On{method.Name}(");
                 WriteParameters(method, FormatNullable);
                 writer.WriteLine(");");
             }
@@ -207,47 +203,28 @@ partial class GrammarGenerator
             writer.WriteLine("protected abstract TDisposable Disposable { get; }");
             foreach(var method in methods)
             {
-                AnalyzeMethod(method, out var handlerReturnType, out _, out _);
-
                 // Explicit implementation
-                writer.Write("protected ");
-                if(handlerReturnType == null)
-                {
-                    writer.Write("async ");
-                }
-                writer.Write($"override {(handlerReturnType != null ? $"ValueTask<{FormatNullable(handlerReturnType.WithNullableAnnotation(NullableAnnotation.Annotated))}>" : "ValueTask<bool>")} On{method.Name}(");
+                writer.Write($"protected override {FormatNullable(method.ReturnType)} On{method.Name}(");
                 WriteParameters(method, FormatNullable);
                 writer.WriteLine(")");
 
                 writer.WriteLine("{");
                 writer.Indent++;
 
-                if(handlerReturnType != null)
-                {
-                    // Just return from inner
-                    writer.Write($"return this.InnerHandler.{method.Name}(");
-                    WriteArguments(method);
-                    writer.WriteLine(")!;");
-                }
-                else
-                {
-                    // Await and return true
-                    writer.Write($"await this.InnerHandler.{method.Name}(");
-                    WriteArguments(method);
-                    writer.WriteLine(");");
-                    writer.WriteLine("return true;");
-                }
+                // Return from inner
+                writer.Write($"return this.InnerHandler.{method.Name}(");
+                WriteArguments(method);
+                writer.WriteLine(");");
 
                 writer.Indent--;
                 writer.WriteLine("}");
             }
 
-            writer.WriteLine("protected async override ValueTask<bool> OnOther(XmlReader payloadReader)");
+            writer.WriteLine("protected override ValueTask OnOther(XmlReader payloadReader)");
             writer.WriteLine("{");
             writer.Indent++;
             {
-                writer.WriteLine("await this.InnerHandler.Other(payloadReader);");
-                writer.WriteLine("return true;");
+                writer.WriteLine("return this.InnerHandler.Other(payloadReader);");
             }
             writer.Indent--;
             writer.WriteLine("}");

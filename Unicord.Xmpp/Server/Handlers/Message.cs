@@ -36,52 +36,44 @@ internal class Message : MessageHandler<CommandContext>, IStanzaCommandHandler
         };
     }
 
-    protected async override ValueTask<bool> OnBody(LanguageTaggedString? text)
+    protected async override ValueTask OnBody(LanguageTaggedString? text)
     {
         body = body.Add(text, Context.Session.RemoteLanguage);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnSubject(LanguageTaggedString? text)
+    protected async override ValueTask OnSubject(LanguageTaggedString? text)
     {
         subject = subject.Add(text, Context.Session.RemoteLanguage);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnNickname(string? text)
+    protected async override ValueTask OnNickname(string? text)
     {
         this.SetOnce(ref nick, text);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnActive()
+    protected async override ValueTask OnActive()
     {
         this.SetOnce(ref state, ChatState.Active);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnInactive()
+    protected async override ValueTask OnInactive()
     {
         this.SetOnce(ref state, ChatState.Inactive);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnComposing()
+    protected async override ValueTask OnComposing()
     {
         this.SetOnce(ref state, ChatState.Composing);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnPaused()
+    protected async override ValueTask OnPaused()
     {
         this.SetOnce(ref state, ChatState.Paused);
-        return true;
     }
 
-    protected async override ValueTask<bool> OnGone()
+    protected async override ValueTask OnGone()
     {
         this.SetOnce(ref state, ChatState.Gone);
-        return true;
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)

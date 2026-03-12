@@ -45,23 +45,21 @@ public abstract class XmppXmlSession : XmppSession
     public abstract ValueTask FlushCommand();
     public abstract ValueTask<bool> CheckFinished();
 
-    protected async sealed override ValueTask<bool> OnTlsProceed()
+    protected async sealed override ValueTask OnTlsProceed()
     {
         await base.OnTlsProceed();
         await FlushCommand();
 
         // Swap to TLS while locked
         await UpgradeTls();
-        return true;
     }
 
-    protected async sealed override ValueTask<bool> OnTlsFailure()
+    protected async sealed override ValueTask OnTlsFailure()
     {
         try
         {
             await base.OnTlsFailure();
             await FlushCommand();
-            return true;
         }
         finally
         {
@@ -70,24 +68,22 @@ public abstract class XmppXmlSession : XmppSession
         }
     }
 
-    protected async sealed override ValueTask<bool> OnCompressed()
+    protected async sealed override ValueTask OnCompressed()
     {
         await base.OnCompressed();
         await FlushCommand();
 
         // Enable compression while locked
         await EnableCompression();
-        return true;
     }
 
-    protected async sealed override ValueTask<bool> OnSaslSuccess()
+    protected async sealed override ValueTask OnSaslSuccess()
     {
         await base.OnSaslSuccess();
         await FlushCommand();
 
         // Finish authentication while locked
         await Authenticated();
-        return true;
     }
 
     class CommandHandler(XmppXmlSession session) : Encoder

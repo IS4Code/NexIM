@@ -5,44 +5,44 @@ namespace Unicord.Xmpp.Protocol.Handlers;
 
 public abstract partial class StreamHandler<TContext> : TransportHandler<TContext> where TContext : IPayloadHandlerContext
 {
-    protected virtual ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
+    protected virtual ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
-        return default;
+        return DefaultImplementation<IMessageHandler>.ValueTask;
     }
 
-    protected virtual ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
+    protected virtual ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
     {
-        return default;
+        return DefaultImplementation<IPresenceHandler>.ValueTask;
     }
 
-    protected virtual ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
+    protected virtual ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
-        return default;
+        return DefaultImplementation<IInfoQueryHandler>.ValueTask;
     }
 }
 
 public abstract partial class BaseStreamHandler<TContext> : BaseTransportHandler<TContext> where TContext : IPayloadHandlerContext
 {
-    protected abstract ValueTask<IMessageHandler?> OnMessage(in Stanza stanza);
-    protected abstract ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza);
-    protected abstract ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza);
+    protected abstract ValueTask<IMessageHandler> OnMessage(in Stanza stanza);
+    protected abstract ValueTask<IPresenceHandler> OnPresence(in Stanza stanza);
+    protected abstract ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza);
 }
 
 public abstract partial class BaseDelegatingStreamHandler<THandler, TDisposable, TContext> : BaseDelegatingTransportHandler<THandler, TDisposable, TContext> where THandler : IStreamHandler where TDisposable : IAsyncDisposable where TContext : IPayloadHandlerContext
 {
-    protected virtual ValueTask<IMessageHandler?> OnMessage(in Stanza stanza)
+    protected virtual ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
-        return InnerHandler.Message(stanza)!;
+        return InnerHandler.Message(stanza);
     }
 
-    protected virtual ValueTask<IPresenceHandler?> OnPresence(in Stanza stanza)
+    protected virtual ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
     {
-        return InnerHandler.Presence(stanza)!;
+        return InnerHandler.Presence(stanza);
     }
 
-    protected virtual ValueTask<IInfoQueryHandler?> OnInfoQuery(in Stanza stanza)
+    protected virtual ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
-        return InnerHandler.InfoQuery(stanza)!;
+        return InnerHandler.InfoQuery(stanza);
     }
 }
 
@@ -87,7 +87,7 @@ abstract partial class StreamHandler<TContext> : IStreamHandler
             return new DelegatingMessageHandler<IMessageHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IMessageHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IMessageHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnMessage(stanza);
         }
@@ -116,7 +116,7 @@ abstract partial class StreamHandler<TContext> : IStreamHandler
             return new DelegatingPresenceHandler<IPresenceHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IPresenceHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IPresenceHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnPresence(stanza);
         }
@@ -145,7 +145,7 @@ abstract partial class StreamHandler<TContext> : IStreamHandler
             return new DelegatingInfoQueryHandler<IInfoQueryHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IInfoQueryHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IInfoQueryHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnInfoQuery(stanza);
         }
@@ -192,7 +192,7 @@ partial class BaseStreamHandler<TContext> : IStreamHandler
             return new DelegatingMessageHandler<IMessageHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IMessageHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IMessageHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnMessage(stanza);
         }
@@ -221,7 +221,7 @@ partial class BaseStreamHandler<TContext> : IStreamHandler
             return new DelegatingPresenceHandler<IPresenceHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IPresenceHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IPresenceHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnPresence(stanza);
         }
@@ -250,7 +250,7 @@ partial class BaseStreamHandler<TContext> : IStreamHandler
             return new DelegatingInfoQueryHandler<IInfoQueryHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IInfoQueryHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IInfoQueryHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnInfoQuery(stanza);
         }
@@ -297,7 +297,7 @@ partial class BaseDelegatingStreamHandler<THandler, TDisposable, TContext> : ISt
             return new DelegatingMessageHandler<IMessageHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IMessageHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IMessageHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnMessage(stanza);
         }
@@ -326,7 +326,7 @@ partial class BaseDelegatingStreamHandler<THandler, TDisposable, TContext> : ISt
             return new DelegatingPresenceHandler<IPresenceHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IPresenceHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IPresenceHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnPresence(stanza);
         }
@@ -355,7 +355,7 @@ partial class BaseDelegatingStreamHandler<THandler, TDisposable, TContext> : ISt
             return new DelegatingInfoQueryHandler<IInfoQueryHandler, ExitDisposable, EmptyPayloadHandlerContext>(handler, new ExitDisposable(parent));
         }
 
-        public ValueTask<IInfoQueryHandler?> OnReceived(in Stanza stanza)
+        public ValueTask<IInfoQueryHandler> OnReceived(in Stanza stanza)
         {
             return parent.OnInfoQuery(stanza);
         }
@@ -374,7 +374,7 @@ file interface IStanzaReceiver<THandler> where THandler : IStanzaHandler
     ValueTask<bool> OnEnter();
     ValueTask OnExit();
     THandler OnExitHandler(THandler handler);
-    ValueTask<THandler?> OnReceived(in Stanza stanza);
+    ValueTask<THandler> OnReceived(in Stanza stanza);
     ValueTask<THandler> Encode(in Stanza stanza, bool exit);
 }
 
@@ -384,7 +384,7 @@ static file class StanzaHelper<TResult> where TResult : IStanzaHandler
     {
         bool exit;
         Stanza copy;
-        ValueTask<TResult?> stanzaTask;
+        ValueTask<TResult> task;
 
         var enterTask = receiver.OnEnter();
         if(enterTask.IsCompletedSuccessfully)
@@ -393,25 +393,39 @@ static file class StanzaHelper<TResult> where TResult : IStanzaHandler
             exit = enterTask.Result;
             try
             {
-                stanzaTask = receiver.OnReceived(stanza);
+                task = receiver.OnReceived(stanza);
             }
             catch(Exception e)
             {
-                stanzaTask = new(Task.FromException<TResult?>(e));
+                task = new(Task.FromException<TResult>(e));
             }
-            if(stanzaTask.IsCompletedSuccessfully && stanzaTask.Result is { } handler)
+            if(!task.Equals(DefaultImplementation<TResult>.ValueTask))
             {
-                // Handled synchronously
-                if(exit)
+                // Implemented
+                if(task.IsCompletedSuccessfully)
                 {
-                    // Result handler must be wrapped
-                    return new(receiver.OnExitHandler(handler));
+                    // Handled synchronously
+                    var handler = task.Result;
+                    if(exit)
+                    {
+                        // Result handler must be wrapped
+                        return new(receiver.OnExitHandler(handler));
+                    }
+                    return new(handler);
                 }
-                return new(handler);
+                // Not handled synchronously
+                return WhenReceived();
             }
-            // Not handled synchronously, use fallback
-            copy = stanza;
-            return WhenHandler();
+            // Not implemented, use fallback
+            try
+            {
+                task = receiver.Encode(stanza, exit);
+            }
+            catch(Exception e)
+            {
+                task = new(Task.FromException<TResult>(e));
+            }
+            return WhenEncoded();
         }
         else
         {
@@ -423,32 +437,48 @@ static file class StanzaHelper<TResult> where TResult : IStanzaHandler
                 exit = await enterTask;
                 try
                 {
-                    stanzaTask = receiver.OnReceived(copy);
+                    task = receiver.OnReceived(copy);
                 }
                 catch(Exception e)
                 {
-                    stanzaTask = new(Task.FromException<TResult?>(e));
+                    task = new(Task.FromException<TResult>(e));
                 }
-                return await WhenHandler();
+                if(!task.Equals(DefaultImplementation<TResult>.ValueTask))
+                {
+                    // Implemented
+                    return await WhenReceived();
+                }
+                return await WhenReceived();
             }
         }
 
-        async ValueTask<TResult> WhenHandler()
+        async ValueTask<TResult> WhenReceived()
         {
             try
             {
-                if(await stanzaTask is { } handler)
+                // Handled with a delay
+                var handler = await task;
+                if(exit)
                 {
-                    // Handled with a delay
-                    if(exit)
-                    {
-                        exit = false;
-                        return receiver.OnExitHandler(handler);
-                    }
-                    return handler;
+                    exit = false;
+                    return receiver.OnExitHandler(handler);
                 }
+                return handler;
+            }
+            finally
+            {
+                if(exit)
+                {
+                    await receiver.OnExit();
+                }
+            }
+        }
 
-                handler = await receiver.Encode(copy, exit);
+        async ValueTask<TResult> WhenEncoded()
+        {
+            try
+            {
+                var handler = await task;
                 exit = false;
                 return handler;
             }
