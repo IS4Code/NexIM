@@ -358,7 +358,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
     }
 
     static readonly XmppStanzaException featureNotImplemented = XmppStanzaException.FeatureNotImplemented();
-    protected bool GetXmppException<TException>(Exception e, [MaybeNullWhen(false)] out TException xmppException) where TException : XmppException
+    bool GetXmppException<TException>(Exception e, [MaybeNullWhen(false)] out TException xmppException) where TException : XmppException
     {
         switch(e)
         {
@@ -375,16 +375,9 @@ public abstract class XmppHandlerSession : XmppXmlSession
         }
     }
 
-    protected record struct StanzaInfo(StanzaKind Kind, string? Identifier);
+    readonly record struct StanzaInfo(StanzaKind Kind, string? Identifier);
 
-    protected enum StanzaKind
-    {
-        Message,
-        Presence,
-        InfoQuery
-    }
-
-    protected class PayloadHandlers : Stack<IPayloadHandler>, IAsyncDisposable
+    sealed class PayloadHandlers : Stack<IPayloadHandler>, IAsyncDisposable
     {
         public THandler Get<THandler>() where THandler : IPayloadHandler
         {
