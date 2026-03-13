@@ -78,7 +78,7 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
         }
         if(stanza.Identifier is { } identifier)
         {
-            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier);
+            await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier.Value);
         }
     }
 }

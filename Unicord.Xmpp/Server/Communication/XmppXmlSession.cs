@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
 
@@ -35,6 +36,16 @@ public abstract class XmppXmlSession : XmppSession
     {
         await FlushCommand();
         semaphore.Release();
+    }
+
+    public override Token<T> GetToken<T>(ReadOnlyMemory<char> value)
+    {
+        return Token<T>.FromAtomized(Reader.NameTable.Add(value));
+    }
+
+    public override Token<T> GetToken<T>(ReadOnlySpan<char> value)
+    {
+        return Token<T>.FromAtomized(Reader.NameTable.Add(value));
     }
 
     protected abstract ValueTask UpgradeTls();

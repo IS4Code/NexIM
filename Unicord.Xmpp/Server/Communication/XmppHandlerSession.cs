@@ -323,7 +323,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
                         case 2:
                             if(attrName == Id)
                             {
-                                stanza.Identifier = reader.Value;
+                                stanza.Identifier = Token<StanzaIdentifier>.FromAtomized(reader.NameTable.Add(reader.Value));
                                 continue;
                             }
                             else if(attrName == To)
@@ -375,7 +375,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         }
     }
 
-    readonly record struct StanzaInfo(StanzaKind Kind, string? Identifier);
+    readonly record struct StanzaInfo(StanzaKind Kind, Token<StanzaIdentifier>? Identifier);
 
     sealed class PayloadHandlers : Stack<IPayloadHandler>, IAsyncDisposable
     {

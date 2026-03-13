@@ -42,8 +42,14 @@ public record struct Stanza(
     Token<StanzaType>? Type = null,
     XmppResource? From = null,
     XmppResource? To = null,
-    string? Identifier = null
+    Token<StanzaIdentifier>? Identifier = null
 );
+
+[SimpleType]
+public enum StanzaIdentifier
+{
+
+}
 
 public interface IPayloadHandler : IAsyncDisposable
 {

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Unicord.Primitives.Xml;
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
@@ -31,8 +33,13 @@ public interface IXmppSession : IXmppSendingHandler
     [MemberNotNullWhen(true, nameof(ClientSession))]
     bool IsAuthenticated { get; }
 
-    void RegisterCallback(string identifier, Func<ValueTask<IInfoQueryHandler>> callback);
-    ValueTask<IInfoQueryHandler> FinishCallback(string? identifier);
+    void RegisterCallback(Token<StanzaIdentifier> identifier, Func<ValueTask<IInfoQueryHandler>> callback);
+    ValueTask<IInfoQueryHandler> FinishCallback(Token<StanzaIdentifier>? identifier);
+
+    Token<T> GetToken<T>(string value) where T : Enum => GetToken<T>(value.AsMemory());
+    Token<T> GetToken<T>(ReadOnlyMemory<char> value) where T : Enum;
+    Token<T> GetToken<T>(ReadOnlySpan<char> value) where T : Enum;
+    Token<StanzaIdentifier> NewStanzaIdentifier();
 }
 
 /// <summary>
@@ -53,19 +60,28 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public ClientSession? ClientSession { get; set; }
     public bool IsAuthenticated => ClientSession != null;
 
-    readonly ConcurrentDictionary<string, Func<ValueTask<IInfoQueryHandler>>> callbacks = new();
+    public Token<T> GetToken<T>(string value) where T : Enum => GetToken<T>(value.AsMemory());
+    public abstract Token<T> GetToken<T>(ReadOnlyMemory<char> value) where T : Enum;
+    public abstract Token<T> GetToken<T>(ReadOnlySpan<char> value) where T : Enum;
 
-    public void RegisterCallback(string identifier, Func<ValueTask<IInfoQueryHandler>> callback)
+    public Token<StanzaIdentifier> NewStanzaIdentifier()
     {
-        if(!callbacks.TryAdd(identifier, callback))
+        return GetToken<StanzaIdentifier>(Guid.NewGuid().ToString("N"));
+    }
+
+    readonly ConcurrentDictionary<string, Func<ValueTask<IInfoQueryHandler>>> callbacks = new(ReferenceEqualityComparer.Instance);
+
+    public void RegisterCallback(Token<StanzaIdentifier> identifier, Func<ValueTask<IInfoQueryHandler>> callback)
+    {
+        if(!callbacks.TryAdd(identifier.Value, callback))
         {
             throw new ArgumentException("The identifier was already used previously.", nameof(identifier));
         }
     }
 
-    public ValueTask<IInfoQueryHandler> FinishCallback(string? identifier)
+    public ValueTask<IInfoQueryHandler> FinishCallback(Token<StanzaIdentifier>? identifier)
     {
-        if(identifier == null || !callbacks.TryRemove(identifier, out var callback))
+        if(identifier is not { Value: var value } || !callbacks.TryRemove(value, out var callback))
         {
             // Unidentified response cannot be dispatched
             return new(NullHandler.Instance);
