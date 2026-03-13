@@ -68,7 +68,7 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
 
     async ValueTask IValueXmlEncoder<LanguageTaggedString>.Encode(XmlWriter writer, LanguageTaggedString value)
     {
-        if(String.Equals(writer.XmlLang, value.LanguageTag, StringComparison.OrdinalIgnoreCase))
+        if(!value.Explicit && String.Equals(writer.XmlLang, value.LanguageTag, StringComparison.OrdinalIgnoreCase))
         {
             // No need to write language
             await writer.WriteStringAsync(value.Value);

@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Globalization;
+using System.Runtime.InteropServices;
 
 namespace Unicord.Primitives;
 
-public record struct LanguageTaggedString(string Value, string LanguageTag)
+[StructLayout(LayoutKind.Auto)]
+public readonly record struct LanguageTaggedString(string Value, string LanguageTag)
 {
+    public bool Explicit { get; init; }
+
     public static string DefaultLanguage {
         get {
             var culture = CultureInfo.CurrentUICulture;

@@ -239,8 +239,14 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
 
     async ValueTask<LanguageTaggedString> IValueXmlDecoder<LanguageTaggedString>.Decode(XmlReader reader)
     {
-        var language = reader.XmlLang;
-        return new(await reader.ReadContentAsStringAsync(), language);
+        var (language, isExplicit) =
+            reader.GetAttribute("lang", "http://www.w3.org/XML/1998/namespace") is { } lang
+            ? (lang, true)
+            : (reader.XmlLang, false);
+        return new(await reader.ReadContentAsStringAsync(), language)
+        {
+            Explicit = isExplicit
+        };
     }
 
     async ValueTask<DateTime> IValueXmlDecoder<DateTime>.Decode(XmlReader reader)
