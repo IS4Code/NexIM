@@ -357,6 +357,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         return stanza;
     }
 
+    static readonly XmppStanzaException featureNotImplemented = XmppStanzaException.FeatureNotImplemented();
     protected bool GetXmppException<TException>(Exception e, [MaybeNullWhen(false)] out TException xmppException) where TException : XmppException
     {
         switch(e)
@@ -365,6 +366,8 @@ public abstract class XmppHandlerSession : XmppXmlSession
                 xmppException = xe;
                 return true;
             case { InnerException: { } inner } when GetXmppException(inner, out xmppException):
+                return true;
+            case NotImplementedException when GetXmppException(featureNotImplemented, out xmppException):
                 return true;
             default:
                 xmppException = null;
