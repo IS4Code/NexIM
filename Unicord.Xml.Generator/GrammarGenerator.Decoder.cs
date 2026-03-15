@@ -181,168 +181,198 @@ partial class GrammarGenerator
         void Switch(IEnumerable<(string name, IEnumerable<IMethodSymbol> list)> names)
         {
             Partition(writer, "elementName", list => {
-                bool firstNamespaceCheck = true;
+                const string defaultNs = "\0";
 
-                int payloadCounter = 0;
+                var methods = list
+                    // Find methods with a namespace
+                    .Select(m => (m, n: GetName(m)))
+                    .Where(t => t.n.HasValue)
+                    .Select(t => (t.m, ns: t.n.GetValueOrDefault().ns ?? GetNamespace(t.m.ContainingType) ?? defaultNs))
+                    // Group by namespace
+                    .GroupBy(t => t.ns, t => t.m)
+                    .ToDictionary(g => g.Key);
 
-                foreach(var method in list)
+                bool hasDefault = methods.TryGetValue(defaultNs, out var defaultMethod);
+
+                if(hasDefault)
                 {
-                    if(GetName(method) is not var (_, ns))
-                    {
-                        continue;
-                    }
+                    // Check default namespace first
+                    methods.Remove(defaultNs);
 
-                    // If no namespace, use the type's attribute
-                    ns ??= GetNamespace(method.ContainingType);
+                    writer.WriteLine($"if(elementNs == (object)this.GetDefaultNamespace(reader.NameTable))");
+                    writer.WriteLine("{");
+                    writer.Indent++;
+                    Decode(defaultMethod);
+                    writer.Indent--;
+                    writer.WriteLine("}");
 
-                    if(firstNamespaceCheck)
+                    if(methods.Count == 0)
                     {
-                        firstNamespaceCheck = false;
+                        // Generate no further code
+                        hasDefault = false;
                     }
                     else
                     {
-                        writer.Write("else ");
+                        writer.WriteLine("else");
+                        writer.WriteLine("{");
+                        writer.Indent++;
                     }
+                }
 
-                    writer.WriteLine($"if(elementNs == (object){(ns != null ? FormatLiteral(ns) : "this.GetDefaultNamespace(reader.NameTable)")} && handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
-                    writer.WriteLine("{");
-                    writer.Indent++;
+                Partition(writer, "elementNs", Decode, methods.Select(p => (p.Key, p.Value)));
+
+                if(hasDefault)
+                {
+                    writer.Indent--;
+                    writer.WriteLine("}");
+                }
+
+                void Decode(IEnumerable<IMethodSymbol> methods)
+                {
+                    int payloadCounter = 0;
+
+                    foreach(var method in methods)
                     {
-                        // Can be handled
-
-                        int varCounter = 0;
-
-                        AnalyzeMethod(method, out var handlerReturnType, out var valueParam, out var attributeParams);
-
-                        bool onAttribute = false;
-                        foreach(var pair2 in attributeParams)
+                        writer.WriteLine($"if(handler is {Format(method.ContainingType)} payloadHandler{++payloadCounter})");
+                        writer.WriteLine("{");
+                        writer.Indent++;
                         {
-                            var (attrName, attrNs) = pair2.Key;
-                            var param = pair2.Value;
+                            // Can be handled
 
-                            var paramType = GetUnderlyingType(param.Type);
-                            var typeName = GetQualifiedName(paramType);
+                            int varCounter = 0;
 
-                            // Get value from attribute
+                            AnalyzeMethod(method, out var handlerReturnType, out var valueParam, out var attributeParams);
 
-                            UsingIfDisposable(paramType);
-                            writer.Write($"var {param.Name} = ");
-                            if(typeName == typeof(string).FullName)
+                            bool onAttribute = false;
+                            foreach(var pair2 in attributeParams)
                             {
-                                // Just use the default as fallback
-                                writer.Write($"reader.GetAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ?? ");
-                            }
-                            else if(typeName.StartsWith("System.", StringComparison.Ordinal) && !UseCustomEncodingForSystemType(paramType))
-                            {
-                                // Standard support
-                                var readerMethod = $"ReadContentAs{paramType.Name switch
-                                {
-                                    // XmlReader names
-                                    "Int64" => "Long",
-                                    "Single" => "Float",
-                                    var n => n
-                                }}";
-                                if(typeof(XmlReader).GetMethod(readerMethod) != null)
-                                {
-                                    // Read directly
-                                    writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? reader.{readerMethod}() : ");
-                                    onAttribute = true;
-                                }
-                                else
-                                {
-                                    // Through converter
-                                    var varName = $"v{++varCounter}";
-                                    writer.Write($"reader.GetAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) is {{ }} {varName} ? XmlConvert.To{paramType.Name}({varName}) : ");
-                                }
-                            }
-                            else
-                            {
-                                // Go through decoder
-                                writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? await this.Decode<{Format(paramType)}, Decoder>(reader, this) : ");
-                                onAttribute = true;
-                            }
-                            DefaultParamValue(param);
-                            writer.WriteLine(";");
-                        }
+                                var (attrName, attrNs) = pair2.Key;
+                                var param = pair2.Value;
 
-                        if(onAttribute)
-                        {
-                            // Move back
-                            writer.WriteLine("reader.MoveToElement();");
-                        }
-
-                        if(handlerReturnType != null)
-                        {
-                            // Open payload
-                            writer.Write("return new(true, ");
-                            Call();
-                            writer.WriteLine(");");
-                        }
-                        else
-                        {
-                            if(valueParam is { } param)
-                            {
                                 var paramType = GetUnderlyingType(param.Type);
                                 var typeName = GetQualifiedName(paramType);
 
-                                // Get value from content
+                                // Get value from attribute
 
                                 UsingIfDisposable(paramType);
-                                writer.Write($"var {param.Name} = await this.OpenElement(reader) ? this.CloseElement(reader, ");
+                                writer.Write($"var {param.Name} = ");
                                 if(typeName == typeof(string).FullName)
                                 {
-                                    writer.Write($"await reader.ReadContentAsStringAsync()");
-                                }
-                                else if(typeName == typeof(object).FullName)
-                                {
-                                    writer.Write($"await reader.ReadContentAsObjectAsync()");
+                                    // Just use the default as fallback
+                                    writer.Write($"reader.GetAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ?? ");
                                 }
                                 else if(typeName.StartsWith("System.", StringComparison.Ordinal) && !UseCustomEncodingForSystemType(paramType))
                                 {
-                                    // Always through converter
-                                    writer.Write($"XmlConvert.To{paramType.Name}(await reader.ReadContentAsStringAsync())");
+                                    // Standard support
+                                    var readerMethod = $"ReadContentAs{paramType.Name switch
+                                    {
+                                        // XmlReader names
+                                        "Int64" => "Long",
+                                        "Single" => "Float",
+                                        var n => n
+                                    }}";
+                                    if(typeof(XmlReader).GetMethod(readerMethod) != null)
+                                    {
+                                        // Read directly
+                                        writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? reader.{readerMethod}() : ");
+                                        onAttribute = true;
+                                    }
+                                    else
+                                    {
+                                        // Through converter
+                                        var varName = $"v{++varCounter}";
+                                        writer.Write($"reader.GetAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) is {{ }} {varName} ? XmlConvert.To{paramType.Name}({varName}) : ");
+                                    }
                                 }
                                 else
                                 {
                                     // Go through decoder
-                                    writer.Write($"await this.Decode<{Format(paramType)}, Decoder>(reader, this)");
+                                    writer.Write($"reader.MoveToAttribute({FormatLiteral(attrName)}, {FormatLiteral(attrNs)}) ? await this.Decode<{Format(paramType)}, Decoder>(reader, this) : ");
+                                    onAttribute = true;
                                 }
-                                writer.Write(") : ");
                                 DefaultParamValue(param);
                                 writer.WriteLine(";");
                             }
+
+                            if(onAttribute)
+                            {
+                                // Move back
+                                writer.WriteLine("reader.MoveToElement();");
+                            }
+
+                            if(handlerReturnType != null)
+                            {
+                                // Open payload
+                                writer.Write("return new(true, ");
+                                Call();
+                                writer.WriteLine(");");
+                            }
                             else
                             {
-                                // Expect empty content
-                                writer.WriteLine("await this.EmptyElement(reader);");
-                            }
-                            // Call and return
-                            Call();
-                            writer.WriteLine(";");
-                            writer.WriteLine("return new(true, null);");
-                        }
-
-                        void Call()
-                        {
-                            writer.Write($"await payloadHandler{payloadCounter}.{method.Name}(");
-                            bool first = true;
-                            foreach(var param in method.Parameters)
-                            {
-                                if(first)
+                                if(valueParam is { } param)
                                 {
-                                    first = false;
+                                    var paramType = GetUnderlyingType(param.Type);
+                                    var typeName = GetQualifiedName(paramType);
+
+                                    // Get value from content
+
+                                    UsingIfDisposable(paramType);
+                                    writer.Write($"var {param.Name} = await this.OpenElement(reader) ? this.CloseElement(reader, ");
+                                    if(typeName == typeof(string).FullName)
+                                    {
+                                        writer.Write($"await reader.ReadContentAsStringAsync()");
+                                    }
+                                    else if(typeName == typeof(object).FullName)
+                                    {
+                                        writer.Write($"await reader.ReadContentAsObjectAsync()");
+                                    }
+                                    else if(typeName.StartsWith("System.", StringComparison.Ordinal) && !UseCustomEncodingForSystemType(paramType))
+                                    {
+                                        // Always through converter
+                                        writer.Write($"XmlConvert.To{paramType.Name}(await reader.ReadContentAsStringAsync())");
+                                    }
+                                    else
+                                    {
+                                        // Go through decoder
+                                        writer.Write($"await this.Decode<{Format(paramType)}, Decoder>(reader, this)");
+                                    }
+                                    writer.Write(") : ");
+                                    DefaultParamValue(param);
+                                    writer.WriteLine(";");
                                 }
                                 else
                                 {
-                                    writer.Write(", ");
+                                    // Expect empty content
+                                    writer.WriteLine("await this.EmptyElement(reader);");
                                 }
-                                writer.Write(param.Name);
+                                // Call and return
+                                Call();
+                                writer.WriteLine(";");
+                                writer.WriteLine("return new(true, null);");
                             }
-                            writer.Write(')');
+
+                            void Call()
+                            {
+                                writer.Write($"await payloadHandler{payloadCounter}.{method.Name}(");
+                                bool first = true;
+                                foreach(var param in method.Parameters)
+                                {
+                                    if(first)
+                                    {
+                                        first = false;
+                                    }
+                                    else
+                                    {
+                                        writer.Write(", ");
+                                    }
+                                    writer.Write(param.Name);
+                                }
+                                writer.Write(')');
+                            }
                         }
+                        writer.Indent--;
+                        writer.WriteLine("}");
                     }
-                    writer.Indent--;
-                    writer.WriteLine("}");
                 }
             }, names);
         }
