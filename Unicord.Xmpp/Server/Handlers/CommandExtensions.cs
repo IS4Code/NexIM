@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Unicord.Primitives.Xml;
 using Unicord.Server;
 using Unicord.Server.Model;
 using Unicord.Xmpp.Protocol;
@@ -41,6 +42,19 @@ internal static class CommandExtensions
         {
             await contentProvider(iq);
         }
+    }
+
+    public static Stanza NewRequest(this ICommandHandler handler, out Token<StanzaIdentifier> identifier, StanzaType? type = StanzaType.Get, XmppResource? from = null)
+    {
+        identifier = handler.Context.Session.NewStanzaIdentifier();
+        return new Stanza(Type: type?.ToToken(), Identifier: identifier, From: from ?? handler.Context.Session.LocalResource, To: handler.Context.Session.RemoteResource);
+    }
+
+    public static ValueTask<IInfoQueryHandler> CreateRequest(this ICommandHandler handler, Func<ValueTask<IInfoQueryHandler>> callback, StanzaType? type = StanzaType.Get, XmppResource? from = null)
+    {
+        var request = NewRequest(handler, out var identifier, type: type, from: from);
+        handler.Context.Session.RegisterCallback(identifier, callback);
+        return handler.Context.Session.InfoQuery(request);
     }
 
     public static void SetOnce<T>(this ICommandHandler handler, ref T storage, T value)

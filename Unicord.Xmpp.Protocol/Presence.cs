@@ -12,8 +12,19 @@ public interface IPresentationHandler : IPayloadHandler
     ValueTask Nickname(string? text);
 }
 
+[ComplexType, Namespace(Caps)]
+public interface ICapabilitiesHandler : IPayloadHandler
+{
+    [Name("c")]
+    ValueTask Capabilities(
+        [Name("hash")] Token<CapabilitiesHash>? hash,
+        [Name("node")] string? node,
+        [Name("ver")] string? version
+    );
+}
+
 [ComplexType]
-public interface IPresenceHandler : IStanzaHandler, IPresentationHandler, IDeliveryHandler
+public interface IPresenceHandler : IStanzaHandler, IPresentationHandler, IDeliveryHandler, ICapabilitiesHandler
 {
     [Name("show")]
     ValueTask Show(Token<StatusType>? text);
@@ -32,4 +43,10 @@ public enum StatusType
     [Name("away")] Away,
     [Name("xa")] ExtendedAway,
     [Name("dnd")] DoNotDisturb
+}
+
+[SimpleType]
+public enum CapabilitiesHash
+{
+    [Name("sha-1")] Sha1
 }

@@ -5,7 +5,7 @@ using Unicord.Primitives.Xml.Grammar;
 namespace Unicord.Xmpp.Protocol;
 
 [ComplexType]
-public interface IFeaturesHandler : IPayloadHandler
+public interface IFeaturesHandler : ICapabilitiesHandler
 {
     [Name("auth", "http://jabber.org/features/iq-auth")]
     ValueTask IqAuth();

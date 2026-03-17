@@ -6,7 +6,7 @@ using Unicord.Primitives.Xml.Grammar;
 namespace Unicord.Xmpp.Protocol;
 
 [ComplexType, Namespace(DiscoInfo)]
-public interface IDiscoInfoQueryHandler : IPayloadHandler
+public interface IDiscoInfoQueryHandler : IDataHandler
 {
     [Name("identity")]
     ValueTask Identity([Name("name")] LanguageTaggedString? name, [Name("category")] Token<DiscoCategory>? category, [Name("type")] Token<DiscoType>? type);
@@ -36,7 +36,9 @@ public enum DiscoFeature
     [Name(AmpAction + "notify")] AmpActionNotify,
     [Name(AmpCondition + "deliver")] AmpConditionDeliver,
     [Name(AmpCondition + "expire-at")] AmpConditionExpireAt,
-    [Name(AmpCondition + "match-resource")] AmpConditionMatchResource
+    [Name(AmpCondition + "match-resource")] AmpConditionMatchResource,
+    [Name(Caps)] EntityCapabilities,
+    [Name(Caps + "#optimize")] OptimizedCapabilities
 }
 
 [SimpleType]

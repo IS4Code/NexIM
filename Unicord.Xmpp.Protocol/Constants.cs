@@ -22,4 +22,6 @@ static class Constants
     public const string Amp = "http://jabber.org/protocol/amp";
     public const string AmpAction = Amp + "?action=";
     public const string AmpCondition = Amp + "?condition=";
+    public const string XData = "jabber:x:data";
+    public const string Caps = "http://jabber.org/protocol/caps";
 }
