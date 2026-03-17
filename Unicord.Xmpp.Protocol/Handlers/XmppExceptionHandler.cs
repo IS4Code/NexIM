@@ -17,7 +17,7 @@ public class XmppStreamExceptionHandler : XmppExceptionHandler<XmppStreamExcepti
 
     ValueTask IStreamErrorTextHandler.Text(LanguageTaggedString? text)
     {
-        message.Add(text, LanguageTaggedString.DefaultLanguage);
+        message = message.Add(text, LanguageTaggedString.DefaultLanguage);
         return default;
     }
 
@@ -38,7 +38,7 @@ public class XmppStanzaExceptionHandler : XmppExceptionHandler<XmppStanzaExcepti
 
     ValueTask IStanzaErrorTextHandler.Text(LanguageTaggedString? text)
     {
-        message.Add(text, LanguageTaggedString.DefaultLanguage);
+        message = message.Add(text, LanguageTaggedString.DefaultLanguage);
         return default;
     }
 

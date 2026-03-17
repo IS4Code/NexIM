@@ -34,7 +34,7 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
 
     protected async override ValueTask OnStatus(LanguageTaggedString? text)
     {
-        statusText.Add(text, Context.Session.RemoteLanguage);
+        statusText = statusText.Add(text, Context.Session.RemoteLanguage);
     }
 
     protected async override ValueTask OnNickname(string? text)
