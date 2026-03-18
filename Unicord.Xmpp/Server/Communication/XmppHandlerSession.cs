@@ -49,6 +49,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
                 }
                 catch(Exception e) when(GetXmppException<XmppStanzaException>(e, out var xe))
                 {
+                    // TODO Log suppressed exceptions
                     await HandleException(xe);
                 }
                 catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
@@ -178,25 +179,40 @@ public abstract class XmppHandlerSession : XmppXmlSession
         return default;
     }
 
-    async ValueTask HandleException(XmppStanzaException exception)
+    async ValueTask<bool> HandleException(XmppStanzaException exception)
     {
-        IStreamHandler errorHandler = this;
+        AbortCommand();
 
-        IStanzaHandler? command = null;
-        await OnError(exception, async exc => {
-            if(command == null)
-            {
-                var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.Identifier);
-                command = lastStanza?.Kind switch
-                {
-                    StanzaKind.InfoQuery => await errorHandler.InfoQuery(stanza),
-                    StanzaKind.Presence => await errorHandler.Presence(stanza),
-                    _ => await errorHandler.Message(stanza)
-                };
-            }
-            return await command.Error(exc.Type?.ToToken(), exc.Code);
-        });
-        if(command != null)
+        if(lastStanza?.Type is StanzaType.Result or StanzaType.Error)
+        {
+            return false;
+        }
+
+        IStreamHandler errorHandler = this;
+        var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.Identifier);
+
+        IStanzaHandler command;
+        switch(lastStanza?.Kind)
+        {
+            case StanzaKind.Message:
+                command = await errorHandler.Message(stanza);
+                break;
+            case StanzaKind.Presence:
+                command = await errorHandler.Presence(stanza);
+                break;
+            case StanzaKind.InfoQuery:
+                command = await errorHandler.InfoQuery(stanza);
+                break;
+            default:
+                return false;
+        }
+        try
+        {
+            await using var err = await command.Error(exception.Type?.ToToken(), exception.Code);
+            await exception.Output(err);
+            return true;
+        }
+        finally
         {
             await command.DisposeAsync();
         }
@@ -204,27 +220,20 @@ public abstract class XmppHandlerSession : XmppXmlSession
 
     async ValueTask HandleException(XmppSaslException exception)
     {
-        IStreamHandler errorHandler = this;
+        AbortCommand();
 
-        ISaslFailureHandler? command = null;
-        await OnError(exception, async exc => {
-            if(command == null)
-            {
-                command = await errorHandler.SaslFailure();
-            }
-            return command;
-        });
-        if(command != null)
-        {
-            await command.DisposeAsync();
-        }
+        IStreamHandler errorHandler = this;
+        await using var error = await errorHandler.SaslFailure();
+        await exception.Output(error);
     }
 
-    ValueTask HandleException(XmppStreamException exception)
+    async ValueTask HandleException(XmppStreamException exception)
     {
-        ITransportHandler errorHandler = this;
+        AbortCommand();
 
-        return OnError(exception, _ => errorHandler.Error());
+        ITransportHandler errorHandler = this;
+        await using var error = await errorHandler.Error();
+        await exception.Output(error);
     }
 
     async ValueTask HandleException(XmlException exception)
@@ -239,28 +248,22 @@ public abstract class XmppHandlerSession : XmppXmlSession
         await HandleException(XmppStreamException.XmlNotWellFormed());
     }
 
-    async ValueTask OnError<TException, THandler>(TException exception, Func<TException, ValueTask<THandler>> errorHandler) where TException : XmppException<THandler> where THandler : IPayloadHandler
+    void AbortCommand()
     {
-        var errors = new List<TException>
-        {
-            exception
-        };
+        int count = handlers.Count;
         while(handlers.TryPop(out var top))
         {
-            try
+            if(top is IDisposable disposable)
             {
-                await top.DisposeAsync();
-            }
-            catch(Exception e2) when(GetXmppException<TException>(e2, out var xe2))
-            {
-                errors.Add(xe2);
+                // Aborting cleanup
+                disposable.Dispose();
             }
         }
 
-        foreach(var exc in errors)
+        // Ignore the rest of the command
+        while(count-- > 0)
         {
-            await using var err = await errorHandler(exc);
-            await exc.Output(err);
+            handlers.Push(NullHandler.Instance);
         }
     }
 
@@ -274,19 +277,19 @@ public abstract class XmppHandlerSession : XmppXmlSession
                 case 2 when elementName == InfoQuery:
                 {
                     var stanza = ParseStanza(reader);
-                    lastStanza = new(StanzaKind.InfoQuery, stanza.Identifier);
+                    lastStanza = new(StanzaKind.InfoQuery, stanza.Type?.ToEnum(), stanza.Identifier);
                     return Success(mainHandler.InfoQuery(stanza));
                 }
                 case 7 when elementName == Message:
                 {
                     var stanza = ParseStanza(reader);
-                    lastStanza = new(StanzaKind.Message, stanza.Identifier);
+                    lastStanza = new(StanzaKind.Message, stanza.Type?.ToEnum(), stanza.Identifier);
                     return Success(mainHandler.Message(stanza));
                 }
                 case 8 when elementName == Presence:
                 {
                     var stanza = ParseStanza(reader);
-                    lastStanza = new(StanzaKind.Presence, stanza.Identifier);
+                    lastStanza = new(StanzaKind.Presence, stanza.Type?.ToEnum(), stanza.Identifier);
                     return Success(mainHandler.Presence(stanza));
                 }
                 case 3:
@@ -375,7 +378,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         }
     }
 
-    readonly record struct StanzaInfo(StanzaKind Kind, Token<StanzaIdentifier>? Identifier);
+    readonly record struct StanzaInfo(StanzaKind Kind, StanzaType? Type, Token<StanzaIdentifier>? Identifier);
 
     sealed class PayloadHandlers : Stack<IPayloadHandler>, IAsyncDisposable
     {
