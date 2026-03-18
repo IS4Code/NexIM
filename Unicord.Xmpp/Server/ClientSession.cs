@@ -6,6 +6,7 @@ using Unicord.Server.Model;
 using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Server.Communication;
+using Unicord.Server.Model.Events;
 
 namespace Unicord.Xmpp.Server;
 
@@ -31,19 +32,6 @@ public class ClientSession : IClientSession
         this.xmpp = xmpp;
     }
 
-    private Token<StanzaType>? MessageType(ConversationType? type)
-    {
-        return type switch
-        {
-            ConversationType.Normal => StanzaType.Normal.ToToken(),
-            ConversationType.Chat => StanzaType.Chat.ToToken(),
-            ConversationType.GroupChat => StanzaType.GroupChat.ToToken(),
-            ConversationType.Headline => StanzaType.Headline.ToToken(),
-            ConversationType.Error => StanzaType.Error.ToToken(),
-            _ => null
-        };
-    }
-
     public void SubscribeToRosterUpdates()
     {
         receivesRosterUpdates = true;
@@ -59,94 +47,60 @@ public class ClientSession : IClientSession
         return !previous && available;
     }
 
-    async ValueTask IClientSession.Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState)
+    ValueTask<ErrorCode> IEventReceiver.Receive(Event evnt)
     {
-        var from = GetResource(sender);
-
-        if(message == null)
+        switch(evnt)
         {
-            // Activity with no message
-            await Notify(from, type, chatState);
-            return;
+            case MessageEvent msgEvent:
+                return OnMessage(msgEvent);
         }
+        return default;
+    }
 
-        await using var msg = await xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
+    private async ValueTask<ErrorCode> OnMessage(MessageEvent msgEvent)
+    {
+        var data = msgEvent.Data;
 
-        await WriteSender(sender.Presentation, msg);
-        foreach(var subject in message.Subject)
+        await using var msg = await xmpp.Message(msgEvent.ToStanza(xmpp));
+
+        await WriteSender(data.Presentation, msg);
+
+        foreach(var subject in data.Subject)
         {
             await msg.Subject(subject);
         }
-        foreach(var body in message.Body)
+
+        foreach(var ((format, language), body) in data.Body.Data)
         {
-            await msg.Body(body);
+            if(format is MessageFormat.Plain)
+            {
+                // TODO Other formats
+                await msg.Body(new((string)body, language));
+            }
         }
 
-        switch(chatState)
+        switch(data.State)
         {
-            case ChatState.Active:
+            case ConversationState.Active:
                 await msg.Active();
                 break;
-            case ChatState.Inactive:
+            case ConversationState.Inactive:
                 await msg.Inactive();
                 break;
-            case ChatState.Composing:
+            case ConversationState.Composing:
                 await msg.Composing();
                 break;
-            case ChatState.Paused:
+            case ConversationState.Paused:
                 await msg.Paused();
                 break;
-            case ChatState.Gone:
+            case ConversationState.Gone:
                 await msg.Gone();
                 break;
             default:
                 break;
         }
-    }
 
-    private async ValueTask Notify(XmppResource from, ConversationType? type, ChatState? chatState)
-    {
-        switch(chatState)
-        {
-            case ChatState.Active:
-                await using(var msg = await Write())
-                {
-                    await msg.Active();
-                    return;
-                }
-            case ChatState.Inactive:
-                await using(var msg = await Write())
-                {
-                    await msg.Inactive();
-                    return;
-                }
-            case ChatState.Composing:
-                await using(var msg = await Write())
-                {
-                    await msg.Composing();
-                    return;
-                }
-            case ChatState.Paused:
-                await using(var msg = await Write())
-                {
-                    await msg.Paused();
-                    return;
-                }
-            case ChatState.Gone:
-                await using(var msg = await Write())
-                {
-                    await msg.Gone();
-                    return;
-                }
-            default:
-                // Unsupported notification type does not need to cause a message
-                return;
-        }
-
-        ValueTask<IMessageHandler> Write()
-        {
-            return xmpp.Message(new Stanza(From: from, To: xmpp.RemoteResource, Type: MessageType(type)));
-        }
+        return ErrorCode.Success;
     }
 
     async ValueTask WriteSender(SenderPresentation sender, IPresentationHandler presence)

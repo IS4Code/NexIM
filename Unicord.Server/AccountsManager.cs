@@ -4,18 +4,12 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
-using Unicord.Primitives;
 
 namespace Unicord.Server;
 
-public class AccountsManager
+public class AccountsManager(Server server)
 {
     readonly ConcurrentDictionary<AccountName, Account> accounts = new();
-
-    public AccountsManager()
-    {
-
-    }
 
     public async ValueTask<bool> Authenticate(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
     {

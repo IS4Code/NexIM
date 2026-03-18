@@ -1,18 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server.Model;
+using Unicord.Server.Model.Events;
 
 namespace Unicord.Server;
 
-public interface IClientSession
+public interface IEventReceiver
+{
+    ValueTask<ErrorCode> Receive(Event evnt);
+}
+
+public interface IClientSession : IEventReceiver
 {
     string Identifier { get; }
     sbyte Priority { get; }
 
     SenderPresentation Presentation { get; }
     Status Status { get; }
-
-    ValueTask Conversation(Sender sender, ConversationType? type, Message? message, ChatState? chatState);
 
     ValueTask StatusUpdate(Sender sender, Status status);
     ValueTask SubscribeRequest(Sender sender);

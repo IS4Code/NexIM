@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Protocol;
@@ -45,7 +44,7 @@ public interface IXmppSendingHandler : IXmppHandler
 /// <summary>
 /// Provides a basic implementation of <see cref="IXmppSendingHandler"/>.
 /// </summary>
-public abstract class XmppSendingHandler : BaseDelegatingStreamHandler<IStreamHandler, XmppSendingHandler.EmptyDisposable, XmppSendingHandler>, IXmppSendingHandler, IPayloadHandlerContext
+public abstract class XmppSendingHandler : BaseDelegatingStreamHandler<IStreamHandler, EmptyDisposable, XmppSendingHandler>, IXmppSendingHandler, IPayloadHandlerContext
 {
     public string? StreamIdentifier { get; set; }
     public XmppResource? LocalResource { get; set; }
@@ -58,12 +57,4 @@ public abstract class XmppSendingHandler : BaseDelegatingStreamHandler<IStreamHa
     public string? RemoteLanguage { get; set; }
 
     protected sealed override EmptyDisposable Disposable => default;
-
-    public readonly struct EmptyDisposable : IAsyncDisposable
-    {
-        public ValueTask DisposeAsync()
-        {
-            return default;
-        }
-    }
 }

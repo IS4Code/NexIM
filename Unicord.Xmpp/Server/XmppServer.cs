@@ -9,11 +9,6 @@ namespace Unicord.Xmpp.Server;
 
 public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
 {
-    public XmppServer(SessionsManager sessions, AccountsManager accounts) : base(sessions, accounts)
-    {
-
-    }
-
     public ValueTask<IXmppReceivingHandler> Connected(IXmppSession session)
     {
         return new(new Stream() { Context = new(this, session, null) });
@@ -21,6 +16,10 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
 
     public ValueTask<IMessageHandler> GetMessageHandler(IXmppSession session, in Stanza stanza)
     {
+        if(stanza.Type == StanzaType.Error.ToToken())
+        {
+            return new(new ErrorMessage(stanza) { Context = new(this, session, stanza.Identifier) });
+        }
         return new(new Message(stanza) { Context = new(this, session, stanza.Identifier) });
     }
 

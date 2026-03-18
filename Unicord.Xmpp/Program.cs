@@ -11,7 +11,7 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        var server = new XmppTcpListener(new XmppServer(new(), new()));
+        var server = new XmppTcpListener(new XmppServer());
 
         await server.RunAsync();
     }

@@ -1,115 +1,157 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
-using System.Xml;
 using Unicord.Primitives;
-using Unicord.Server.Model;
+using Unicord.Server.Model.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class Message : MessageHandler<CommandContext>, IStanzaCommandHandler
+/// <summary>
+/// Handles incoming message commands.
+/// </summary>
+internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, CommandContext>, IStanzaCommandHandler
 {
-    readonly ConversationType? type;
-
     LocalizedString subject, body;
     string? nick;
-    ChatState? state;
+    ConversationState? state;
 
     public required override CommandContext Context { get => base.Context; init => base.Context = value; }
+
+    protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new CapturingHandler<IMessageHandler>();
+    protected sealed override EmptyDisposable Disposable => default;
+
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
     public XmppResource? To { get; }
 
+    protected DateTimeOffset ConstructedTime { get; }
+    protected DateTimeOffset? WrittenTime { get; private set; }
+
     public Message(in Stanza stanza)
     {
+        ConstructedTime = DateTimeOffset.UtcNow;
+
         (Type, From, To) = this.OpenStanza(stanza);
-
-        type = Type switch {
-            null => null,
-            StanzaType.Normal => ConversationType.Normal,
-            StanzaType.Chat => ConversationType.Chat,
-            StanzaType.GroupChat => ConversationType.GroupChat,
-            StanzaType.Headline => ConversationType.Headline,
-            StanzaType.Error => ConversationType.Error,
-            _ => throw XmppStanzaException.BadRequest("Invalid message type.")
-        };
     }
 
-    protected async override ValueTask OnBody(LanguageTaggedString? text)
+    protected async sealed override ValueTask OnBody(LanguageTaggedString? text)
     {
-        body = body.Add(text, Context.Session.RemoteLanguage);
+        WrittenTime = DateTimeOffset.UtcNow;
+        body = body.Add(text, this.GetLanguage());
     }
 
-    protected async override ValueTask OnSubject(LanguageTaggedString? text)
+    protected async sealed override ValueTask OnSubject(LanguageTaggedString? text)
     {
-        subject = subject.Add(text, Context.Session.RemoteLanguage);
+        subject = subject.Add(text, this.GetLanguage());
     }
 
-    protected async override ValueTask OnNickname(string? text)
+    protected async sealed override ValueTask OnNickname(string? text)
     {
         this.SetOnce(ref nick, text);
     }
 
-    protected async override ValueTask OnDelay(DateTimeOffset? stamp, XmppResource? from, LanguageTaggedString? reason)
+    protected async sealed override ValueTask OnDelay(DateTimeOffset? stamp, XmppResource? from, LanguageTaggedString? reason)
     {
-        // Ignore
+        // TODO Preserve
     }
 
-    protected async override ValueTask OnActive()
+    protected async sealed override ValueTask OnActive()
     {
-        this.SetOnce(ref state, ChatState.Active);
+        this.SetOnce(ref state, ConversationState.Active);
     }
 
-    protected async override ValueTask OnInactive()
+    protected async sealed override ValueTask OnInactive()
     {
-        this.SetOnce(ref state, ChatState.Inactive);
+        this.SetOnce(ref state, ConversationState.Inactive);
     }
 
-    protected async override ValueTask OnComposing()
+    protected async sealed override ValueTask OnComposing()
     {
-        this.SetOnce(ref state, ChatState.Composing);
+        this.SetOnce(ref state, ConversationState.Composing);
     }
 
-    protected async override ValueTask OnPaused()
+    protected async sealed override ValueTask OnPaused()
     {
-        this.SetOnce(ref state, ChatState.Paused);
+        this.SetOnce(ref state, ConversationState.Paused);
     }
 
-    protected async override ValueTask OnGone()
+    protected async sealed override ValueTask OnGone()
     {
-        this.SetOnce(ref state, ChatState.Gone);
+        this.SetOnce(ref state, ConversationState.Gone);
     }
 
-    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    protected virtual MessageData GetMessage()
     {
-        await this.Unrecognized(payloadReader);
-    }
-
-    public async override ValueTask DisposeAsync()
-    {
-        if(To is not { } to)
+        var content = MessageBodyCollection.Empty.Data.ToBuilder();
+        foreach(var body in this.body)
         {
-            throw XmppStanzaException.BadRequest("Receiver of a message is empty.");
-        }
-        var targetAccount = ClientSession.GetAccount(to, out var targetIdentifier);
-        if(Context.Server.Sessions.GetSessions(targetAccount, targetIdentifier, false).FirstOrDefault() is not { } target)
-        {
-            throw XmppStanzaException.ItemNotFound("Receiver of a message is not connected.");
+            // TODO XHTML
+            content[(MessageFormat.Plain, body.LanguageTag)] = body.Value;
         }
 
-        var sender = new Sender(
-            Account: this.GetAccountName(),
-            Identifier: this.GetRemoteResource().ResourceIdentifier,
-            Presentation: new Unicord.Server.Model.SenderPresentation(Nickname: nick)
-        );
+        var extensions = ImmutableDictionary<ExtensionType, object>.Empty;
+        if(InnerHandler.Calls.Count > 0)
+        {
+            extensions = extensions.SetItem(ExtensionType.Xmpp, InnerHandler);
+        }
 
-        var message =
-            (subject.Empty && body.Empty)
-            ? null
-            : new Unicord.Server.Model.Message(subject, body);
+        return new MessageData
+        {
+            Subject = subject,
+            Body = new(content.ToImmutable()),
+            Presentation = new(Nickname: nick),
+            State = state ?? ConversationState.Unspecified,
+            Extensions = extensions
+        };
+    }
 
-        await target.Conversation(sender, type, message, state);
+    protected virtual Event GetEvent()
+    {
+        return new MessageEvent
+        {
+            From = this.GetSender()?.ToIdentifier(),
+            To = this.GetRecipient()?.ToIdentifier(),
+            TransactionIdentifier = this.GetIdentifier()?.ToIdentifier(),
+            Type = Type.ToMessageType(),
+            Received = ConstructedTime,
+            Accepted = WrittenTime,
+            Published = DateTimeOffset.UtcNow,
+            Data = GetMessage()
+        };
+    }
+
+    public sealed override async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            await Context.Server.Delivery.Post(GetEvent());
+        }
+    }
+}
+
+internal class ErrorMessage(in Stanza stanza) : Message(stanza)
+{
+    // TODO Error data
+
+    protected override Event GetEvent()
+    {
+        var time = DateTimeOffset.UtcNow;
+        return new ErrorEvent
+        {
+            From = this.GetSender()?.ToIdentifier(),
+            To = this.GetRecipient()?.ToIdentifier(),
+            TransactionIdentifier = this.GetIdentifier()?.ToIdentifier(),
+            Received = ConstructedTime,
+            Accepted = time,
+            Published = time,
+            Data = new ErrorData(),
+            OriginalData = GetMessage()
+        };
     }
 }

@@ -10,11 +10,13 @@ public class Server
 {
     public SessionsManager Sessions { get; }
     public AccountsManager Accounts { get; }
+    public DeliveryManager Delivery { get; }
 
-    public Server(SessionsManager sessions, AccountsManager accounts)
+    public Server()
     {
-        Sessions = sessions;
-        Accounts = accounts;
+        Sessions = new(this);
+        Accounts = new(this);
+        Delivery = new(this);
     }
 
     public async ValueTask<bool> Authenticate(AccountName accountName, TemporaryString? password, IClientSession session)

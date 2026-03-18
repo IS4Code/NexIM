@@ -1,4 +1,5 @@
-﻿using Unicord.Xmpp.Protocol;
+﻿using Unicord.Primitives.Xml;
+using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
@@ -24,5 +25,25 @@ internal static class StanzaExtensions
         {
             throw XmppStanzaException.Forbidden("The receiving entity must be the user's account.");
         }
+    }
+
+    public static XmppResource? GetSender(this IStanzaCommandHandler handler)
+    {
+        return handler.From ?? handler.Context.Session.RemoteResource;
+    }
+
+    public static XmppResource? GetRecipient(this IStanzaCommandHandler handler)
+    {
+        return handler.To ?? handler.Context.Session.LocalResource;
+    }
+
+    public static Token<StanzaIdentifier>? GetIdentifier(this IStanzaCommandHandler handler)
+    {
+        return handler.Context.Identifier;
+    }
+
+    public static string? GetLanguage(this IStanzaCommandHandler handler)
+    {
+        return handler.Context.Session.RemoteLanguage;
     }
 }

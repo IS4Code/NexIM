@@ -9,6 +9,8 @@ namespace Unicord.Server;
 
 public class SessionsManager
 {
+    readonly Server server;
+
     readonly ConcurrentDictionary<AccountName, AccountSessions> activeSessions = new();
 
     readonly Func<AccountName, IClientSession, AccountSessions> addSessionsInitializer;
@@ -20,8 +22,10 @@ public class SessionsManager
     readonly Func<AccountName, IClientSession, AccountSessions> removeSessionsInitializer;
     readonly Func<AccountName, AccountSessions, IClientSession, AccountSessions> removeSessionsUpdater;
 
-    public SessionsManager()
+    public SessionsManager(Server server)
     {
+        this.server = server;
+
         addSessionsInitializer = (account, session) => {
             return AccountSessions.Create(session);
         };
