@@ -189,7 +189,7 @@ public abstract class XmppHandlerSession : XmppXmlSession
         }
 
         IStreamHandler errorHandler = this;
-        var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.Identifier);
+        var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.Identifier ?? default);
 
         IStanzaHandler command;
         switch(lastStanza?.Kind)
