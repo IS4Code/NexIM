@@ -11,7 +11,7 @@ public abstract partial class Vocabulary : XmlMemoryNameTable
 {
     public static class Standard
     {
-        public static readonly Token<Enum> Empty = Token<Enum>.FromAtomized("");
+        public static readonly Token<Enum> Empty = Token<Enum>.FromAtomized(String.Empty);
 
         public static readonly Token<Enum> Xmlns = Token<Enum>.FromAtomized("xmlns");
         public static readonly Token<Enum> XmlnsNs = Token<Enum>.FromAtomized("http://www.w3.org/2000/xmlns/");

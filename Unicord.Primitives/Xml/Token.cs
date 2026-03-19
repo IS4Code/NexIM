@@ -13,7 +13,7 @@ public readonly record struct Token<TEnum> where TEnum : Enum
 {
     readonly string? value;
 
-    public string Value => value ?? "";
+    public string Value => value ?? String.Empty;
 
     private Token(string value)
     {
