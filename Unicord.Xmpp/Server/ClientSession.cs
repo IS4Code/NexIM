@@ -47,7 +47,7 @@ public class ClientSession : IClientSession
         return !previous && available;
     }
 
-    ValueTask<ErrorCode> IEventReceiver.Receive(Event evnt)
+    ValueTask<ErrorCode> IClientSession.Receive(Event evnt)
     {
         switch(evnt)
         {

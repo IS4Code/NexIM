@@ -130,7 +130,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         }
         finally
         {
-            await Context.Server.Post(GetEvent());
+            await this.GetAccount().Post(GetEvent());
         }
     }
 }

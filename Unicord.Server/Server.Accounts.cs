@@ -22,7 +22,7 @@ partial class Server
         var hash = GetHash();
 
         // TODO Registration
-        var account = accounts.GetOrAdd(accountName, _ => new Account(accountName, hash));
+        var account = accounts.GetOrAdd(accountName, _ => new Account(this, accountName, hash));
         if(account.PasswordHash == hash)
         {
             // Newly added

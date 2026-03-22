@@ -30,6 +30,16 @@ public readonly struct AccountName : IEquatable<AccountName>
         return obj is AccountName name ? Equals(name) : false;
     }
 
+    public static bool operator ==(AccountName a, AccountName b)
+    {
+        return a.Equals(b);
+    }
+
+    public static bool operator !=(AccountName a, AccountName b)
+    {
+        return !a.Equals(b);
+    }
+
     public override int GetHashCode()
     {
         return Identifier?.GetHashCode() ?? 0;

@@ -7,14 +7,17 @@ namespace Unicord.Server.Accounts;
 
 public partial class Account
 {
+    readonly Server server;
+
     public AccountName Name { get; }
     internal byte[] PasswordHash { get; }
     ImmutableDictionary<AccountName, Contact> contacts = ImmutableDictionary<AccountName, Contact>.Empty;
 
     public ICollection<Contact> Contacts => GetValues(contacts);
 
-    public Account(AccountName name, byte[] passwordHash)
+    public Account(Server server, AccountName name, byte[] passwordHash)
     {
+        this.server = server;
         Name = name;
         PasswordHash = passwordHash;
     }
