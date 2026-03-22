@@ -92,7 +92,10 @@ internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceiving
     {
         if(Context.Session.ClientSession is { } session)
         {
-            Context.Server.Sessions.RemoveSession(this.GetAccountName(), session);
+            if(Context.Server.GetAccount(this.GetAccountName()) is { } account)
+            {
+                account.RemoveSession(session);
+            }
         }
     }
 

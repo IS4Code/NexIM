@@ -6,27 +6,21 @@ using Unicord.Primitives;
 
 namespace Unicord.Server;
 
-public class Server
+public partial class Server
 {
-    public SessionsManager Sessions { get; }
-    public AccountsManager Accounts { get; }
-    public DeliveryManager Delivery { get; }
-
     public Server()
     {
-        Sessions = new(this);
-        Accounts = new(this);
-        Delivery = new(this);
+
     }
 
     public async ValueTask<bool> Authenticate(AccountName accountName, TemporaryString? password, IClientSession session)
     {
-        if(!await Accounts.Authenticate(accountName, password?.Value.AsMemory() ?? default, password))
+        if(await AuthenticateAccount(accountName, password?.Value.AsMemory() ?? default, password) is not { } account)
         {
             return false;
         }
 
-        Sessions.AddSession(accountName, session);
+        account.AddSession(session);
         return true;
     }
 
@@ -66,12 +60,12 @@ public class Server
             return null;
         }
 
-        if(!await Accounts.Authenticate(accountName, password, data))
+        if(await AuthenticateAccount(accountName, password, data) is not { } account)
         {
             return null;
         }
 
-        return accountName;
+        return account.Name;
     }
 
     public async ValueTask<bool> RemoveContact(Account account, AccountName target)
@@ -81,7 +75,7 @@ public class Server
             return false;
         }
 
-        foreach(var session in Sessions.GetSessions(account.Name, null, false))
+        foreach(var session in account.GetSessions(null, false))
         {
             await session.ContactRemoved(contact, contacts);
         }
@@ -107,7 +101,7 @@ public class Server
             return false;
         }
 
-        foreach(var session in Sessions.GetSessions(account.Name, null, false))
+        foreach(var session in account.GetSessions(null, false))
         {
             await session.ContactUpdated(updated, contacts);
         }
@@ -145,7 +139,7 @@ public class Server
 
     public async ValueTask<bool> ReceiveSubscribeRequest(Sender sender, AccountName target)
     {
-        if(Accounts.GetAccount(target) is not { } targetAccount)
+        if(GetAccount(target) is not { } targetAccount)
         {
             // Non-existent
             return false;
@@ -162,7 +156,7 @@ public class Server
             // Auto-accepted from approved state - update and reply back
 
             await ContactUpdate(targetAccount, updated, contacts);
-            return await Subscribed(target, default, sender.Account);
+            return await Subscribed(targetAccount, default, sender.Account);
         }
 
         if(!updated.SubscriptionState.PendingFrom)
@@ -173,7 +167,7 @@ public class Server
 
         // Send subscription request
         bool any = false;
-        foreach(var session in Sessions.GetSessions(target, null, false))
+        foreach(var session in targetAccount.GetSessions(null, false))
         {
             await session.SubscribeRequest(sender);
             any = true;
@@ -201,7 +195,7 @@ public class Server
         {
             // Inform of updated contact and reply back
             await ContactUpdate(account, updated, contacts);
-            return await Subscribed(account.Name, senderPresentation, target);
+            return await Subscribed(account, senderPresentation, target);
         }
 
         if(!updated.SubscriptionState.ApprovedFrom)
@@ -218,7 +212,7 @@ public class Server
 
     public async ValueTask<bool> ReceiveSubscribeResponse(Sender sender, AccountName target)
     {
-        if(Accounts.GetAccount(target) is not { } targetAccount)
+        if(GetAccount(target) is not { } targetAccount)
         {
             return false;
         }
@@ -233,7 +227,7 @@ public class Server
         await ContactUpdate(targetAccount, updated, contacts);
 
         // Route to sessions
-        foreach(var session in Sessions.GetSessions(target, null, false))
+        foreach(var session in targetAccount.GetSessions(null, false))
         {
             await session.SubscribeResponse(sender);
         }
@@ -257,7 +251,7 @@ public class Server
             case { AcceptedFrom: true }:
                 // Send as unavailable
                 var status = new Status(Availability.Unavailable);
-                foreach(var session in Sessions.GetSessions(account.Name, null, false))
+                foreach(var session in account.GetSessions(null, false))
                 {
                     var sender = new Sender(account.Name, session.Identifier, senderPresentation);
                     await StatusUpdate(sender, status, target);
@@ -276,7 +270,7 @@ public class Server
 
     public async ValueTask<bool> ReceiveSubscribeCancellation(Sender sender, AccountName target)
     {
-        if(Accounts.GetAccount(target) is not { } targetAccount)
+        if(GetAccount(target) is not { } targetAccount)
         {
             return false;
         }
@@ -288,7 +282,7 @@ public class Server
         }
 
         // Route to sessions
-        foreach(var session in Sessions.GetSessions(target, null, false))
+        foreach(var session in targetAccount.GetSessions(null, false))
         {
             await session.UnsubscribeResponse(sender);
         }
@@ -316,7 +310,7 @@ public class Server
 
     public async ValueTask<bool> ReceiveUnsubscribeNotification(Sender sender, AccountName target)
     {
-        if(Accounts.GetAccount(target) is not { } targetAccount)
+        if(GetAccount(target) is not { } targetAccount)
         {
             // Non-existent
             return false;
@@ -335,7 +329,7 @@ public class Server
         }
 
         // Route to sessions
-        foreach(var session in Sessions.GetSessions(target, null, false))
+        foreach(var session in targetAccount.GetSessions(null, false))
         {
             await session.UnsubscribeRequest(sender);
         }
@@ -344,7 +338,7 @@ public class Server
 
         // Send as unavailable
         var status = new Status(Availability.Unavailable);
-        foreach(var session in Sessions.GetSessions(target, null, false))
+        foreach(var session in targetAccount.GetSessions(null, false))
         {
             var targetSender = new Sender(target, session.Identifier);
             await StatusUpdate(targetSender, status, sender.Account);
@@ -354,7 +348,7 @@ public class Server
 
     private async ValueTask ContactUpdate(Account account, Contact contact, ICollection<Contact> contacts)
     {
-        foreach(var session in Sessions.GetSessions(account.Name, null, false))
+        foreach(var session in account.GetSessions(null, false))
         {
             await session.ContactUpdated(contact, contacts);
         }
@@ -362,7 +356,7 @@ public class Server
 
     private async ValueTask ContactRemove(Account account, Contact contact, ICollection<Contact> contacts)
     {
-        foreach(var session in Sessions.GetSessions(account.Name, null, false))
+        foreach(var session in account.GetSessions(null, false))
         {
             await session.ContactRemoved(contact, contacts);
         }
@@ -380,11 +374,11 @@ public class Server
         }
     }
 
-    private async ValueTask<bool> Subscribed(AccountName account, SenderPresentation senderPresentation, AccountName target)
+    private async ValueTask<bool> Subscribed(Account account, SenderPresentation senderPresentation, AccountName target)
     {
-        await ReceiveSubscribeResponse(new Sender(account, Presentation: senderPresentation), target);
+        await ReceiveSubscribeResponse(new Sender(account.Name, Presentation: senderPresentation), target);
 
-        foreach(var session in Sessions.GetSessions(account, null, false))
+        foreach(var session in account.GetSessions(null, false))
         {
             var status = session.Status;
             if(status.Availability == Availability.Unavailable)
@@ -393,7 +387,7 @@ public class Server
                 continue;
             }
 
-            var sender = new Sender(account, session.Identifier, session.Presentation);
+            var sender = new Sender(account.Name, session.Identifier, session.Presentation);
             await StatusUpdate(sender, status, target);
         }
 
@@ -416,7 +410,7 @@ public class Server
             if(identifier == null)
             {
                 // Send from all sessions
-                foreach(var session in Sessions.GetSessions(account.Name, null, false))
+                foreach(var session in account.GetSessions(null, false))
                 {
                     var sender = new Sender(account.Name, session.Identifier, senderPresentation);
                     await StatusUpdate(sender, status, contact.Account);
@@ -432,7 +426,7 @@ public class Server
 
     public async ValueTask StatusUpdate(Sender sender, Status status, AccountName target)
     {
-        if(Accounts.GetAccount(target) is not { } targetAccount)
+        if(GetAccount(target) is not { } targetAccount)
         {
             return;
         }
@@ -442,7 +436,7 @@ public class Server
             return;
         }
 
-        foreach(var session in Sessions.GetSessions(target, null, false))
+        foreach(var session in targetAccount.GetSessions(null, false))
         {
             await session.StatusUpdate(sender, status);
         }
@@ -469,7 +463,7 @@ public class Server
 
     public async ValueTask<bool> ReceiveStatusProbe(Sender sender, AccountName targetAccount)
     {
-        if(Accounts.GetAccount(targetAccount) is not { } account)
+        if(GetAccount(targetAccount) is not { } account)
         {
             return false;
         }
@@ -482,7 +476,7 @@ public class Server
         }
 
         bool any = false;
-        foreach(var session in Sessions.GetSessions(targetAccount, null, false))
+        foreach(var session in account.GetSessions(null, false))
         {
             var status = session.Status;
             if(status.Availability == Availability.Unavailable)

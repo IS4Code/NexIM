@@ -128,19 +128,19 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
         var session = Context.Session;
         var server = Context.Server;
 
+        var sender = new SenderPresentation(Nickname: nick);
+
+        var account = this.GetAccount();
+
         if(priority is { } newPriority && session.ClientSession is { } clientSession)
         {
             var currentPriority = clientSession.Priority;
             if(currentPriority != newPriority)
             {
                 clientSession.Priority = newPriority;
-                server.Sessions.AddOrUpdateSession(session.AccountName, session.ClientSession);
+                account.AddOrUpdateSession(session.ClientSession);
             }
         }
-
-        var sender = new Unicord.Server.Accounts.SenderPresentation(Nickname: nick);
-
-        var account = this.GetAccount();
 
         if(Type is null or StanzaType.Unavailable)
         {

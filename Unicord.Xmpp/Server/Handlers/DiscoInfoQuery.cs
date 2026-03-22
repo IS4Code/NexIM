@@ -35,7 +35,7 @@ internal class GetAccountDiscoInfoQuery(XmppAddress address) : GetDiscoInfoQuery
 {
     public async override ValueTask DisposeAsync()
     {
-        if(Context.Server.Accounts.GetAccount(ClientSession.GetAccount(address)) is not { } account)
+        if(Context.Server.GetAccount(ClientSession.GetAccount(address)) is not { } account)
         {
             throw XmppStanzaException.ServiceUnavailable();
         }

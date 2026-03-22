@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Unicord.Server.Accounts;
 
-public class Account
+public partial class Account
 {
     public AccountName Name { get; }
     internal byte[] PasswordHash { get; }

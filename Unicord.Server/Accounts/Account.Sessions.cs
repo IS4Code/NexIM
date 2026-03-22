@@ -1,83 +1,32 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
-namespace Unicord.Server;
+namespace Unicord.Server.Accounts;
 
-public class SessionsManager
+partial class Account
 {
-    readonly Server server;
+    AccountSessions sessions = AccountSessions.Create();
 
-    readonly ConcurrentDictionary<AccountName, AccountSessions> activeSessions = new();
-
-    readonly Func<AccountName, IClientSession, AccountSessions> addSessionsInitializer;
-    readonly Func<AccountName, AccountSessions, IClientSession, AccountSessions> addSessionsUpdater;
-
-    readonly Func<AccountName, IClientSession, AccountSessions> addOrUpdateSessionsInitializer;
-    readonly Func<AccountName, AccountSessions, IClientSession, AccountSessions> addOrUpdateSessionsUpdater;
-
-    readonly Func<AccountName, IClientSession, AccountSessions> removeSessionsInitializer;
-    readonly Func<AccountName, AccountSessions, IClientSession, AccountSessions> removeSessionsUpdater;
-
-    public SessionsManager(Server server)
+    public void AddSession(IClientSession session)
     {
-        this.server = server;
-
-        addSessionsInitializer = (account, session) => {
-            return AccountSessions.Create(session);
-        };
-        addSessionsUpdater = (account, existing, session) => {
-            return existing.Add(session);
-        };
-        addOrUpdateSessionsInitializer = (account, session) => {
-            return AccountSessions.Create(session);
-        };
-        addOrUpdateSessionsUpdater = (account, existing, session) => {
-            return existing.AddOrUpdate(session);
-        };
-        removeSessionsInitializer = (account, _) => {
-            return AccountSessions.Create();
-        };
-        removeSessionsUpdater = (account, existing, session) => {
-            return existing.Remove(session);
-        };
+        sessions = sessions.Add(session);
     }
 
-    public void AddSession(AccountName account, IClientSession session)
+    public void AddOrUpdateSession(IClientSession session)
     {
-        activeSessions.AddOrUpdate(
-            account, addSessionsInitializer, addSessionsUpdater, session
-        );
+        sessions = sessions.AddOrUpdate(session);
     }
 
-    public void AddOrUpdateSession(AccountName account, IClientSession session)
+    public void RemoveSession(IClientSession session)
     {
-        var result = activeSessions.AddOrUpdate(account, addOrUpdateSessionsInitializer, addOrUpdateSessionsUpdater, session);
-        if(result.IsEmpty)
-        {
-            activeSessions.TryRemove(new KeyValuePair<AccountName, AccountSessions>(account, result));
-        }
+        sessions = sessions.Remove(session);
     }
 
-    public void RemoveSession(AccountName account, IClientSession session)
+    public IEnumerable<IClientSession> GetSessions(string? identifier, bool checkPriority)
     {
-        var result = activeSessions.AddOrUpdate(account, removeSessionsInitializer, removeSessionsUpdater, session);
-        if(result.IsEmpty)
-        {
-            activeSessions.TryRemove(new KeyValuePair<AccountName, AccountSessions>(account, result));
-        }
-    }
-
-    public IEnumerable<IClientSession> GetSessions(AccountName account, string? identifier, bool checkPriority)
-    {
-        if(!activeSessions.TryGetValue(account, out var sessions))
-        {
-            // No online account
-            return Array.Empty<IClientSession>();
-        }
         if(identifier == null)
         {
             if(checkPriority)

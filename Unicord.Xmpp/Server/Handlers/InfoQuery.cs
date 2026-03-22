@@ -181,7 +181,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     {
         SetHandled();
 
-        if(Context.Server.Accounts.GetAccount(ClientSession.GetAccount(Address)) != null)
+        if(Context.Server.GetAccount(ClientSession.GetAccount(Address)) != null)
         {
             // Account exists
             await this.SendResponse();

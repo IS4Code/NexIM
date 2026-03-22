@@ -15,7 +15,7 @@ internal static class CommandExtensions
     public static XmppResource GetLocalResource(this ICommandHandler handler) => handler.Context.Session.LocalResource ?? throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
     public static XmppResource GetRemoteResource(this ICommandHandler handler) => handler.Context.Session.RemoteResource ?? throw XmppStanzaException.NotAuthorized();
     public static AccountName GetAccountName(this ICommandHandler handler) => ClientSession.GetAccount(GetRemoteResource(handler), out _);
-    public static Account GetAccount(this ICommandHandler handler) => handler.Context.Server.Accounts.GetAccount(GetAccountName(handler)) ?? throw XmppStanzaException.NotAuthorized();
+    public static Account GetAccount(this ICommandHandler handler) => handler.Context.Server.GetAccount(GetAccountName(handler)) ?? throw XmppStanzaException.NotAuthorized();
 
     public static THandler GetHandler<THandler>(this ICommandHandler handler) where THandler : ICommandHandler, new()
     {

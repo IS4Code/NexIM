@@ -7,30 +7,32 @@ using Unicord.Server.Accounts;
 
 namespace Unicord.Server;
 
-public class AccountsManager(Server server)
+partial class Server
 {
     readonly ConcurrentDictionary<AccountName, Account> accounts = new();
 
-    public async ValueTask<bool> Authenticate(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
+    public async ValueTask<Account?> AuthenticateAccount(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
     {
         if(!accountName.IsValid || password.Length == 0)
         {
-            return false;
+            return null;
         }
 
         // TODO Normal password hashing algorithm
         var hash = GetHash();
 
-        var existing = accounts.GetOrAdd(accountName, _ => new Account(accountName, hash)).PasswordHash;
-        if(existing == hash)
+        // TODO Registration
+        var account = accounts.GetOrAdd(accountName, _ => new Account(accountName, hash));
+        if(account.PasswordHash == hash)
         {
             // Newly added
-            return true;
+            return account;
         }
-        else
+        else if(CryptographicOperations.FixedTimeEquals(hash, account.PasswordHash))
         {
-            return CryptographicOperations.FixedTimeEquals(hash, existing);
+            return account;
         }
+        return null;
 
         byte[] GetHash()
         {

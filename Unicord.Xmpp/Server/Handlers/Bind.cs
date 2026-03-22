@@ -45,7 +45,7 @@ internal class SetBind : BindHandler<CommandContext>
         clientSession.Identifier = resource;
 
         // TODO Handle when already exists (conflict)
-        Context.Server.Sessions.AddSession(accountName, clientSession);
+        this.GetAccount().AddSession(clientSession);
 
         // Inform of the full resource
         await using var iq = await this.CreateResponse();
