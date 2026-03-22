@@ -1,4 +1,4 @@
-﻿namespace Unicord.Server.Model.Events;
+﻿namespace Unicord.Server.Events;
 
 public enum ErrorCode
 {

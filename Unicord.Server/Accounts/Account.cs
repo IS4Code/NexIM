@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Unicord.Server.Model;
+namespace Unicord.Server.Accounts;
 
 public class Account
 {

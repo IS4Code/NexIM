@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicord.Server;
-using Unicord.Server.Model;
+using Unicord.Server.Accounts;
 using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Server.Communication;
-using Unicord.Server.Model.Events;
+using Unicord.Server.Events;
 
 namespace Unicord.Xmpp.Server;
 

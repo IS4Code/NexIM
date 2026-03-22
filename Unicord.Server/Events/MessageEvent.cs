@@ -1,4 +1,4 @@
-﻿namespace Unicord.Server.Model.Events;
+﻿namespace Unicord.Server.Events;
 
 /// <summary>
 /// Represents a message event. Such an event is suitable for long-term storage,

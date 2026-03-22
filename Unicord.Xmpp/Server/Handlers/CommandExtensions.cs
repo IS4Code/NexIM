@@ -5,7 +5,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Unicord.Primitives.Xml;
 using Unicord.Server;
-using Unicord.Server.Model;
+using Unicord.Server.Accounts;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Handlers;

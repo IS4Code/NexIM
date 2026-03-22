@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Unicord.Primitives;
-using Unicord.Server.Model.Events;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 

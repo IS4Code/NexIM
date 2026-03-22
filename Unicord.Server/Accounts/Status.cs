@@ -1,6 +1,6 @@
 ﻿using Unicord.Primitives;
 
-namespace Unicord.Server.Model;
+namespace Unicord.Server.Accounts;
 
 public record struct Status(
     Availability Availability,

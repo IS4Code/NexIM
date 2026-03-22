@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Unicord.Server.Model;
+namespace Unicord.Server.Accounts;
 
 using static SubscriptionLevel;
 

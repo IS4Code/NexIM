@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
-using Unicord.Server.Model;
+using Unicord.Server.Accounts;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 
@@ -138,7 +138,7 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
             }
         }
 
-        var sender = new Unicord.Server.Model.SenderPresentation(Nickname: nick);
+        var sender = new Unicord.Server.Accounts.SenderPresentation(Nickname: nick);
 
         var account = this.GetAccount();
 

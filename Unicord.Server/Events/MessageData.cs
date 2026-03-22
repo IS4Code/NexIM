@@ -4,15 +4,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Unicord.Primitives;
+using Unicord.Server.Accounts;
 
-namespace Unicord.Server.Model.Events;
+namespace Unicord.Server.Events;
 
 using MessageBodyCollectionData = ImmutableDictionary<(MessageFormat format, string language), object>;
 
 /// <summary>
 /// Stores data for a message.
 /// </summary>
-public record MessageData : EventData
+public sealed record MessageData : EventData
 {
     /// <summary>
     /// The sender's presentation.

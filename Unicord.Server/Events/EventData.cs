@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Unicord.Server.Model.Events;
+namespace Unicord.Server.Events;
 
 /// <summary>
 /// Represents an arbitrary payload of an event.

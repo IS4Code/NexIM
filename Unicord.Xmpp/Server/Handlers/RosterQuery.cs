@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives.Xml;
-using Unicord.Server.Model;
+using Unicord.Server.Accounts;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 

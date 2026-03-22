@@ -1,7 +1,7 @@
 ﻿using System;
 using Unicord.Primitives.Xml;
-using Unicord.Server.Model;
-using Unicord.Server.Model.Events;
+using Unicord.Server.Events;
+using Unicord.Server.Accounts;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Server;
 using Unicord.Xmpp.Server.Communication;

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Unicord.Server.Model;
-using Unicord.Server.Model.Events;
+using Unicord.Server.Events;
+using Unicord.Server.Accounts;
 
 namespace Unicord.Server;
 

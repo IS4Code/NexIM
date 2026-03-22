@@ -1,6 +1,7 @@
 ﻿using System;
+using Unicord.Server.Accounts;
 
-namespace Unicord.Server.Model.Events;
+namespace Unicord.Server.Events;
 
 /// <summary>
 /// Represents an event originating from a party.

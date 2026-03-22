@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Unicord.Server.Model.Events;
+using Unicord.Server.Events;
 
 namespace Unicord.Server;
 

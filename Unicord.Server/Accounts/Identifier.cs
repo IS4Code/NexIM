@@ -1,4 +1,4 @@
-﻿namespace Unicord.Server.Model;
+﻿namespace Unicord.Server.Accounts;
 
 public readonly record struct Identifier(AccountName? Account, string? Resource)
 {
