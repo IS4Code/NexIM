@@ -24,7 +24,10 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
 
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
-    public XmppResource? To { get; }
+
+    // Use the user's account by default
+    readonly XmppResource? _to;
+    public XmppResource? To => _to ?? Context.Session.RemoteResource;
 
     protected DateTimeOffset ConstructedTime { get; }
     protected DateTimeOffset? WrittenTime { get; private set; }
@@ -33,7 +36,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     {
         ConstructedTime = DateTimeOffset.UtcNow;
 
-        (Type, From, To) = this.OpenStanza(stanza);
+        (Type, From, _to) = this.OpenStanza(stanza);
     }
 
     protected async sealed override ValueTask OnBody(LanguageTaggedString? text)

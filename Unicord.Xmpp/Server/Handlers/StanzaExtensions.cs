@@ -13,17 +13,19 @@ internal static class StanzaExtensions
 
     public static void EnsureReceiverIsUserAccount(this IStanzaCommandHandler handler)
     {
-        if(handler.To is { } to && to != handler.Context.Session.LocalResource?.Bare)
+        var session = handler.Context.Session;
+        if(handler.To is { } to && to != session.RemoteResource?.Bare)
         {
             throw XmppStanzaException.Forbidden("The receiving entity must be the user's account.");
         }
     }
 
-    public static void EnsureReceiverIsEmpty(this IStanzaCommandHandler handler)
+    public static void EnsureReceiverIsServer(this IStanzaCommandHandler handler)
     {
-        if(handler.To != null)
+        var session = handler.Context.Session;
+        if(handler.To is { } to && to != session.RemoteResource?.Bare && to != session.LocalResource)
         {
-            throw XmppStanzaException.Forbidden("The receiving entity must be the user's account.");
+            throw XmppStanzaException.Forbidden("The receiving entity must be the user's account or server.");
         }
     }
 

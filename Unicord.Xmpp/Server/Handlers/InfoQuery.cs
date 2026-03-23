@@ -40,17 +40,61 @@ internal abstract class GetSetInfoQuery : InfoQueryHandler<CommandContext>, ISta
     }
 }
 
-internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+internal abstract class GetInfoQuery : GetSetInfoQuery
 {
-    public GetServerInfoQuery(in Stanza stanza) : base(stanza)
+    public GetInfoQuery(in Stanza stanza) : base(stanza)
     {
 
     }
 
-    protected async override ValueTask<IAuthQueryHandler> OnAuthQuery()
+    protected async sealed override ValueTask<IAuthQueryHandler> OnAuthQuery()
     {
         SetHandled();
+        this.EnsureReceiverIsServer();
         return this.GetHandler<GetAuthQuery>();
+    }
+}
+
+internal abstract class SetInfoQuery : GetSetInfoQuery
+{
+    public SetInfoQuery(in Stanza stanza) : base(stanza)
+    {
+
+    }
+
+    protected async sealed override ValueTask<IAuthQueryHandler> OnAuthQuery()
+    {
+        SetHandled();
+        this.EnsureReceiverIsServer();
+        return this.GetHandler<SetAuthQuery>();
+    }
+
+    protected async sealed override ValueTask<IBindHandler> OnBind()
+    {
+        SetHandled();
+        this.EnsureReceiverIsServer();
+        return this.GetHandler<SetBind>();
+    }
+
+    protected async sealed override ValueTask OnSession()
+    {
+        SetHandled();
+        this.EnsureReceiverIsServer();
+
+        // Ensure authenticated and bound
+        _ = this.GetRemoteResource();
+
+        // Success
+        await this.SendResponse();
+    }
+
+}
+
+internal class GetServerInfoQuery : GetInfoQuery, IInfoQueryHandler
+{
+    public GetServerInfoQuery(in Stanza stanza) : base(stanza)
+    {
+
     }
 
     protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
@@ -85,14 +129,6 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
         await this.SendResponse();
     }
 
-    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
-    {
-        // The server can handle the request only if it was targeted implicitly
-        SetHandled();
-        this.EnsureReceiverIsEmpty();
-        return new GetRosterQuery(version) { Context = Context };
-    }
-
     protected async override ValueTask<ITimeHandler> OnTime()
     {
         SetHandled();
@@ -100,57 +136,26 @@ internal class GetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     }
 }
 
-internal class SetServerInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+internal class SetServerInfoQuery : SetInfoQuery, IInfoQueryHandler
 {
     public SetServerInfoQuery(in Stanza stanza) : base(stanza)
     {
 
     }
 
-    protected async override ValueTask<IAuthQueryHandler> OnAuthQuery()
-    {
-        SetHandled();
-        return this.GetHandler<SetAuthQuery>();
-    }
-
-    protected async override ValueTask<IBindHandler> OnBind()
-    {
-        SetHandled();
-        return this.GetHandler<SetBind>();
-    }
-
-    protected async override ValueTask OnSession()
-    {
-        SetHandled();
-
-        // Ensure authenticated and bound
-        _ = this.GetRemoteResource();
-
-        // Success
-        await this.SendResponse();
-    }
-
     protected async override ValueTask OnPing()
     {
         SetHandled();
     }
-
-    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
-    {
-        // The server can handle the request only if it was targeted implicitly
-        SetHandled();
-        this.EnsureReceiverIsEmpty();
-        return this.GetHandler<SetRosterQuery>();
-    }
 }
 
-internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
 {
-    XmppAddress Address { get; }
+    XmppAddress Address => (To ?? Context.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
 
     public GetAccountInfoQuery(in Stanza stanza) : base(stanza)
     {
-        Address = (To ?? Context.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
+        
     }
 
     protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
@@ -200,7 +205,7 @@ internal class GetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
     }
 }
 
-internal class SetAccountInfoQuery : GetSetInfoQuery, IInfoQueryHandler
+internal class SetAccountInfoQuery : SetInfoQuery, IInfoQueryHandler
 {
     public SetAccountInfoQuery(in Stanza stanza) : base(stanza)
     {

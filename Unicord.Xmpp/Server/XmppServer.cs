@@ -30,7 +30,7 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
 
     public ValueTask<IInfoQueryHandler> GetInfoQueryHandler(IXmppSession session, in Stanza stanza)
     {
-        if(stanza.To is not { } to || to == session.LocalResource)
+        if(stanza.To == session.LocalResource)
         {
             // Addressed to the server
             switch(stanza.Type?.ToEnum())
@@ -50,7 +50,7 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
                     return new(NullHandler.Instance);
             }
         }
-        else if(stanza.To?.ResourceIdentifier == null)
+        else if(stanza.To is not { } to || to.ResourceIdentifier == null)
         {
             // Addressed to an account
             switch(stanza.Type?.ToEnum())
