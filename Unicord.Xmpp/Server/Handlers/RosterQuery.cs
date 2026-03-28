@@ -28,7 +28,7 @@ internal class GetRosterQuery : RosterQueryHandler<CommandContext>
         var contacts = this.GetAccount().Contacts;
 
         // Compute the version
-        var newVersion = ClientSession.GetContactsVersion(contacts);
+        var newVersion = XmppClientSession.GetContactsVersion(contacts);
 
         await using var iq = await this.CreateResponse();
 
@@ -42,7 +42,7 @@ internal class GetRosterQuery : RosterQueryHandler<CommandContext>
 
         foreach(var contact in contacts)
         {
-            await ClientSession.SendContact(roster, contact);
+            await XmppClientSession.SendContact(roster, contact);
         }
     }
 }
@@ -80,17 +80,17 @@ internal class SetRosterQuery : BaseRosterQueryHandler<CommandContext>
 
         var account = this.GetAccount();
 
-        var target = ClientSession.GetAccount(id.Address);
+        var target = XmppClientSession.GetAccount(id.Address);
         if(remove)
         {
-            if(!await Context.Server.RemoveContact(account, target))
+            if(!await account.RemoveContact(target))
             {
                 throw XmppStanzaException.ItemNotFound();
             }
         }
         else
         {
-            if(!await Context.Server.SetContact(account, new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
+            if(!await account.SetContact(new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
             {
                 throw XmppStanzaException.ItemNotFound();
             }

@@ -1,4 +1,5 @@
 ﻿using Unicord.Primitives.Xml;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Handlers;
@@ -29,19 +30,29 @@ internal static class StanzaExtensions
         }
     }
 
-    public static XmppResource? GetSender(this IStanzaCommandHandler handler)
+    public static XmppResource GetSender(this IStanzaCommandHandler handler)
     {
-        return handler.From ?? handler.Context.Session.RemoteResource;
+        return handler.From ?? handler.GetRemoteResource();
     }
 
     public static XmppResource? GetRecipient(this IStanzaCommandHandler handler)
     {
-        return handler.To ?? handler.Context.Session.LocalResource;
+        return handler.To;
     }
 
     public static Token<StanzaIdentifier>? GetIdentifier(this IStanzaCommandHandler handler)
     {
         return handler.Context.Identifier;
+    }
+
+    public static EventOrigin GetOrigin(this IStanzaCommandHandler handler)
+    {
+        return new()
+        {
+            From = handler.GetSender().ToIdentifier(),
+            To = new(handler.GetRecipient()?.ToIdentifier()),
+            TransactionIdentifier = handler.GetIdentifier()?.ToIdentifier()
+        };
     }
 
     public static string? GetLanguage(this IStanzaCommandHandler handler)

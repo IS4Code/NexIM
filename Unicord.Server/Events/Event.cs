@@ -9,20 +9,89 @@ namespace Unicord.Server.Events;
 public abstract record Event
 {
     /// <summary>
-    /// The identifier of the originating party.
+    /// Information about the source of the event.
     /// </summary>
-    public required Identifier? From { get; init; }
+    public required EventOrigin Origin { get; init; }
 
     /// <summary>
-    /// The identifier of the party this event is being delivered to.
+    /// Information about the processing of the event.
     /// </summary>
-    public required Identifier? To { get; init; }
+    public required EventProcessing Processing { get; set; }
+
+    /// <summary>
+    /// The identifier of the originating party.
+    /// </summary>
+    public Identifier From => Origin.From;
+
+    /// <summary>
+    /// The identifiers of the parties this event is being delivered to.
+    /// </summary>
+    public IdentifierSet To => Origin.To;
 
     /// <summary>
     /// The identifier of the event within the scope of the session between the two parties.
     /// </summary>
-    public required Identifier? TransactionIdentifier { get; init; }
+    public Identifier? TransactionIdentifier => Origin.TransactionIdentifier;
 
+    /// <summary>
+    /// The date and time this event was received by the server.
+    /// </summary>
+    public DateTimeOffset Received => Processing.Received;
+
+    /// <summary>
+    /// The date and time this event's main content was received by the server.
+    /// </summary>
+    public DateTimeOffset? Accepted => Processing.Accepted;
+
+    /// <summary>
+    /// The date and time this event was fully processed by the server.
+    /// </summary>
+    public DateTimeOffset? Published => Processing.Published;
+
+    /// <summary>
+    /// The canonical date and time of this event.
+    /// </summary>
+    public DateTimeOffset Created => Processing.Created;
+}
+
+/// <summary>
+/// Represents an event originating from a party with a particular payload type.
+/// </summary>
+/// <typeparam name="TData">The type of the payload.</typeparam>
+public abstract record Event<TData> : Event where TData : EventData
+{
+    /// <summary>
+    /// The data associated with the event, indicating the type and content of the event.
+    /// </summary>
+    public required TData? Data { get; init; }
+}
+
+/// <summary>
+/// Stores the origin information of an event.
+/// </summary>
+public record struct EventOrigin
+{
+    /// <summary>
+    /// The identifier of the originating party.
+    /// </summary>
+    public required Identifier From { get; set; }
+
+    /// <summary>
+    /// The identifiers of the parties this event is being delivered to.
+    /// </summary>
+    public required IdentifierSet To { get; set; }
+
+    /// <summary>
+    /// The identifier of the event within the scope of the session between the two parties.
+    /// </summary>
+    public required Identifier? TransactionIdentifier { get; set; }
+}
+
+/// <summary>
+/// Stores the processing information of an event.
+/// </summary>
+public record struct EventProcessing
+{
     /// <summary>
     /// The date and time this event was received by the server.
     /// </summary>
@@ -55,16 +124,19 @@ public abstract record Event
     /// <see cref="Published"/>, <see cref="Received"/> that is set.
     /// </remarks>
     public DateTimeOffset Created => Accepted ?? Published ?? Received;
-}
 
-/// <summary>
-/// Represents an event originating from a party with a particular payload type.
-/// </summary>
-/// <typeparam name="TData">The type of the payload.</typeparam>
-public abstract record Event<TData> : Event where TData : EventData
-{
     /// <summary>
-    /// The data associated with the event, indicating the type and content of the event.
+    /// Creates a new artificial <see cref="EventProcessing"/> instance for
+    /// a newly produced event.
     /// </summary>
-    public required TData Data { get; init; }
+    public static EventProcessing NewInternal()
+    {
+        var date = DateTime.UtcNow;
+        return new()
+        {
+            Received = date,
+            Accepted = date,
+            Published = date
+        };
+    }
 }

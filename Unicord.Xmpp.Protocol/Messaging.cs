@@ -21,6 +21,9 @@ public interface IMessageHandler : IStanzaHandler, IPresentationHandler, IDelive
     [Name("body")]
     ValueTask Body(LanguageTaggedString? text);
 
+    [Name("thread")]
+    ValueTask Thread(string? identifier);
+
     [Name("active", ChatStates)] ValueTask Active();
     [Name("inactive", ChatStates)] ValueTask Inactive();
     [Name("composing", ChatStates)] ValueTask Composing();

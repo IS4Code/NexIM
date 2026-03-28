@@ -28,7 +28,7 @@ public interface IXmppSession : IXmppSendingHandler
     X509Certificate? RemoteCertificate { get; }
 
     AccountName AccountName { get; }
-    ClientSession? ClientSession { get; set; }
+    XmppClientSession? ClientSession { get; set; }
 
     [MemberNotNullWhen(true, nameof(ClientSession))]
     bool IsAuthenticated { get; }
@@ -56,8 +56,8 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract X509Certificate? RemoteCertificate { get; }
     public abstract CancellationToken CancellationToken { get; }
 
-    public AccountName AccountName => ClientSession?.AccountName ?? ClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
-    public ClientSession? ClientSession { get; set; }
+    public AccountName AccountName => ClientSession?.Account.Name ?? XmppClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
+    public XmppClientSession? ClientSession { get; set; }
     public bool IsAuthenticated => ClientSession != null;
 
     public Token<T> GetToken<T>(string value) where T : Enum => GetToken<T>(value.AsMemory());

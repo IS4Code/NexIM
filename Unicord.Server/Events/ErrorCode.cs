@@ -5,5 +5,7 @@ public enum ErrorCode
     NotAvailable,
     Success,
     InvalidRequest,
-    NotFound
+    NotFound,
+    Unrecognized,
+    NotAuthorized
 }

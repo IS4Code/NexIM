@@ -1,16 +1,21 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Server.Accounts;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
+/// <summary>
+/// Handles incoming presence commands.
+/// </summary>
+internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresenceHandler>, EmptyDisposable, CommandContext>, IStanzaCommandHandler
 {
     StatusType? show;
     LocalizedString statusText;
@@ -18,23 +23,34 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
     sbyte? priority;
 
     public required override CommandContext Context { get => base.Context; init => base.Context = value; }
+
+    protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
+    protected sealed override EmptyDisposable Disposable => default;
+
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
     public XmppResource? To { get; }
 
+    protected DateTimeOffset ConstructedTime { get; }
+    protected DateTimeOffset? WrittenTime { get; private set; }
+
     public Presence(in Stanza stanza)
     {
+        ConstructedTime = DateTimeOffset.UtcNow;
+
         (Type, From, To) = this.OpenStanza(stanza);
     }
 
     protected async override ValueTask OnShow(Token<StatusType>? text)
     {
         this.SetOnce(ref show, text?.ToEnum());
+        WrittenTime = DateTimeOffset.UtcNow;
     }
 
     protected async override ValueTask OnStatus(LanguageTaggedString? text)
     {
         statusText = statusText.Add(text, Context.Session.RemoteLanguage);
+        WrittenTime = DateTimeOffset.UtcNow;
     }
 
     protected async override ValueTask OnNickname(string? text)
@@ -52,7 +68,7 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
         // Ignore
     }
 
-    protected async override ValueTask OnCapabilities(Token<CapabilitiesHash>? hash, string? node, string? version)
+    /*protected async override ValueTask OnCapabilities(Token<CapabilitiesHash>? hash, string? node, string? version)
     {
         if(hash?.ToEnum() != CapabilitiesHash.Sha1)
         {
@@ -116,76 +132,75 @@ internal class Presence : PresenceHandler<CommandContext>, IStanzaCommandHandler
                 // TODO Remember globally
             }
         }
-    }
+    }*/
 
-    protected override ValueTask OnUnrecognized(XmlReader payloadReader)
+    protected virtual PresenceData GetPresence()
     {
-        return this.Unrecognized(payloadReader);
-    }
-
-    public async override ValueTask DisposeAsync()
-    {
-        var session = Context.Session;
-        var server = Context.Server;
-
-        var sender = new SenderPresentation(Nickname: nick);
-
-        var account = this.GetAccount();
-
-        if(priority is { } newPriority && session.ClientSession is { } clientSession)
-        {
-            var currentPriority = clientSession.Priority;
-            if(currentPriority != newPriority)
-            {
-                clientSession.Priority = newPriority;
-                account.AddOrUpdateSession(session.ClientSession);
-            }
-        }
-
-        if(Type is null or StanzaType.Unavailable)
-        {
-            // TODO Handle To
-            var status = new Status(
-                show switch {
-                    StatusType.Chat => Availability.Chatting,
-                    StatusType.Away => Availability.Away,
-                    StatusType.ExtendedAway => Availability.Gone,
-                    StatusType.DoNotDisturb => Availability.Busy,
-                    _ => Type == StanzaType.Unavailable ? Availability.Unavailable : Availability.Available
-                },
+        return new PresenceData {
+            Status = new(
+                show?.ToAvailability()
+                ?? (Type == StanzaType.Unavailable ? Availability.Unavailable : Availability.Available),
                 statusText
-            );
-            if(session.ClientSession?.UpdatePresence(sender, status) == true)
-            {
-                await server.SendStatusProbe(account, sender);
-            }
-            await server.StatusUpdate(account, this.GetRemoteResource().ResourceIdentifier, sender, status);
-            return;
-        }
+            ),
+            Presentation = new(Nickname: nick),
+            Priority = priority
+        };
+    }
 
-        if(To is not { } to)
+    protected virtual Event GetEvent()
+    {
+        var origin = this.GetOrigin();
+        var processing = new EventProcessing()
         {
-            throw XmppStanzaException.BadRequest();
-        }
+            Received = ConstructedTime,
+            Accepted = WrittenTime,
+            Published = DateTimeOffset.UtcNow
+        };
+        var data = GetPresence();
+        return Type switch {
+            null or StanzaType.Unavailable => new StatusUpdateEvent {
+                Origin = origin,
+                Processing = processing,
+                Data = data
+            },
+            StanzaType.Probe => new StatusRequestEvent {
+                Origin = origin,
+                Processing = processing,
+                Data = data
+            },
+            StanzaType.Subscribe => new SubscriptionRequestedEvent {
+                Origin = origin,
+                Processing = processing,
+                Data = data
+            },
+            StanzaType.Subscribed => new SubscriptionAcceptedEvent {
+                Origin = origin,
+                Processing = processing,
+                Data = data
+            },
+            StanzaType.Unsubscribed => new SubscriptionRejectedEvent {
+                Origin = origin,
+                Processing = processing,
+                Data = data
+            },
+            StanzaType.Unsubscribe => new SubscriptionCancelledEvent {
+                Origin = origin,
+                Processing = processing,
+                Data = data
+            },
+            _ => throw XmppStanzaException.FeatureNotImplemented()
+        };
+    }
 
-        var target = ClientSession.GetAccount(to, out _);
-
-        switch(Type)
+    public async sealed override ValueTask DisposeAsync()
+    {
+        try
         {
-            case StanzaType.Subscribe:
-                await server.SendSubscribeRequest(account, sender, target);
-                break;
-            case StanzaType.Subscribed:
-                await server.SendSubscribeResponse(account, sender, target);
-                break;
-            case StanzaType.Unsubscribe:
-                await server.SendUnsubscribeNotification(account, sender, target);
-                break;
-            case StanzaType.Unsubscribed:
-                await server.SendSubscribeCancellation(account, sender, target);
-                break;
-            default:
-                throw XmppStanzaException.FeatureNotImplemented();
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            await this.GetSession().Inbound(GetEvent());
         }
     }
 }

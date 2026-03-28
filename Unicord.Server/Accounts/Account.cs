@@ -20,6 +20,8 @@ public partial class Account
         this.server = server;
         Name = name;
         PasswordHash = passwordHash;
+
+        InitEvents(out router, out messageTarget, out presenceTarget);
     }
 
     public Contact? GetContact(AccountName name)
@@ -34,9 +36,22 @@ public partial class Account
 
     private bool AddOrUpdateContact(AccountName name, Func<AccountName, ValueTuple, Contact?> addFactory, Func<AccountName, Contact, ValueTuple, Contact?> updateFactory, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
     {
+        if(IsProhibitedContact(name))
+        {
+            previous = null;
+            updated = null;
+            finalContacts = GetValues(contacts);
+            return false;
+        }
         var success = Immutable.AddOrUpdate(ref contacts, name, addFactory, updateFactory, out previous, out updated, out var final, default);
         finalContacts = GetValues(final);
         return success;
+    }
+
+    private bool IsProhibitedContact(AccountName name)
+    {
+        // Can't have itself as contact
+        return name == Name;
     }
 
     // New contact's subscription state "approved to" flag is set only if the request originates from the user.
@@ -53,6 +68,13 @@ public partial class Account
 
     public bool SetContact(Contact info, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
     {
+        if(IsProhibitedContact(info.Account))
+        {
+            previous = null;
+            updated = null;
+            finalContacts = GetValues(contacts);
+            return false;
+        }
         var success = Immutable.AddOrUpdate(ref contacts, info.Account, addContact, updateContact, out previous, out updated, out var final, info);
         finalContacts = GetValues(final);
         return success;

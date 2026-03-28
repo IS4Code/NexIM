@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using static System.Collections.Specialized.BitVector32;
 
 namespace Unicord.Server.Accounts;
 
@@ -10,60 +11,58 @@ partial class Account
 {
     AccountSessions sessions = AccountSessions.Create();
 
-    public void AddSession(IClientSession session)
+    public void AddSession(ClientSession session)
     {
         sessions = sessions.Add(session);
     }
 
-    public void AddOrUpdateSession(IClientSession session)
+    public void AddOrUpdateSession(ClientSession session)
     {
         sessions = sessions.AddOrUpdate(session);
     }
 
-    public void RemoveSession(IClientSession session)
+    public void RemoveSession(ClientSession session)
     {
         sessions = sessions.Remove(session);
     }
 
-    public IEnumerable<IClientSession> GetSessions(string? identifier, bool checkPriority)
+    public ClientSession? GetSession(string resource)
     {
-        if(identifier == null)
+        if(!sessions.ByIdentifier.TryGetValue(resource, out var session))
         {
-            if(checkPriority)
-            {
-                // All sessions with non-zero descending priority
-                var byPriority =
-                    sessions.ByPriority
-                    .TakeWhile(static pair => pair.Key >= 0)
-                    .SelectMany(static pair => pair.Value);
+            return null;
+        }
+        // Found
+        return session;
+    }
 
-                return byPriority;
-            }
-            else
-            {
-                // Order is irrelevant
-                return sessions.ByIdentifier.Values;
-            }
-        }
-        else if(sessions.ByIdentifier.TryGetValue(identifier, out var session))
+    public IEnumerable<ClientSession> GetSessions(bool checkPriority)
+    {
+        if(checkPriority)
         {
-            // Found
-            if(!checkPriority || session.Priority >= 0)
-            {
-                return new[] { session };
-            }
+            // All sessions with non-zero descending priority
+            var byPriority =
+                sessions.ByPriority
+                .TakeWhile(static pair => pair.Key >= 0)
+                .SelectMany(static pair => pair.Value);
+
+            return byPriority;
         }
-        return Array.Empty<IClientSession>();
+        else
+        {
+            // Order is irrelevant
+            return sessions.ByIdentifier.Values;
+        }
     }
 
     readonly record struct AccountSessions(
-        ImmutableSortedDictionary<sbyte, ImmutableHashSet<IClientSession>> ByPriority,
-        ImmutableDictionary<string, IClientSession> ByIdentifier
+        ImmutableSortedDictionary<sbyte, ImmutableHashSet<ClientSession>> ByPriority,
+        ImmutableDictionary<string, ClientSession> ByIdentifier
     )
     {
-        static readonly ImmutableSortedDictionary<sbyte, ImmutableHashSet<IClientSession>> emptyPriorities = ImmutableSortedDictionary.Create<sbyte, ImmutableHashSet<IClientSession>>(new DescendingPriority());
-        static readonly ImmutableHashSet<IClientSession> emptySessions = ImmutableHashSet.Create<IClientSession>();
-        static readonly ImmutableDictionary<string, IClientSession> emptyIdentifiers = ImmutableDictionary.Create<string, IClientSession>(StringComparer.Ordinal);
+        static readonly ImmutableSortedDictionary<sbyte, ImmutableHashSet<ClientSession>> emptyPriorities = ImmutableSortedDictionary.Create<sbyte, ImmutableHashSet<ClientSession>>(new DescendingPriority());
+        static readonly ImmutableHashSet<ClientSession> emptySessions = ImmutableHashSet<ClientSession>.Empty;
+        static readonly ImmutableDictionary<string, ClientSession> emptyIdentifiers = ImmutableDictionary.Create<string, ClientSession>(StringComparer.Ordinal);
 
         public bool IsEmpty => ByPriority.Count + ByIdentifier.Count == 0;
 
@@ -72,12 +71,12 @@ partial class Account
             return new AccountSessions(emptyPriorities, emptyIdentifiers);
         }
 
-        public static AccountSessions Create(IClientSession session)
+        public static AccountSessions Create(ClientSession session)
         {
             return Create().Add(session);
         }
 
-        public AccountSessions Add(IClientSession session)
+        public AccountSessions Add(ClientSession session)
         {
             if(!ByPriority.TryGetValue(session.Priority, out var sessions))
             {
@@ -86,11 +85,11 @@ partial class Account
             }
             return new(
                 ByPriority.SetItem(session.Priority, sessions.Add(session)),
-                ByIdentifier.Add(session.Identifier, session)
+                ByIdentifier.Add(session.Resource, session)
             );
         }
 
-        public AccountSessions Remove(IClientSession session)
+        public AccountSessions Remove(ClientSession session)
         {
             var byPriority = ByPriority;
             var priority = session.Priority;
@@ -108,7 +107,7 @@ partial class Account
                 }
             }
 
-            var identifier = session.Identifier;
+            var identifier = session.Resource;
             var byIdentifier = ByIdentifier.Remove(identifier);
             if(byIdentifier.Count == ByIdentifier.Count)
             {
@@ -125,7 +124,7 @@ partial class Account
             );
         }
 
-        public AccountSessions AddOrUpdate(IClientSession session)
+        public AccountSessions AddOrUpdate(ClientSession session)
         {
             var byPriority = ByPriority;
             var priority = session.Priority;
@@ -174,7 +173,7 @@ partial class Account
                 byPriority = byPriority.SetItem(priority, sessions);
             }
 
-            var identifier = session.Identifier;
+            var identifier = session.Resource;
             var byIdentifier = ByIdentifier;
             if(byIdentifier.TryGetValue(identifier, out var existingSession))
             {
@@ -204,7 +203,7 @@ partial class Account
             );
         }
 
-        private bool FindSessionPriority(IClientSession session, ref sbyte priority, [MaybeNullWhen(false)] out ImmutableHashSet<IClientSession> sessions)
+        private bool FindSessionPriority(ClientSession session, ref sbyte priority, [MaybeNullWhen(false)] out ImmutableHashSet<ClientSession> sessions)
         {
             foreach(var pair in ByPriority)
             {
@@ -219,7 +218,7 @@ partial class Account
             return false;
         }
 
-        private bool FindSessionIdentifier(IClientSession session, [MaybeNullWhen(false)] out string identifier)
+        private bool FindSessionIdentifier(ClientSession session, [MaybeNullWhen(false)] out string identifier)
         {
             foreach(var pair in ByIdentifier)
             {

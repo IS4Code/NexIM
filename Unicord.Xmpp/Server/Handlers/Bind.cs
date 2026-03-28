@@ -36,16 +36,12 @@ internal class SetBind : BindHandler<CommandContext>
         }
 
         var clientSession = session.ClientSession;
-        var accountName = clientSession.AccountName;
+        var accountName = clientSession.Account.Name;
 
         // Auto-generate resource name if missing
         resource ??= Guid.NewGuid().ToString("N");
-
-        session.RemoteResource = new XmppResource(ClientSession.GetAddress(accountName), resource);
-        clientSession.Identifier = resource;
-
-        // TODO Handle when already exists (conflict)
-        this.GetAccount().AddSession(clientSession);
+        clientSession.Bind(resource);
+        session.RemoteResource = new XmppResource(XmppClientSession.GetAddress(accountName), resource);
 
         // Inform of the full resource
         await using var iq = await this.CreateResponse();

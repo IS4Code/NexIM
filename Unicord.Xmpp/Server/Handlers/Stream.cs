@@ -128,7 +128,7 @@ internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceiving
             throw XmppSaslException.NotAuthorized();
         }
 
-        if(await Context.Server.AuthenticatePlain(data, username => ClientSession.GetAccount(new XmppAddress(username, this.GetLocalResource().Address.Host))) is not { } accountName)
+        if(await Context.Server.AuthenticatePlain(data, username => XmppClientSession.GetAccount(new XmppAddress(username, this.GetLocalResource().Address.Host))) is not { } account)
         {
             throw XmppSaslException.NotAuthorized();
         }
@@ -136,11 +136,7 @@ internal sealed class Stream : BaseStreamHandler<CommandContext>, IXmppReceiving
         var session = Context.Session;
 
         // Not bound yet
-        session.ClientSession = new ClientSession(session)
-        {
-            Identifier = null,
-            AccountName = accountName
-        };
+        session.ClientSession = new XmppClientSession(account, null, session);
 
         await session.SaslSuccess();
     }

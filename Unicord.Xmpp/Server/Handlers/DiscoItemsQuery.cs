@@ -30,7 +30,7 @@ internal class GetAccountDiscoItemsQuery(XmppAddress address) : DiscoItemsQueryH
 
     public async override ValueTask DisposeAsync()
     {
-        if(Context.Server.GetAccount(ClientSession.GetAccount(address)) is not { } account)
+        if(Context.Server.GetAccount(XmppClientSession.GetAccount(address)) is not { } account)
         {
             throw XmppStanzaException.ServiceUnavailable();
         }
@@ -39,9 +39,9 @@ internal class GetAccountDiscoItemsQuery(XmppAddress address) : DiscoItemsQueryH
         await using var list = await iq.DiscoItemsQuery(null);
 
         // TODO Check permissions
-        foreach(var session in account.GetSessions(null, false))
+        foreach(var session in account.GetSessions(false))
         {
-            await list.Item(ClientSession.GetResource(account.Name, session.Identifier), null, null);
+            await list.Item(XmppClientSession.GetResource(account.Name, session.Resource), null, null);
         }
     }
 }

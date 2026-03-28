@@ -111,7 +111,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
     {
         try
         {
-            if(username == null || resource == null || Context.Session.IsSecure ? password == null : digest == null)
+            if(username == null || resource == null || (Context.Session.IsSecure ? password == null : digest == null))
             {
                 throw XmppStanzaException.BadRequest();
             }
@@ -124,18 +124,15 @@ internal class SetAuthQuery : BaseAuthQueryHandler<CommandContext>, IDisposable
 
             var identifier = new XmppResource(username, this.GetLocalResource().Address.Host, resource);
 
-            var accountName = ClientSession.GetAccount(identifier, out _);
+            var accountName = XmppClientSession.GetAccount(identifier, out _);
 
-            var clientSession = new ClientSession(Context.Session)
-            {
-                Identifier = resource,
-                AccountName = accountName
-            };
-
-            if(!await Context.Server.Authenticate(accountName, password, clientSession))
+            if(await Context.Server.Authenticate(accountName, password) is not { } account)
             {
                 throw XmppStanzaException.NotAuthorized();
             }
+
+            var clientSession = new XmppClientSession(account, resource, Context.Session);
+            account.AddSession(clientSession);
 
             Context.Session.RemoteResource = identifier;
             Context.Session.ClientSession = clientSession;

@@ -14,20 +14,17 @@ namespace Unicord.Xmpp.Server.Handlers;
 internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, CommandContext>, IStanzaCommandHandler
 {
     LocalizedString subject, body;
-    string? nick;
+    string? nick, thread;
     ConversationState? state;
 
     public required override CommandContext Context { get => base.Context; init => base.Context = value; }
 
-    protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new CapturingHandler<IMessageHandler>();
+    protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
-
-    // Use the user's account by default
-    readonly XmppResource? _to;
-    public XmppResource? To => _to ?? Context.Session.RemoteResource;
+    public XmppResource? To { get; }
 
     protected DateTimeOffset ConstructedTime { get; }
     protected DateTimeOffset? WrittenTime { get; private set; }
@@ -36,7 +33,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     {
         ConstructedTime = DateTimeOffset.UtcNow;
 
-        (Type, From, _to) = this.OpenStanza(stanza);
+        (Type, From, To) = this.OpenStanza(stanza);
     }
 
     protected async sealed override ValueTask OnBody(LanguageTaggedString? text)
@@ -48,6 +45,11 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected async sealed override ValueTask OnSubject(LanguageTaggedString? text)
     {
         subject = subject.Add(text, this.GetLanguage());
+    }
+
+    protected async sealed override ValueTask OnThread(string? identifier)
+    {
+        this.SetOnce(ref thread, identifier);
     }
 
     protected async sealed override ValueTask OnNickname(string? text)
@@ -94,19 +96,14 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             content[(MessageFormat.Plain, body.LanguageTag)] = body.Value;
         }
 
-        var extensions = ImmutableDictionary<ExtensionType, object>.Empty;
-        if(InnerHandler.Calls.Count > 0)
-        {
-            extensions = extensions.SetItem(ExtensionType.Xmpp, InnerHandler);
-        }
-
         return new MessageData
         {
             Subject = subject,
             Body = new(content.ToImmutable()),
+            ThreadIdentifier = thread,
             Presentation = new(Nickname: nick),
             State = state ?? ConversationState.Unspecified,
-            Extensions = extensions
+            Extensions = new(InnerHandler.Calls.Count > 0 ? InnerHandler : null)
         };
     }
 
@@ -114,18 +111,19 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     {
         return new MessageEvent
         {
-            From = this.GetSender()?.ToIdentifier(),
-            To = this.GetRecipient()?.ToIdentifier(),
-            TransactionIdentifier = this.GetIdentifier()?.ToIdentifier(),
+            Origin = this.GetOrigin(),
             Type = Type.ToMessageType(),
-            Received = ConstructedTime,
-            Accepted = WrittenTime,
-            Published = DateTimeOffset.UtcNow,
+            Processing = new()
+            {
+                Received = ConstructedTime,
+                Accepted = WrittenTime,
+                Published = DateTimeOffset.UtcNow
+            },
             Data = GetMessage()
         };
     }
 
-    public sealed override async ValueTask DisposeAsync()
+    public async sealed override ValueTask DisposeAsync()
     {
         try
         {
@@ -133,7 +131,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         }
         finally
         {
-            await this.GetAccount().Post(GetEvent());
+            await this.GetSession().Inbound(GetEvent());
         }
     }
 }
@@ -147,12 +145,13 @@ internal class ErrorMessage(in Stanza stanza) : Message(stanza)
         var time = DateTimeOffset.UtcNow;
         return new ErrorEvent
         {
-            From = this.GetSender()?.ToIdentifier(),
-            To = this.GetRecipient()?.ToIdentifier(),
-            TransactionIdentifier = this.GetIdentifier()?.ToIdentifier(),
-            Received = ConstructedTime,
-            Accepted = time,
-            Published = time,
+            Origin = this.GetOrigin(),
+            Processing = new()
+            {
+                Received = ConstructedTime,
+                Accepted = time,
+                Published = time
+            },
             Data = new ErrorData(),
             OriginalData = GetMessage()
         };

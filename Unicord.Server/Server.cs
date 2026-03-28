@@ -1,73 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Unicord.Server.Accounts;
-using Unicord.Primitives;
+using Unicord.Server.Events;
 
-namespace Unicord.Server;
+namespace Unicord.Server.Accounts;
 
-public partial class Server
+partial class Account
 {
-    public Server()
+    private void ResendEvent(Event evnt, List<Identifier>? targetsList, List<ValueTask<ErrorCode>> tasks)
     {
+        if(targetsList == null)
+        {
+            // No need to send to anyone
+            tasks.Add(new(ErrorCode.Success));
+            return;
+        }
 
+        // Update the event
+        evnt = evnt.WithOrigin(
+            evnt.Origin with
+            {
+                From = new(Name, null),
+                To = new(targetsList)
+            }
+        );
+        tasks.Add(server.Post(evnt));
     }
 
-    public async ValueTask<bool> Authenticate(AccountName accountName, TemporaryString? password, IClientSession session)
-    {
-        if(await AuthenticateAccount(accountName, password?.Value.AsMemory() ?? default, password) is not { } account)
-        {
-            return false;
-        }
-
-        account.AddSession(session);
-        return true;
-    }
-
-    public async ValueTask<AccountName?> AuthenticatePlain(TemporaryUtf8String? data, Func<string, AccountName> usernameResolver)
-    {
-        if(data == null)
-        {
-            return null;
-        }
-
-        var memory = data.Value.AsMemory();
-
-        // Format [authzid]NUL[authid]NUL[password]
-        int usernameAt = memory.Span.IndexOf('\0');
-        if(++usernameAt == 0)
-        {
-            return null;
-        }
-        int passwordAt = memory.Span.Slice(usernameAt).IndexOf('\0');
-        if(++passwordAt == 0)
-        {
-            return null;
-        }
-        passwordAt += usernameAt;
-        if(memory.Span.Slice(passwordAt).IndexOf('\0') != -1)
-        {
-            return null;
-        }
-
-        var authzid = memory.Slice(0, usernameAt - 1);
-        var username = memory.Slice(usernameAt, passwordAt - usernameAt - 1).ToString();
-        var password = memory.Slice(passwordAt);
-
-        var accountName = usernameResolver(username);
-        if(authzid.Length != 0 && !((ReadOnlySpan<char>)authzid.Span).Equals(accountName.ToString().AsSpan(), StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        if(await AuthenticateAccount(accountName, password, data) is not { } account)
-        {
-            return null;
-        }
-
-        return account.Name;
-    }
-
+    /*
     public async ValueTask<bool> RemoveContact(Account account, AccountName target)
     {
         if(!account.RemoveContact(target, out var contact, out var contacts))
@@ -108,392 +67,392 @@ public partial class Server
 
         return true;
     }
+    */
 
-    public async ValueTask<bool> SendSubscribeRequest(Account account, SenderPresentation sender, AccountName target)
+    private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
-        if(!account.TrySetPendingSubscriptionTo(target, out _, out var updated, out var contacts))
+        List<Identifier>? targetsList = null;
+
+        foreach(var identifier in targets)
         {
-            // No change
-            return false;
+            if(identifier.Account is not { } targetAccount)
+            {
+                // Unrecognized identifier
+                tasks.Add(new(ErrorCode.NotFound));
+                continue;
+            }
+
+            if(!TrySetPendingSubscriptionTo(targetAccount, out _, out var updated, out var contacts))
+            {
+                // No change
+                tasks.Add(new(ErrorCode.Success));
+                continue;
+            }
+
+            var targetAccountIdentifier = new Identifier(targetAccount, null);
+
+            if(updated.SubscriptionState.AcceptedTo)
+            {
+                // Already subscribed - confirm
+                RouteToSessions(new SubscriptionAcceptedEvent
+                {
+                    Origin = new()
+                    {
+                        From = targetAccountIdentifier,
+                        To = new(new Identifier(Name, null)),
+                        TransactionIdentifier = null
+                    },
+                    Processing = EventProcessing.NewInternal(),
+                    Data = null
+                }, new(source), tasks);
+                continue;
+            }
+
+            if(!updated.SubscriptionState.PendingTo)
+            {
+                // Blocked for some reason
+                tasks.Add(new(ErrorCode.NotAuthorized));
+                continue;
+            }
+
+            // Inform of subscribing to contact
+            ContactUpdate(updated, contacts, tasks);
+
+            // Pass the event through
+            (targetsList ??= new()).Add(targetAccountIdentifier);
         }
 
-        if(updated.SubscriptionState.AcceptedTo)
-        {
-            // Already subscribed - confirmed elsewhere
-            return true;
-        }
-
-        if(!updated.SubscriptionState.PendingTo)
-        {
-            // Blocked for some reason
-            return false;
-        }
-
-        // Inform of subscribing to contact
-        await ContactUpdate(account, updated, contacts);
-
-        // This is now an outgoing request potentially directed at another server
-        // TODO Extend to use an arbitrary server
-        return await ReceiveSubscribeRequest(new Sender(account.Name, Presentation: sender), target);
+        ResendEvent(evnt, targetsList, tasks);
     }
 
-    public async ValueTask<bool> ReceiveSubscribeRequest(Sender sender, AccountName target)
+    private async ValueTask HandleIncomingSubscriptionRequest(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
-        if(GetAccount(target) is not { } targetAccount)
+        if(identifier.Account is not { } senderAccount)
         {
-            // Non-existent
-            return false;
+            // Unrecognized identifier
+            tasks.Add(new(ErrorCode.InvalidRequest));
+            return;
         }
 
-        if(!targetAccount.TrySetPendingSubscriptionFrom(sender.Account, out _, out var updated, out var contacts))
+        if(!TrySetPendingSubscriptionFrom(senderAccount, out _, out var updated, out var contacts))
         {
             // No change
-            return false;
+            tasks.Add(new(ErrorCode.Success));
+            return;
         }
 
         if(updated.SubscriptionState.AcceptedFrom)
         {
             // Auto-accepted from approved state - update and reply back
 
-            await ContactUpdate(targetAccount, updated, contacts);
-            return await Subscribed(targetAccount, default, sender.Account);
+            ContactUpdate(updated, contacts, tasks);
+
+            OnSubscribed(new(identifier), tasks);
+            return;
         }
 
         if(!updated.SubscriptionState.PendingFrom)
         {
             // Blocked for some reason
-            return false;
+            tasks.Add(new(ErrorCode.NotAuthorized));
+            return;
         }
-
-        // Send subscription request
-        bool any = false;
-        foreach(var session in targetAccount.GetSessions(null, false))
-        {
-            await session.SubscribeRequest(sender);
-            any = true;
-        }
-
-        // Unavailable
-        if(!any)
-        {
-            // Respond with unavailable status
-            await StatusUpdate(new Sender(target), new Status(Availability.Unavailable), sender.Account);
-        }
-        return true;
-    }
-
-    public async ValueTask<bool> SendSubscribeResponse(Account account, SenderPresentation senderPresentation, AccountName target)
-    {
-        // Update confirmation
-        if(!account.TrySetAcceptedSubscriptionFrom(target, out _, out var updated, out var contacts))
-        {
-            // No change
-            return false;
-        }
-
-        if(updated.SubscriptionState.AcceptedFrom)
-        {
-            // Inform of updated contact and reply back
-            await ContactUpdate(account, updated, contacts);
-            return await Subscribed(account, senderPresentation, target);
-        }
-
-        if(!updated.SubscriptionState.ApprovedFrom)
-        {
-            // Blocked for some reason
-            return false;
-        }
-
-        // Only approved - update contact
-        await ContactUpdate(account, updated, contacts);
-
-        return true;
-    }
-
-    public async ValueTask<bool> ReceiveSubscribeResponse(Sender sender, AccountName target)
-    {
-        if(GetAccount(target) is not { } targetAccount)
-        {
-            return false;
-        }
-
-        if(!targetAccount.TrySetAcceptedSubscriptionTo(sender.Account, out _, out var updated, out var contacts) || !updated.SubscriptionState.AcceptedTo)
-        {
-            // No change
-            return false;
-        }
-
-        // Inform of updated contact
-        await ContactUpdate(targetAccount, updated, contacts);
 
         // Route to sessions
-        foreach(var session in targetAccount.GetSessions(null, false))
+        foreach(var session in GetSessions(false))
         {
-            await session.SubscribeResponse(sender);
+            tasks.Add(session.Outbound(evnt));
         }
 
-        return true;
+        // TODO Send unavailable? (Privacy)
     }
 
-    public async ValueTask<bool> SendSubscribeCancellation(Account account, SenderPresentation senderPresentation, AccountName target)
+    private async ValueTask HandleOutgoingSubscriptionAcceptation(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
-        if(!account.TrySetCancelledSubscriptionFrom(target, out var previous, out var updated, out var contacts))
-        {
-            // No change
-            return false;
-        }
+        List<Identifier>? targetsList = null;
 
-        // Inform of updated contact
-        await ContactUpdateOrRemove(account, previous, updated, contacts);
-
-        switch(previous.SubscriptionState)
+        foreach(var identifier in targets)
         {
-            case { AcceptedFrom: true }:
-                // Send as unavailable
-                var status = new Status(Availability.Unavailable);
-                foreach(var session in account.GetSessions(null, false))
+            if(identifier.Account is not { } targetAccount)
+            {
+                // Unrecognized identifier
+                tasks.Add(new(ErrorCode.NotFound));
+                continue;
+            }
+
+            // Update confirmation
+            if(!TrySetAcceptedSubscriptionFrom(targetAccount, out _, out var updated, out var contacts))
+            {
+                // No change
+                tasks.Add(new(ErrorCode.Success));
+                continue;
+            }
+
+            if(!updated.SubscriptionState.AcceptedFrom)
+            {
+                // Was not pending
+
+                if(!updated.SubscriptionState.ApprovedFrom)
                 {
-                    var sender = new Sender(account.Name, session.Identifier, senderPresentation);
-                    await StatusUpdate(sender, status, target);
+                    // Blocked for some reason
+                    tasks.Add(new(ErrorCode.NotAuthorized));
+                    continue;
                 }
-                break;
-            case { PendingFrom: true }:
-                break;
-            default:
-                // Just unapproved
-                return true;
+
+                // Only approved - update contact
+                ContactUpdate(updated, contacts, tasks);
+                continue;
+            }
+
+            // Inform of updated contact
+            ContactUpdate(updated, contacts, tasks);
+
+            // Pass the event through
+            var targetAccountIdentifier = new Identifier(targetAccount, null);
+            (targetsList ??= new()).Add(targetAccountIdentifier);
         }
 
-        // Route revocation
-        return await ReceiveSubscribeCancellation(new Sender(account.Name, Presentation: senderPresentation), target);
+        ResendEvent(evnt, targetsList, tasks);
+        if(targetsList != null)
+        {
+            OnSubscribed(new(targetsList), tasks);
+        }
     }
 
-    public async ValueTask<bool> ReceiveSubscribeCancellation(Sender sender, AccountName target)
+    private async ValueTask HandleIncomingSubscriptionAcceptation(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
-        if(GetAccount(target) is not { } targetAccount)
+        if(identifier.Account is not { } senderAccount)
         {
-            return false;
+            // Unrecognized identifier
+            tasks.Add(new(ErrorCode.InvalidRequest));
+            return;
         }
 
-        if(!targetAccount.TrySetCancelledSubscriptionTo(sender.Account, out _, out var updated, out var contacts))
+        if(!TrySetAcceptedSubscriptionTo(senderAccount, out _, out var updated, out var contacts) || !updated.SubscriptionState.AcceptedTo)
         {
             // No change
-            return false;
+            tasks.Add(new(ErrorCode.Success));
+            return;
+        }
+
+        // Inform of updated contact
+        ContactUpdate(updated, contacts, tasks);
+
+        // Route to sessions
+        foreach(var session in GetSessions(false))
+        {
+            tasks.Add(session.Outbound(evnt));
+        }
+    }
+
+    private async ValueTask HandleOutgoingSubscriptionRejection(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
+    {
+        List<Identifier>? unavailableList = null;
+        List<Identifier>? targetsList = null;
+
+        foreach(var identifier in targets)
+        {
+            if(identifier.Account is not { } targetAccount)
+            {
+                // Unrecognized identifier
+                tasks.Add(new(ErrorCode.NotFound));
+                continue;
+            }
+
+            if(!TrySetCancelledSubscriptionFrom(targetAccount, out var previous, out var updated, out var contacts))
+            {
+                // No change
+                tasks.Add(new(ErrorCode.Success));
+                continue;
+            }
+
+            // Inform of updated contact
+            ContactUpdateOrRemove(previous, updated, contacts, tasks);
+
+            var targetAccountIdentifier = new Identifier(targetAccount, null);
+
+            switch(previous.SubscriptionState)
+            {
+                case { AcceptedFrom: true }:
+                    // Stopped allowing subscription
+                    (unavailableList ??= new()).Add(targetAccountIdentifier);
+                    break;
+                case { PendingFrom: true }:
+                    // Rejected subscription request
+                    break;
+                default:
+                    // Just unapproved
+                    tasks.Add(new(ErrorCode.Success));
+                    continue;
+            }
+
+            // Pass the event through
+            (targetsList ??= new()).Add(targetAccountIdentifier);
+        }
+
+        if(unavailableList != null)
+        {
+            OnUnsubscribed(new(unavailableList), tasks);
+        }
+        ResendEvent(evnt, targetsList, tasks);
+    }
+
+    private async ValueTask HandleIncomingSubscriptionRejection(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)
+    {
+        if(identifier.Account is not { } senderAccount)
+        {
+            // Unrecognized identifier
+            tasks.Add(new(ErrorCode.InvalidRequest));
+            return;
+        }
+
+        if(!TrySetCancelledSubscriptionTo(senderAccount, out _, out var updated, out var contacts))
+        {
+            // No change
+            tasks.Add(new(ErrorCode.Success));
+            return;
         }
 
         // Route to sessions
-        foreach(var session in targetAccount.GetSessions(null, false))
+        foreach(var session in GetSessions(false))
         {
-            await session.UnsubscribeResponse(sender);
+            tasks.Add(session.Outbound(evnt));
         }
 
         // Inform of updated contact (must be after)
-        await ContactUpdate(targetAccount, updated, contacts);
-
-        return true;
+        ContactUpdate(updated, contacts, tasks);
     }
 
-    public async ValueTask<bool> SendUnsubscribeNotification(Account account, SenderPresentation sender, AccountName target)
+    private async ValueTask HandleOutgoingSubscriptionCancellation(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
-        if(!account.TrySetCancelledSubscriptionTo(target, out _, out var updated, out var contacts))
+        List<Identifier>? targetsList = null;
+
+        foreach(var identifier in targets)
         {
-            // No change
-            return false;
+            if(identifier.Account is not { } targetAccount)
+            {
+                // Unrecognized identifier
+                tasks.Add(new(ErrorCode.NotFound));
+                continue;
+            }
+
+            if(!TrySetCancelledSubscriptionTo(targetAccount, out _, out var updated, out var contacts))
+            {
+                // No change
+                tasks.Add(new(ErrorCode.Success));
+                continue;
+            }
+
+            // Inform of unsubscribing from contact
+            ContactUpdate(updated, contacts, tasks);
+
+            // Pass the event through
+            var targetAccountIdentifier = new Identifier(targetAccount, null);
+            (targetsList ??= new()).Add(targetAccountIdentifier);
         }
 
-        // Inform of unsubscribing from contact
-        await ContactUpdate(account, updated, contacts);
-
-        // TODO Extend to use an arbitrary server
-        return await ReceiveUnsubscribeNotification(new Sender(account.Name, Presentation: sender), target);
+        ResendEvent(evnt, targetsList, tasks);
     }
 
-    public async ValueTask<bool> ReceiveUnsubscribeNotification(Sender sender, AccountName target)
+    private async ValueTask HandleIncomingSubscriptionCancellation(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
-        if(GetAccount(target) is not { } targetAccount)
+        if(identifier.Account is not { } senderAccount)
         {
-            // Non-existent
-            return false;
+            // Unrecognized identifier
+            tasks.Add(new(ErrorCode.InvalidRequest));
+            return;
         }
 
-        if(!targetAccount.TrySetCancelledSubscriptionFrom(sender.Account, out var previous, out var updated, out var contacts))
+        if(!TrySetCancelledSubscriptionFrom(senderAccount, out var previous, out var updated, out var contacts))
         {
             // No change
-            return false;
+            tasks.Add(new(ErrorCode.Success));
+            return;
         }
 
         if(!previous.SubscriptionState.AcceptedFrom)
         {
             // No action needed
-            return false;
+            return;
         }
 
         // Route to sessions
-        foreach(var session in targetAccount.GetSessions(null, false))
+        foreach(var session in GetSessions(false))
         {
-            await session.UnsubscribeRequest(sender);
+            tasks.Add(session.Outbound(evnt));
         }
 
-        await ContactUpdateOrRemove(targetAccount, previous, updated, contacts);
+        ContactUpdateOrRemove(previous, updated, contacts, tasks);
 
         // Send as unavailable
-        var status = new Status(Availability.Unavailable);
-        foreach(var session in targetAccount.GetSessions(null, false))
-        {
-            var targetSender = new Sender(target, session.Identifier);
-            await StatusUpdate(targetSender, status, sender.Account);
-        }
-        return true;
+        OnUnsubscribed(new(identifier), tasks);
     }
 
-    private async ValueTask ContactUpdate(Account account, Contact contact, ICollection<Contact> contacts)
+    private void OnSubscribed(IdentifierSet targets, List<ValueTask<ErrorCode>> tasks)
     {
-        foreach(var session in account.GetSessions(null, false))
+        // Prepare status event fields
+        var origin = new EventOrigin()
         {
-            await session.ContactUpdated(contact, contacts);
-        }
-    }
-
-    private async ValueTask ContactRemove(Account account, Contact contact, ICollection<Contact> contacts)
-    {
-        foreach(var session in account.GetSessions(null, false))
+            From = default, // Filled later
+            To = targets,
+            TransactionIdentifier = null
+        };
+        var processing = EventProcessing.NewInternal();
+        foreach(var session in GetSessions(false))
         {
-            await session.ContactRemoved(contact, contacts);
-        }
-    }
-
-    private async ValueTask ContactUpdateOrRemove(Account account, Contact previous, Contact? updated, ICollection<Contact> contacts)
-    {
-        if(updated is not null)
-        {
-            await ContactUpdate(account, updated, contacts);
-        }
-        else
-        {
-            await ContactRemove(account, previous, contacts);
-        }
-    }
-
-    private async ValueTask<bool> Subscribed(Account account, SenderPresentation senderPresentation, AccountName target)
-    {
-        await ReceiveSubscribeResponse(new Sender(account.Name, Presentation: senderPresentation), target);
-
-        foreach(var session in account.GetSessions(null, false))
-        {
-            var status = session.Status;
-            if(status.Availability == Availability.Unavailable)
+            var presence = session.Presence;
+            if(presence.Status.Availability == Availability.Unavailable)
             {
                 // Invisible
                 continue;
             }
 
-            var sender = new Sender(account.Name, session.Identifier, session.Presentation);
-            await StatusUpdate(sender, status, target);
-        }
-
-        return true;
-    }
-
-    public async ValueTask StatusUpdate(Account account, string? identifier, SenderPresentation senderPresentation, Status status)
-    {
-        var contacts = account.Contacts;
-
-        foreach(var contact in contacts)
-        {
-            if(!contact.SubscriptionState.AcceptedFrom)
+            // Send current presence
+            tasks.Add(server.Post(new StatusUpdateEvent
             {
-                continue;
-            }
-
-            // Contact is subscribed
-
-            if(identifier == null)
-            {
-                // Send from all sessions
-                foreach(var session in account.GetSessions(null, false))
+                Origin = origin with
                 {
-                    var sender = new Sender(account.Name, session.Identifier, senderPresentation);
-                    await StatusUpdate(sender, status, contact.Account);
-                }
-            }
-            else
-            {
-                var sender = new Sender(account.Name, identifier, senderPresentation);
-                await StatusUpdate(sender, status, contact.Account);
-            }
+                    From = session.Identifier
+                },
+                Processing = processing,
+                Data = presence
+            }));
         }
     }
 
-    public async ValueTask StatusUpdate(Sender sender, Status status, AccountName target)
+    private void OnUnsubscribed(IdentifierSet targets, List<ValueTask<ErrorCode>> tasks)
     {
-        if(GetAccount(target) is not { } targetAccount)
+        // Prepare unavailable event fields
+        var origin = new EventOrigin()
         {
-            return;
-        }
-
-        if(targetAccount.GetContact(sender.Account) is not { SubscriptionState: { AcceptedTo: true } })
+            From = default, // Filled later
+            To = targets,
+            TransactionIdentifier = null
+        };
+        var processing = EventProcessing.NewInternal();
+        var data = new PresenceData
         {
-            return;
-        }
-
-        foreach(var session in targetAccount.GetSessions(null, false))
+            Presentation = default,
+            Priority = null,
+            Status = new Status(Availability.Unavailable)
+        };
+        foreach(var session in GetSessions(false))
         {
-            await session.StatusUpdate(sender, status);
-        }
-    }
-
-    public async ValueTask SendStatusProbe(Account account, SenderPresentation senderPresentation)
-    {
-        var contacts = account.Contacts;
-
-        var sender = new Sender(account.Name, Presentation: senderPresentation);
-
-        foreach(var contact in contacts)
-        {
-            if(!contact.SubscriptionState.AcceptedTo)
+            if(session.Presence.Status.Availability == Availability.Unavailable)
             {
+                // Was not announced
                 continue;
             }
 
-            // Subscribed to contact
-
-            await ReceiveStatusProbe(sender, contact.Account);
-        }
-    }
-
-    public async ValueTask<bool> ReceiveStatusProbe(Sender sender, AccountName targetAccount)
-    {
-        if(GetAccount(targetAccount) is not { } account)
-        {
-            return false;
-        }
-
-        if(account.GetContact(sender.Account) is not { SubscriptionState.AcceptedFrom: true })
-        {
-            // Not subscribed
-            await ReceiveSubscribeCancellation(new Sender(targetAccount), sender.Account);
-            return false;
-        }
-
-        bool any = false;
-        foreach(var session in account.GetSessions(null, false))
-        {
-            var status = session.Status;
-            if(status.Availability == Availability.Unavailable)
+            // Send as unavailable
+            tasks.Add(server.Post(new StatusUpdateEvent
             {
-                continue;
-            }
-
-            await StatusUpdate(new Sender(targetAccount, session.Identifier, session.Presentation), status, sender.Account);
-            any = true;
+                Origin = origin with {
+                    From = session.Identifier
+                },
+                Processing = processing,
+                Data = data
+            }));
         }
-
-        // Unavailable
-        if(!any)
-        {
-            // Respond with unavailable status
-            await StatusUpdate(new Sender(targetAccount), new Status(Availability.Unavailable), sender.Account);
-        }
-        return true;
     }
 }

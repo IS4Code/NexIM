@@ -1,7 +1,7 @@
 ﻿using System;
 using Unicord.Primitives.Xml;
-using Unicord.Server.Events;
 using Unicord.Server.Accounts;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Server;
 using Unicord.Xmpp.Server.Communication;
@@ -12,7 +12,7 @@ internal static class AdapterExtensions
 {
     public static Identifier ToIdentifier(this XmppResource resource)
     {
-        return new(ClientSession.GetAccount(resource, out var id), id);
+        return new(XmppClientSession.GetAccount(resource, out var id), id);
     }
 
     public static Identifier ToIdentifier(this Token<StanzaIdentifier> identifier)
@@ -27,7 +27,15 @@ internal static class AdapterExtensions
             // TODO Adapt other identifier formats
             throw new NotImplementedException();
         }
-        return ClientSession.GetResource(account, resource);
+        return XmppClientSession.GetResource(account, resource);
+    }
+
+    public static XmppResource? ToResource(this IdentifierSet identifiers)
+    {
+        return
+            identifiers.TryGetSingle(out var identifier)
+            ? ToResource(identifier)
+            : null;
     }
 
     public static Token<StanzaIdentifier> ToStanzaIdentifier(this Identifier identifier, IXmppSession session)
@@ -44,8 +52,25 @@ internal static class AdapterExtensions
     {
         return new(
             Type: evnt.Type.ToStanzaType(),
-            From: evnt.From?.ToResource(),
-            To: evnt.To?.ToResource(),
+            From: evnt.From.ToResource(),
+            To: evnt.To.ToResource(),
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
+        );
+    }
+
+    public static Stanza ToStanza(this PresenceEvent evnt, IXmppSession session)
+    {
+        return new(
+            Type: evnt switch {
+                StatusUpdateEvent { Data.Status.Availability: Availability.Unavailable } => StanzaType.Unavailable.ToToken(),
+                StatusUpdateEvent => null,
+                SubscriptionRequestedEvent => StanzaType.Subscribe.ToToken(),
+                SubscriptionAcceptedEvent => StanzaType.Subscribed.ToToken(),
+                SubscriptionRejectedEvent => StanzaType.Unsubscribed.ToToken(),
+                SubscriptionCancelledEvent => StanzaType.Unsubscribe.ToToken()
+            },
+            From: evnt.From.ToResource(),
+            To: evnt.To.ToResource(),
             Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
         );
     }
@@ -70,6 +95,28 @@ internal static class AdapterExtensions
             StanzaType.GroupChat => MessageType.GroupChat,
             StanzaType.Headline => MessageType.Headline,
             _ => throw XmppStanzaException.BadRequest("Invalid message type.")
+        };
+    }
+
+    public static Availability? ToAvailability(this StatusType type)
+    {
+        return type switch {
+            StatusType.Chat => Availability.Chatting,
+            StatusType.Away => Availability.Away,
+            StatusType.ExtendedAway => Availability.Gone,
+            StatusType.DoNotDisturb => Availability.Busy,
+            _ => null
+        };
+    }
+
+    public static StatusType? ToStatusType(this Availability availability)
+    {
+        return availability switch {
+            Availability.Chatting => StatusType.Chat,
+            Availability.Away => StatusType.Away,
+            Availability.Gone => StatusType.ExtendedAway,
+            Availability.Busy => StatusType.DoNotDisturb,
+            _ => null
         };
     }
 

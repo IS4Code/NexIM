@@ -18,22 +18,27 @@ public sealed record MessageData : EventData
     /// <summary>
     /// The sender's presentation.
     /// </summary>
-    public SenderPresentation Presentation { get; set; }
+    public required SenderPresentation Presentation { get; set; }
 
     /// <summary>
     /// The subject of the message.
     /// </summary>
-    public LocalizedString Subject { get; set; }
+    public required LocalizedString Subject { get; set; }
 
     /// <summary>
     /// The collection of message bodies in differing formats and languages.
     /// </summary>
-    public MessageBodyCollection Body { get; set; }
+    public required MessageBodyCollection Body { get; set; }
 
     /// <summary>
     /// The present state of the conversation.
     /// </summary>
-    public ConversationState State { get; set; }
+    public required ConversationState State { get; set; }
+
+    /// <summary>
+    /// The identifier of the conversation.
+    /// </summary>
+    public required string? ThreadIdentifier { get; set; }
 }
 
 /// <summary>
