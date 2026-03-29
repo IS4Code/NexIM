@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using Unicord.Server.Tools;
 
 namespace Unicord.Server.Accounts;
 
@@ -11,9 +11,9 @@ public partial class Account
 
     public AccountName Name { get; }
     internal byte[] PasswordHash { get; }
-    ImmutableDictionary<AccountName, Contact> contacts = ImmutableDictionary<AccountName, Contact>.Empty;
+    SnapshotDictionary<AccountName, Contact> contacts = default;
 
-    public ICollection<Contact> Contacts => GetValues(contacts);
+    public ICollection<Contact> Contacts => contacts.Snapshot.Values;
 
     public Account(Server server, AccountName name, byte[] passwordHash)
     {
@@ -29,22 +29,17 @@ public partial class Account
         return contacts.TryGetValue(name, out var contact) ? contact : null;
     }
 
-    private static ICollection<TValue> GetValues<TKey, TValue>(IDictionary<TKey, TValue> dictionary) where TKey : notnull
-    {
-        return dictionary.Values;
-    }
-
     private bool AddOrUpdateContact(AccountName name, Func<AccountName, ValueTuple, Contact?> addFactory, Func<AccountName, Contact, ValueTuple, Contact?> updateFactory, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
     {
         if(IsProhibitedContact(name))
         {
             previous = null;
             updated = null;
-            finalContacts = GetValues(contacts);
+            finalContacts = Contacts;
             return false;
         }
-        var success = Immutable.AddOrUpdate(ref contacts, name, addFactory, updateFactory, out previous, out updated, out var final, default);
-        finalContacts = GetValues(final);
+        var success = contacts.AddOrUpdate(name, addFactory, updateFactory, out previous, out updated, out var snapshot, default);
+        finalContacts = snapshot.Values;
         return success;
     }
 
@@ -72,18 +67,18 @@ public partial class Account
         {
             previous = null;
             updated = null;
-            finalContacts = GetValues(contacts);
+            finalContacts = Contacts;
             return false;
         }
-        var success = Immutable.AddOrUpdate(ref contacts, info.Account, addContact, updateContact, out previous, out updated, out var final, info);
-        finalContacts = GetValues(final);
+        var success = contacts.AddOrUpdate(info.Account, addContact, updateContact, out previous, out updated, out var snapshot, info);
+        finalContacts = snapshot.Values;
         return success;
     }
 
     public bool RemoveContact(AccountName name, [MaybeNullWhen(false)] out Contact result, out ICollection<Contact> finalContacts)
     {
-        var success = Immutable.TryRemove(ref contacts, name, out result, out var final);
-        finalContacts = GetValues(final);
+        var success = contacts.TryRemove(name, out result, out var snapshot);
+        finalContacts = snapshot.Values;
         return success;
     }
 

@@ -1,18 +1,17 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 
-namespace Unicord.Server;
+namespace Unicord.Server.Tools;
 
-internal static class Immutable
+internal static class SnapshotDictionaryExtensions
 {
-    public static bool AddOrUpdate<TKey, TValue, TArg>(ref ImmutableDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue?> addFactory, Func<TKey, TValue, TArg, TValue?> updateFactory, out TValue? previous, out TValue? updated, out ImmutableDictionary<TKey, TValue> finalState, TArg arg) where TKey : notnull where TValue : class
+    public static bool AddOrUpdate<TKey, TValue, TArg>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue?> addFactory, Func<TKey, TValue, TArg, TValue?> updateFactory, out TValue? previous, out TValue? updated, out IDictionary<TKey, TValue> snapshot, TArg arg) where TKey : notnull where TValue : class
     {
         while(true)
         {
             // Get the current state
-            var originalDict = Volatile.Read(ref dictionary);
+            var originalDict = SnapshotDictionary<TKey, TValue>.Storage.Get(ref dictionary);
 
             // Create the item
             TValue? item;
@@ -24,7 +23,7 @@ internal static class Immutable
                 {
                     // No change
                     updated = existing;
-                    finalState = originalDict;
+                    snapshot = originalDict;
                     return false;
                 }
             }
@@ -40,41 +39,41 @@ internal static class Immutable
             {
                 // No change
                 updated = item;
-                finalState = originalDict;
+                snapshot = originalDict;
                 return false;
             }
 
-            if(Interlocked.CompareExchange(ref dictionary, updatedDict, originalDict) == originalDict)
+            if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updatedDict, originalDict))
             {
                 // Unchanged in the meantime, store
                 updated = item;
-                finalState = updatedDict;
+                snapshot = updatedDict;
                 return true;
             }
         }
     }
 
-    public static bool TryRemove<TKey, TValue>(ref ImmutableDictionary<TKey, TValue> dictionary, TKey key, [MaybeNullWhen(false)] out TValue value, out ImmutableDictionary<TKey, TValue> finalState) where TKey : notnull
+    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, [MaybeNullWhen(false)] out TValue value, out IDictionary<TKey, TValue> snapshot) where TKey : notnull
     {
         while(true)
         {
             // Get the current state
-            var original = Volatile.Read(ref dictionary);
+            var original = SnapshotDictionary<TKey, TValue>.Storage.Get(ref dictionary);
 
             if(!original.TryGetValue(key, out value))
             {
                 // Not present
-                finalState = original;
+                snapshot = original;
                 return false;
             }
 
             // Remove the item
             var updated = original.Remove(key);
 
-            if(Interlocked.CompareExchange(ref dictionary, updated, original) == original)
+            if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updated, original))
             {
                 // Unchanged in the meantime, store
-                finalState = updated;
+                snapshot = updated;
                 return true;
             }
         }
