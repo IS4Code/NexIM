@@ -26,49 +26,6 @@ partial class Account
         tasks.Add(server.Post(evnt));
     }
 
-    /*
-    public async ValueTask<bool> RemoveContact(Account account, AccountName target)
-    {
-        if(!account.RemoveContact(target, out var contact, out var contacts))
-        {
-            return false;
-        }
-
-        foreach(var session in account.GetSessions(null, false))
-        {
-            await session.ContactRemoved(contact, contacts);
-        }
-
-        var sender = new Sender(account.Name);
-        if(contact.SubscriptionState.AcceptedTo)
-        {
-            await ReceiveUnsubscribeNotification(sender, target);
-        }
-        if(contact.SubscriptionState.AcceptedFrom)
-        {
-            await ReceiveSubscribeCancellation(sender, target);
-        }
-
-        return true;
-    }
-
-    public async ValueTask<bool> SetContact(Account account, Contact info)
-    {
-        var success = account.SetContact(info, out _, out var updated, out var contacts);
-        if(!success || updated is null)
-        {
-            return false;
-        }
-
-        foreach(var session in account.GetSessions(null, false))
-        {
-            await session.ContactUpdated(updated, contacts);
-        }
-
-        return true;
-    }
-    */
-
     private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
         List<Identifier>? targetsList = null;
