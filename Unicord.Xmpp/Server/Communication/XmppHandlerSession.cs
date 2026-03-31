@@ -52,10 +52,10 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 {
                     await Read(cancellationToken);
                 }
-                catch(Exception e) when(GetXmppException<XmppStanzaException>(e, out var xe))
+                catch(Exception e) when(lastStanza is { } stanza && GetXmppException<XmppStanzaException>(e, out var xe))
                 {
                     // TODO Log suppressed exceptions
-                    await HandleException(xe);
+                    await HandleException(xe, stanza);
                 }
                 catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
                 {
@@ -184,20 +184,20 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         return default;
     }
 
-    async ValueTask<bool> HandleException(XmppStanzaException exception)
+    async ValueTask<bool> HandleException(XmppStanzaException exception, StanzaInfo lastStanza)
     {
         AbortCommand();
 
-        if(lastStanza?.Type is StanzaType.Result or StanzaType.Error)
+        if(lastStanza.Type is StanzaType.Result or StanzaType.Error)
         {
             return false;
         }
 
         IStreamHandler errorHandler = this;
-        var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza?.Identifier ?? default);
+        var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza.Identifier);
 
         IStanzaHandler command;
-        switch(lastStanza?.Kind)
+        switch(lastStanza.Kind)
         {
             case StanzaKind.Message:
                 command = await errorHandler.Message(stanza);
@@ -209,7 +209,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 command = await errorHandler.InfoQuery(stanza);
                 break;
             default:
-                return false;
+                throw new InvalidOperationException("Invalid stanza type.");
         }
         try
         {
