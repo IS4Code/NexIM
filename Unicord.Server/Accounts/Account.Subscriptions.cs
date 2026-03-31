@@ -23,7 +23,7 @@ partial class Account
                 To = new(targetsList)
             }
         );
-        tasks.Add(server.Post(evnt));
+        tasks.Add(Server.Post(evnt));
     }
 
     private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
@@ -365,7 +365,7 @@ partial class Account
             }
 
             // Send current presence
-            tasks.Add(server.Post(new StatusUpdateEvent
+            tasks.Add(Server.Post(new StatusUpdateEvent
             {
                 Origin = origin with
                 {
@@ -402,7 +402,7 @@ partial class Account
             }
 
             // Send as unavailable
-            tasks.Add(server.Post(new StatusUpdateEvent
+            tasks.Add(Server.Post(new StatusUpdateEvent
             {
                 Origin = origin with {
                     From = session.Identifier

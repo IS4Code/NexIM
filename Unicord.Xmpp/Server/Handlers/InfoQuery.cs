@@ -7,11 +7,15 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal abstract class GetSetInfoQuery : InfoQueryHandler<CommandContext>, IStanzaCommandHandler
+internal abstract class GetSetInfoQuery : InfoQueryHandler<ICommandContext>, IStanzaCommandHandler
 {
     bool? handled;
 
-    public required override CommandContext Context { get => base.Context; init => base.Context = value; }
+    public required override ICommandContext Context {
+#nullable disable
+        get => base.Context; init => base.Context = value;
+#nullable restore
+    }
     public StanzaType? Type { get; }
     public XmppResource? From { get; }
     public XmppResource? To { get; }
@@ -186,7 +190,7 @@ internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
     {
         SetHandled();
 
-        if(Context.Server.GetAccount(XmppClientSession.GetAccount(Address)) != null)
+        if(this.GetServer().GetAccount(XmppClientSession.GetAccount(Address)) != null)
         {
             // Account exists
             await this.SendResponse();

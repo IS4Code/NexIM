@@ -1,8 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Net.NetworkInformation;
-using System.Reflection;
 using System.Threading.Tasks;
-using Unicord.Primitives.Xml;
 using Unicord.Server;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;

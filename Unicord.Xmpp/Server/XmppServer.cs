@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Server;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 using Unicord.Xmpp.Server.Communication;
@@ -7,28 +6,28 @@ using Unicord.Xmpp.Server.Handlers;
 
 namespace Unicord.Xmpp.Server;
 
-public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
+public class XmppServer : Unicord.Server.Server, IXmppReceiver<XmppHandlerSession>
 {
-    public ValueTask<IXmppReceivingHandler> Connected(IXmppSession session)
+    public ValueTask<IXmppReceivingHandler> Connected(XmppHandlerSession session)
     {
-        return new(new Stream() { Context = new(this, session, null) });
+        return new(new Stream() { Context = session });
     }
 
-    public ValueTask<IMessageHandler> GetMessageHandler(IXmppSession session, in Stanza stanza)
+    internal ValueTask<IMessageHandler> GetMessageHandler(IXmppSession session, in Stanza stanza)
     {
         if(stanza.Type == StanzaType.Error.ToToken())
         {
-            return new(new ErrorMessage(stanza) { Context = new(this, session, stanza.Identifier) });
+            return new(new ErrorMessage(stanza) { Context = (ICommandContext)session });
         }
-        return new(new Message(stanza) { Context = new(this, session, stanza.Identifier) });
+        return new(new Message(stanza) { Context = (ICommandContext)session });
     }
 
-    public ValueTask<IPresenceHandler> GetPresenceHandler(IXmppSession session, in Stanza stanza)
+    internal ValueTask<IPresenceHandler> GetPresenceHandler(IXmppSession session, in Stanza stanza)
     {
-        return new(new Presence(stanza) { Context = new(this, session, stanza.Identifier) });
+        return new(new Presence(stanza) { Context = (ICommandContext)session });
     }
 
-    public ValueTask<IInfoQueryHandler> GetInfoQueryHandler(IXmppSession session, in Stanza stanza)
+    internal ValueTask<IInfoQueryHandler> GetInfoQueryHandler(IXmppSession session, in Stanza stanza)
     {
         if(stanza.To == session.LocalResource)
         {
@@ -37,10 +36,10 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
             {
                 case StanzaType.Get:
                     // Information retrieval
-                    return new(new GetServerInfoQuery(stanza) { Context = new(this, session, stanza.Identifier) });
+                    return new(new GetServerInfoQuery(stanza) { Context = (ICommandContext)session });
                 case StanzaType.Set:
                     // Information update
-                    return new(new SetServerInfoQuery(stanza) { Context = new(this, session, stanza.Identifier) });
+                    return new(new SetServerInfoQuery(stanza) { Context = (ICommandContext)session });
                 case StanzaType.Error:
                 case StanzaType.Result:
                     // Response to an earlier inquiry must be handled by the session
@@ -57,10 +56,10 @@ public class XmppServer : Unicord.Server.Server, IXmppReceiver<IXmppSession>
             {
                 case StanzaType.Get:
                     // Information retrieval
-                    return new(new GetAccountInfoQuery(stanza) { Context = new(this, session, stanza.Identifier) });
+                    return new(new GetAccountInfoQuery(stanza) { Context = (ICommandContext)session });
                 case StanzaType.Set:
                     // Information update
-                    return new(new SetAccountInfoQuery(stanza) { Context = new(this, session, stanza.Identifier) });
+                    return new(new SetAccountInfoQuery(stanza) { Context = (ICommandContext)session });
                 // TODO Consider responses to account's inquiries
                 default:
                     // Ignore unknown types

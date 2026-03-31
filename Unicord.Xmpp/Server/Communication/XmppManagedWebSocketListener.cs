@@ -8,7 +8,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server.Communication;
@@ -24,7 +23,9 @@ public class XmppManagedWebSocketListener : XmppServerListener<vtortola.WebSocke
 
     public ICollection<string> Prefixes => prefixes;
 
-    public XmppManagedWebSocketListener(IXmppReceiver<XmppFrameSession> receiver) : base(receiver)
+    XmppServer Server => (XmppServer)base.Receiver;
+
+    public XmppManagedWebSocketListener(XmppServer server) : base(server)
     {
 
     }
@@ -76,7 +77,7 @@ public class XmppManagedWebSocketListener : XmppServerListener<vtortola.WebSocke
     protected override ValueTask<XmppFrameSession> CreateSession(vtortola.WebSockets.WebSocket webSocket, CancellationToken cancellationToken)
     {
         var context = new Context(webSocket);
-        return new(new XmppWebSocketSession(context, context, ReaderSettings, WriterSettings, cancellationToken));
+        return new(new XmppWebSocketSession(Server, context, context, ReaderSettings, WriterSettings, cancellationToken));
     }
 
     sealed class Context(vtortola.WebSockets.WebSocket webSocket) : WebSocketContext, IWebSocketRequest

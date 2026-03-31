@@ -91,7 +91,7 @@ partial class Account : IEventHandler
         if(targetType.Value == TargetType.Server)
         {
             // Not intended for this account
-            return server.Post(msgEvent.WithTo(targetTo));
+            return Server.Post(msgEvent.WithTo(targetTo));
         }
 
         var tasks = new List<ValueTask<ErrorCode>>();
@@ -126,7 +126,7 @@ partial class Account : IEventHandler
         if(targetType.Value == TargetType.Server)
         {
             // Not intended for this account
-            return server.Post(presEvent);
+            return Server.Post(presEvent);
         }
 
         var tasks = new List<ValueTask<ErrorCode>>();

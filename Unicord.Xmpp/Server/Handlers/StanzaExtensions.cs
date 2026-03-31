@@ -14,7 +14,7 @@ internal static class StanzaExtensions
 
     public static void EnsureReceiverIsUserAccount(this IStanzaCommandHandler handler)
     {
-        var session = handler.Context.Session;
+        var session = handler.GetSession();
         if(handler.To is { } to && to != session.RemoteResource?.Bare)
         {
             throw XmppStanzaException.Forbidden("The receiving entity must be the user's account.");
@@ -23,7 +23,7 @@ internal static class StanzaExtensions
 
     public static void EnsureReceiverIsServer(this IStanzaCommandHandler handler)
     {
-        var session = handler.Context.Session;
+        var session = handler.GetSession();
         if(handler.To is { } to && to != session.RemoteResource?.Bare && to != session.LocalResource)
         {
             throw XmppStanzaException.Forbidden("The receiving entity must be the user's account or server.");
@@ -42,7 +42,7 @@ internal static class StanzaExtensions
 
     public static Token<StanzaIdentifier>? GetIdentifier(this IStanzaCommandHandler handler)
     {
-        return handler.Context.Identifier;
+        return handler.GetContext().Identifier;
     }
 
     public static EventOrigin GetOrigin(this IStanzaCommandHandler handler)
@@ -57,6 +57,6 @@ internal static class StanzaExtensions
 
     public static string? GetLanguage(this IStanzaCommandHandler handler)
     {
-        return handler.Context.Session.RemoteLanguage;
+        return handler.GetSession().RemoteLanguage;
     }
 }

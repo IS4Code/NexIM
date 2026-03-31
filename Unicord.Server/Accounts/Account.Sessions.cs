@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using static System.Collections.Specialized.BitVector32;
 
 namespace Unicord.Server.Accounts;
 

@@ -7,7 +7,7 @@ namespace Unicord.Server.Accounts;
 
 public partial class Account
 {
-    readonly Server server;
+    public Server Server { get; }
 
     public AccountName Name { get; }
     internal byte[] PasswordHash { get; }
@@ -17,7 +17,7 @@ public partial class Account
 
     public Account(Server server, AccountName name, byte[] passwordHash)
     {
-        this.server = server;
+        Server = server;
         Name = name;
         PasswordHash = passwordHash;
 

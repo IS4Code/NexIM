@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Unicord.Primitives;
 using Unicord.Server.Events;
@@ -11,13 +10,17 @@ namespace Unicord.Xmpp.Server.Handlers;
 /// <summary>
 /// Handles incoming message commands.
 /// </summary>
-internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, CommandContext>, IStanzaCommandHandler
+internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, IStanzaCommandHandler
 {
     LocalizedString subject, body;
     string? nick, thread;
     ConversationState? state;
 
-    public required override CommandContext Context { get => base.Context; init => base.Context = value; }
+    public required override ICommandContext Context {
+#nullable disable
+        get => base.Context; init => base.Context = value;
+#nullable restore
+    }
 
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -131,7 +134,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         }
         finally
         {
-            await this.GetSession().Inbound(GetEvent());
+            await this.GetClientSession().Inbound(GetEvent());
         }
     }
 }

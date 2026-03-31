@@ -30,6 +30,8 @@ public abstract class ClientSession : IAsyncDisposable
 
     public Account Account { get; }
 
+    public Server Server => Account.Server;
+
     /// <summary>
     /// The set of targets to which directed presence has been sent and which
     /// must be informed when this session is closed.
@@ -87,7 +89,7 @@ public abstract class ClientSession : IAsyncDisposable
                 var to = statusEvent.To;
                 var presence = statusEvent.Data;
 
-                if(presence == DefaultPresence)
+                if(presence is null || presence == DefaultPresence)
                 {
                     // Deduplicate
                     presence = DefaultPresence;

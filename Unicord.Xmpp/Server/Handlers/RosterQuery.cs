@@ -7,7 +7,7 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class GetRosterQuery : RosterQueryHandler<CommandContext>
+internal class GetRosterQuery : RosterQueryHandler<ICommandContext>
 {
     readonly string? cachedVersion;
 
@@ -23,7 +23,7 @@ internal class GetRosterQuery : RosterQueryHandler<CommandContext>
 
     public async override ValueTask DisposeAsync()
     {
-        Context.Session.ClientSession?.SubscribeToRosterUpdates();
+        this.TryGetClientSession()?.SubscribeToRosterUpdates();
 
         var contacts = this.GetAccount().Contacts;
 
@@ -47,7 +47,7 @@ internal class GetRosterQuery : RosterQueryHandler<CommandContext>
     }
 }
 
-internal class SetRosterQuery : BaseRosterQueryHandler<CommandContext>
+internal class SetRosterQuery : BaseRosterQueryHandler<ICommandContext>
 {
     (XmppResource id, string? name, bool remove)? item;
     string? group;
@@ -99,7 +99,7 @@ internal class SetRosterQuery : BaseRosterQueryHandler<CommandContext>
         await this.SendResponse();
     }
 
-    sealed class ItemHandler : BaseRosterItemHandler<CommandContext>
+    sealed class ItemHandler : BaseRosterItemHandler<ICommandContext>
     {
         readonly SetRosterQuery parent;
 

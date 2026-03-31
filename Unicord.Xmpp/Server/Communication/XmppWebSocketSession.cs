@@ -15,7 +15,7 @@ namespace Unicord.Xmpp.Server.Communication;
 /// Provides a final <see cref="IXmppSession"/> implementation
 /// that communicates using WebSocket.
 /// </summary>
-internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketContext context, WebSocketStream wsStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(wsStream)
+internal sealed class XmppWebSocketSession(XmppServer server, IWebSocketRequest request, WebSocketContext context, WebSocketStream wsStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(wsStream)
 {
     public override string DefaultLanguage => "en";
 
@@ -29,12 +29,13 @@ internal sealed class XmppWebSocketSession(IWebSocketRequest request, WebSocketC
 
     public override bool CanCompress => false;
 
+    public override XmppServer Server => server;
     public override X509Certificate? RemoteCertificate => request.RemoteCertificate;
     public override EndPoint? LocalEndPoint => request.LocalEndPoint;
     public override EndPoint? RemoteEndPoint => request.RemoteEndPoint;
     public override CancellationToken CancellationToken => cancellationToken;
 
-    public XmppWebSocketSession(IWebSocketRequest request, WebSocketContext context, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : this(request, context, OpenStream(context), readerSettings, writerSettings, cancellationToken)
+    public XmppWebSocketSession(XmppServer server, IWebSocketRequest request, WebSocketContext context, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : this(server, request, context, OpenStream(context), readerSettings, writerSettings, cancellationToken)
     {
 
     }

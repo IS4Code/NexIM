@@ -5,7 +5,7 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class GetServerDiscoItemsQuery : DiscoItemsQueryHandler<CommandContext>
+internal class GetServerDiscoItemsQuery : DiscoItemsQueryHandler<ICommandContext>
 {
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
@@ -21,7 +21,7 @@ internal class GetServerDiscoItemsQuery : DiscoItemsQueryHandler<CommandContext>
     }
 }
 
-internal class GetAccountDiscoItemsQuery(XmppAddress address) : DiscoItemsQueryHandler<CommandContext>
+internal class GetAccountDiscoItemsQuery(XmppAddress address) : DiscoItemsQueryHandler<ICommandContext>
 {
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
@@ -30,7 +30,7 @@ internal class GetAccountDiscoItemsQuery(XmppAddress address) : DiscoItemsQueryH
 
     public async override ValueTask DisposeAsync()
     {
-        if(Context.Server.GetAccount(XmppClientSession.GetAccount(address)) is not { } account)
+        if(this.GetServer().GetAccount(XmppClientSession.GetAccount(address)) is not { } account)
         {
             throw XmppStanzaException.ServiceUnavailable();
         }

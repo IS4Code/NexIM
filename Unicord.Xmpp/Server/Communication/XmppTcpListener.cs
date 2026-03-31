@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Xmpp.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
 
@@ -14,9 +13,10 @@ public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
 {
     protected override bool PrettyOutput => true;
 
+    XmppServer Server => (XmppServer)base.Receiver;
     readonly TcpListener listener;
 
-    public XmppTcpListener(IXmppReceiver<XmppStreamSession> receiver) : base(receiver)
+    public XmppTcpListener(XmppServer server) : base(server)
     {
         listener = new(IPAddress.Any, 5222);
     }
@@ -55,6 +55,6 @@ public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
 
     protected override ValueTask<XmppStreamSession> CreateSession(TcpClient client, CancellationToken cancellationToken)
     {
-        return new(new XmppTcpSession(client.GetStream(), ReaderSettings, WriterSettings, cancellationToken));
+        return new(new XmppTcpSession(Server, client.GetStream(), ReaderSettings, WriterSettings, cancellationToken));
     }
 }

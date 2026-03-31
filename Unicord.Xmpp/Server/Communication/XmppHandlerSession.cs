@@ -8,6 +8,7 @@ using Unicord.Primitives.Xml;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
 using Unicord.Xmpp.Protocol.Handlers;
+using Unicord.Xmpp.Server.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 
@@ -18,12 +19,16 @@ using static Vocabulary.Standard;
 /// that reads XMPP commands from input and passes them
 /// to an <see cref="IXmppReceivingHandler"/> instance.
 /// </summary>
-public abstract class XmppHandlerSession : XmppXmlSession
+public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
 {
     protected abstract int TopLevelReaderDepth { get; }
 
     static readonly ClientDecoder decoder = new();
     public override string DefaultNamespace => ClientDecoder.Namespace;
+
+    public abstract XmppServer Server { get; }
+    IXmppSession ICommandContext.Session => this;
+    Token<StanzaIdentifier>? ICommandContext.Identifier => lastStanza?.Identifier;
 
     IXmppReceivingHandler mainHandler = NullHandler.Instance;
     readonly PayloadHandlers handlers = new();

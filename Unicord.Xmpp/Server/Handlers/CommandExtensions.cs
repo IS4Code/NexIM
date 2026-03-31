@@ -4,19 +4,68 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Unicord.Primitives.Xml;
-using Unicord.Server;
 using Unicord.Server.Accounts;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
 internal static class CommandExtensions
 {
-    public static XmppResource GetLocalResource(this ICommandHandler handler) => handler.Context.Session.LocalResource ?? throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
-    public static XmppResource GetRemoteResource(this ICommandHandler handler) => handler.Context.Session.RemoteResource ?? throw XmppStanzaException.NotAuthorized();
-    public static AccountName GetAccountName(this ICommandHandler handler) => XmppClientSession.GetAccount(GetRemoteResource(handler), out _);
-    public static Account GetAccount(this ICommandHandler handler) => handler.Context.Server.GetAccount(GetAccountName(handler)) ?? throw XmppStanzaException.NotAuthorized();
-    public static XmppClientSession GetSession(this ICommandHandler handler) => handler.Context.Session.ClientSession ?? throw XmppStanzaException.NotAuthorized();
+    public static ICommandContext GetContext(this ICommandHandler handler)
+    {
+        return handler.Context ?? throw new InvalidOperationException("The command context is not properly initialized.");
+    }
+
+    public static XmppResource? TryGetLocalResource(this ICommandHandler handler)
+    {
+        return GetContext(handler).Session.LocalResource;
+    }
+
+    public static XmppResource? TryGetRemoteResource(this ICommandHandler handler)
+    {
+        return GetContext(handler).Session.RemoteResource;
+    }
+
+    public static XmppResource GetLocalResource(this ICommandHandler handler)
+    {
+        return TryGetLocalResource(handler) ?? throw XmppStanzaException.InternalServerError("The remote server is not properly identified.");
+    }
+
+    public static XmppResource GetRemoteResource(this ICommandHandler handler)
+    {
+        return TryGetRemoteResource(handler) ?? throw XmppStanzaException.NotAuthorized();
+    }
+
+    public static Account GetAccount(this ICommandHandler handler)
+    {
+        return GetClientSession(handler).Account;
+    }
+
+    public static XmppClientSession? TryGetClientSession(this ICommandHandler handler)
+    {
+        return GetContext(handler).Session.ClientSession;
+    }
+
+    public static XmppClientSession GetClientSession(this ICommandHandler handler)
+    {
+        return TryGetClientSession(handler) ?? throw XmppStanzaException.NotAuthorized();
+    }
+
+    public static IXmppSession GetSession(this ICommandHandler handler)
+    {
+        return GetContext(handler).Session;
+    }
+
+    public static XmppServer GetServer(this ICommandHandler handler)
+    {
+        return GetContext(handler).Server;
+    }
+
+    public static bool IsSecureSession(this ICommandHandler handler)
+    {
+        return GetSession(handler).IsSecure;
+    }
 
     public static THandler GetHandler<THandler>(this ICommandHandler handler) where THandler : ICommandHandler, new()
     {
@@ -28,12 +77,12 @@ internal static class CommandExtensions
 
     public static Stanza NewResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null)
     {
-        return new Stanza(Type: type?.ToToken(), Identifier: handler.Context.Identifier, From: from ?? handler.Context.Session.LocalResource, To: handler.Context.Session.RemoteResource);
+        return new Stanza(Type: type?.ToToken(), Identifier: GetContext(handler).Identifier, From: from ?? TryGetLocalResource(handler), To: TryGetRemoteResource(handler));
     }
 
     public static ValueTask<IInfoQueryHandler> CreateResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null)
     {
-        return handler.Context.Session.InfoQuery(NewResponse(handler, type: type, from: from));
+        return GetSession(handler).InfoQuery(NewResponse(handler, type: type, from: from));
     }
 
     public static async ValueTask SendResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null, Func<IInfoQueryHandler, ValueTask>? contentProvider = null)
@@ -47,15 +96,15 @@ internal static class CommandExtensions
 
     public static Stanza NewRequest(this ICommandHandler handler, out Token<StanzaIdentifier> identifier, StanzaType? type = StanzaType.Get, XmppResource? from = null)
     {
-        identifier = handler.Context.Session.NewStanzaIdentifier();
-        return new Stanza(Type: type?.ToToken(), Identifier: identifier, From: from ?? handler.Context.Session.LocalResource, To: handler.Context.Session.RemoteResource);
+        identifier = GetSession(handler).NewStanzaIdentifier();
+        return new Stanza(Type: type?.ToToken(), Identifier: identifier, From: from ?? TryGetLocalResource(handler), To: TryGetRemoteResource(handler));
     }
 
     public static ValueTask<IInfoQueryHandler> CreateRequest(this ICommandHandler handler, Func<ValueTask<IInfoQueryHandler>> callback, StanzaType? type = StanzaType.Get, XmppResource? from = null)
     {
         var request = NewRequest(handler, out var identifier, type: type, from: from);
-        handler.Context.Session.RegisterCallback(identifier, callback);
-        return handler.Context.Session.InfoQuery(request);
+        GetSession(handler).RegisterCallback(identifier, callback);
+        return GetSession(handler).InfoQuery(request);
     }
 
     public static void SetOnce<T>(this ICommandHandler handler, ref T storage, T value)
@@ -69,7 +118,7 @@ internal static class CommandExtensions
 
     public static void ValidateSender(this ICommandHandler handler, in Stanza stanza)
     {
-        if(stanza.From is { } from && !from.IsNarrowerThan(handler.Context.Session.RemoteResource))
+        if(stanza.From is { } from && !from.IsNarrowerThan(GetSession(handler).RemoteResource))
         {
             throw XmppStreamException.InvalidFrom();
         }

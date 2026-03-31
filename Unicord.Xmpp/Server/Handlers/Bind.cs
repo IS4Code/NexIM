@@ -6,7 +6,7 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class SetBind : BindHandler<CommandContext>
+internal class SetBind : BindHandler<ICommandContext>
 {
     string? resource;
 
@@ -22,7 +22,7 @@ internal class SetBind : BindHandler<CommandContext>
 
     public async override ValueTask DisposeAsync()
     {
-        var session = Context.Session;
+        var session = this.GetSession();
 
         if(session.RemoteResource != null)
         {

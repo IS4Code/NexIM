@@ -15,9 +15,10 @@ namespace Unicord.Xmpp.Server.Communication;
 /// Provides a final <see cref="IXmppSession"/> implementation
 /// that communicates using TCP.
 /// </summary>
-internal sealed class XmppTcpSession(NetworkStream networkStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppNetworkSession(networkStream, cancellationToken)
+internal sealed class XmppTcpSession(XmppServer server, NetworkStream networkStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppNetworkSession(networkStream, cancellationToken)
 {
     public override string DefaultLanguage => "en";
+    public override XmppServer Server => server;
 
     protected override SslServerAuthenticationOptions ServerAuthenticationOptions => new SslServerAuthenticationOptions()
     {

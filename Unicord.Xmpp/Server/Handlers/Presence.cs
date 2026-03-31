@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Immutable;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
-using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Server.Accounts;
@@ -15,14 +12,18 @@ namespace Unicord.Xmpp.Server.Handlers;
 /// <summary>
 /// Handles incoming presence commands.
 /// </summary>
-internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresenceHandler>, EmptyDisposable, CommandContext>, IStanzaCommandHandler
+internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresenceHandler>, EmptyDisposable, ICommandContext>, IStanzaCommandHandler
 {
     StatusType? show;
     LocalizedString statusText;
     string? nick;
     sbyte? priority;
 
-    public required override CommandContext Context { get => base.Context; init => base.Context = value; }
+    public required override ICommandContext Context {
+#nullable disable
+        get => base.Context; init => base.Context = value;
+#nullable restore
+    }
 
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -200,7 +201,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         }
         finally
         {
-            await this.GetSession().Inbound(GetEvent());
+            await this.GetClientSession().Inbound(GetEvent());
         }
     }
 }
