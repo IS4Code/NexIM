@@ -21,6 +21,9 @@ public abstract class XmppXmlSession : XmppSession
     public abstract XmlReader Reader { get; }
     public abstract XmlWriter Writer { get; }
 
+    // Cannot access XmlReader.NameTable when asynchronous reading is in progress
+    protected virtual XmlNameTable NameTable => Reader.Settings?.NameTable ?? Reader.NameTable;
+
     public XmppXmlSession()
     {
         InnerHandler = new CommandHandler(this);
@@ -40,12 +43,12 @@ public abstract class XmppXmlSession : XmppSession
 
     public override Token<T> GetToken<T>(ReadOnlyMemory<char> value)
     {
-        return Token<T>.FromAtomized(Reader.NameTable.Add(value));
+        return Token<T>.FromAtomized(NameTable.Add(value));
     }
 
     public override Token<T> GetToken<T>(ReadOnlySpan<char> value)
     {
-        return Token<T>.FromAtomized(Reader.NameTable.Add(value));
+        return Token<T>.FromAtomized(NameTable.Add(value));
     }
 
     protected abstract ValueTask UpgradeTls();

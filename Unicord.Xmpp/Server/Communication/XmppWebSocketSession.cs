@@ -40,6 +40,8 @@ internal sealed class XmppWebSocketSession(XmppServer server, IWebSocketRequest 
 
     }
 
+    protected override XmlNameTable NameTable => readerSettings.NameTable ?? base.NameTable;
+
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
     {
         stream = new ConsoleDebuggingStream(stream);

@@ -31,6 +31,8 @@ internal sealed class XmppTcpSession(XmppServer server, NetworkStream networkStr
         ServerCertificate = GetCertificate()
     };
 
+    protected override XmlNameTable NameTable => readerSettings.NameTable ?? base.NameTable;
+
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
     {
         stream = new ConsoleDebuggingStream(stream);
