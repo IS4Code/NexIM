@@ -201,7 +201,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         }
         finally
         {
-            await this.GetClientSession().Inbound(GetEvent());
+            this.Post(GetEvent());
         }
     }
 }

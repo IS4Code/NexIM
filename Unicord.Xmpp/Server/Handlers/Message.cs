@@ -134,7 +134,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         }
         finally
         {
-            await this.GetClientSession().Inbound(GetEvent());
+            this.Post(GetEvent());
         }
     }
 }

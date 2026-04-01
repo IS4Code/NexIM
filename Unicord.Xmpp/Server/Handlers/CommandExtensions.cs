@@ -5,6 +5,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Unicord.Primitives.Xml;
 using Unicord.Server.Accounts;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Server.Communication;
 
@@ -65,6 +66,11 @@ internal static class CommandExtensions
     public static bool IsSecureSession(this ICommandHandler handler)
     {
         return GetSession(handler).IsSecure;
+    }
+
+    public static void Post(this ICommandHandler handler, Event evnt)
+    {
+        GetContext(handler).EventsToSend.Add(evnt);
     }
 
     public static THandler GetHandler<THandler>(this ICommandHandler handler) where THandler : ICommandHandler, new()

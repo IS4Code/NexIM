@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives.Xml;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
 using Unicord.Xmpp.Protocol.Handlers;
@@ -28,12 +29,14 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
 
     public abstract XmppServer Server { get; }
     IXmppSession ICommandContext.Session => this;
-    Token<StanzaIdentifier>? ICommandContext.Identifier => lastStanza?.Identifier;
 
     IXmppReceivingHandler mainHandler = NullHandler.Instance;
     readonly PayloadHandlers handlers = new();
-
+    readonly List<Event> eventsToSend = new();
     StanzaInfo? lastStanza;
+
+    ICollection<Event> ICommandContext.EventsToSend => eventsToSend;
+    Token<StanzaIdentifier>? ICommandContext.Identifier => lastStanza?.Identifier;
 
     protected abstract ValueTask Read(CancellationToken cancellationToken);
 
@@ -44,7 +47,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         try
         {
             // Dispose all handlers at the end
-            await using var handlers = this.handlers;
+            using var handlers = this.handlers;
 
             while(await Reader.ReadAsync())
             {
@@ -60,6 +63,25 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
                 {
                     await HandleException(xe);
+                }
+
+                if(handlers.Count == 0)
+                {
+                    // Dispatch all created events
+                    try
+                    {
+                        if(ClientSession is { } session)
+                        {
+                            foreach(var evnt in eventsToSend)
+                            {
+                                await session.Inbound(evnt);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        eventsToSend.Clear();
+                    }
                 }
             }
         }
@@ -265,6 +287,9 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             }
         }
 
+        // Created events are discarded
+        eventsToSend.Clear();
+
         // Ignore the rest of the command
         while(count-- > 0)
         {
@@ -385,7 +410,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
 
     readonly record struct StanzaInfo(StanzaKind Kind, StanzaType? Type, Token<StanzaIdentifier>? Identifier);
 
-    sealed class PayloadHandlers : Stack<IPayloadHandler>, IAsyncDisposable
+    sealed class PayloadHandlers : Stack<IPayloadHandler>, IDisposable
     {
         public THandler Get<THandler>() where THandler : IPayloadHandler
         {
@@ -396,11 +421,14 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             return handler;
         }
 
-        public async ValueTask DisposeAsync()
+        public void Dispose()
         {
             while(this.TryPop(out var top))
             {
-                await top.DisposeAsync();
+                if(top is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
             }
         }
     }
