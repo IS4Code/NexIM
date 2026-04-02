@@ -1,4 +1,5 @@
-﻿using System.IO.Compression;
+﻿using System;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -32,9 +33,11 @@ public abstract class XmppNetworkSession(NetworkStream networkStream, Cancellati
         // Do not compress when TLS is a possibility
         !isCompressed && !CanUpgradeTls;
 
+    const string socketException = "The socket is not bound";
+
+    public sealed override EndPoint LocalEndPoint => networkStream.Socket.LocalEndPoint ?? throw new InvalidOperationException(socketException);
+    public sealed override EndPoint RemoteEndPoint => networkStream.Socket.RemoteEndPoint ?? throw new InvalidOperationException(socketException);
     public sealed override X509Certificate? RemoteCertificate => sslStream?.RemoteCertificate;
-    public sealed override EndPoint? LocalEndPoint => networkStream.Socket.LocalEndPoint;
-    public sealed override EndPoint? RemoteEndPoint => networkStream.Socket.RemoteEndPoint;
     public sealed override CancellationToken CancellationToken => cancellationToken;
 
     protected abstract SslServerAuthenticationOptions ServerAuthenticationOptions { get; }

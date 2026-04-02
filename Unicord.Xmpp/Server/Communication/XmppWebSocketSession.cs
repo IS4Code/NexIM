@@ -31,8 +31,8 @@ internal sealed class XmppWebSocketSession(XmppServer server, IWebSocketRequest 
 
     public override XmppServer Server => server;
     public override X509Certificate? RemoteCertificate => request.RemoteCertificate;
-    public override EndPoint? LocalEndPoint => request.LocalEndPoint;
-    public override EndPoint? RemoteEndPoint => request.RemoteEndPoint;
+    public override EndPoint LocalEndPoint => request.LocalEndPoint;
+    public override EndPoint RemoteEndPoint => request.RemoteEndPoint;
     public override CancellationToken CancellationToken => cancellationToken;
 
     public XmppWebSocketSession(XmppServer server, IWebSocketRequest request, WebSocketContext context, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : this(server, request, context, OpenStream(context), readerSettings, writerSettings, cancellationToken)
@@ -44,7 +44,7 @@ internal sealed class XmppWebSocketSession(XmppServer server, IWebSocketRequest 
 
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
     {
-        stream = new ConsoleDebuggingStream(stream);
+        stream = new ConsoleDebuggingStream(stream, RemoteEndPoint);
 
         reader = XmlReader.Create(stream, readerSettings);
         writer = XmlWriter.Create(stream, writerSettings);

@@ -12,11 +12,32 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
     readonly MemoryStream readStream = new();
     readonly MemoryStream writeStream = new();
 
+    readonly ConsoleColor color;
+
     StreamReader? readReader, writeReader;
 
-    public ConsoleDebuggingStream(Stream inner)
+    public ConsoleDebuggingStream(Stream inner, ConsoleColor color)
     {
         this.inner = inner;
+        this.color = color;
+    }
+
+    public ConsoleDebuggingStream(Stream inner, object instance) : this(inner, ColorFromHash(instance.GetHashCode()))
+    {
+
+    }
+
+    static readonly ConsoleColor[] hashColorSequence = {
+        ConsoleColor.Cyan,
+        ConsoleColor.Green,
+        ConsoleColor.Magenta,
+        ConsoleColor.Red,
+        ConsoleColor.Yellow
+    };
+
+    static ConsoleColor ColorFromHash(int hash)
+    {
+        return hashColorSequence[Math.Abs(hash) % hashColorSequence.Length];
     }
 
     public override bool CanRead => inner.CanRead;
@@ -27,7 +48,7 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
 
     static readonly char[] trimChars = { '\n', '\r' };
 
-    private void OnData(ReadOnlySpan<byte> data, MemoryStream stream, ref StreamReader? reader, ConsoleColor highlight)
+    private void OnData(ReadOnlySpan<byte> data, MemoryStream stream, ref StreamReader? reader, bool outgoing)
     {
         if(data.Length == 0)
         {
@@ -60,7 +81,7 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
 
                         Reset();
 
-                        OnLine(line, highlight);
+                        OnLine(line, outgoing);
                         return;
                     }
 
@@ -79,14 +100,14 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
                 }
 
                 // Not the last line (reader's buffer contains more data)
-                OnLine(line, highlight);
+                OnLine(line, outgoing);
 
                 // Use the current line as next
                 line = nextLine;
                 goto reset;
             }
 
-            OnLine(line, highlight);
+            OnLine(line, outgoing);
         }
 
         Reset();
@@ -98,7 +119,7 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
         }
     }
 
-    private void OnLine(string line, ConsoleColor highlight)
+    private void OnLine(string line, bool outgoing)
     {
         if(String.IsNullOrWhiteSpace(line))
         {
@@ -106,27 +127,44 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
         }
         lock(typeof(Console))
         {
-            var color = Console.ForegroundColor;
+            var fg = Console.ForegroundColor;
+            var bg = Console.BackgroundColor;
             try
             {
-                Console.ForegroundColor = highlight;
+                if(outgoing)
+                {
+                    Console.BackgroundColor = bg;
+                    Console.ForegroundColor = color;
+                    Console.Write("<");
+                }
+                else
+                {
+                    Console.BackgroundColor = color;
+                    Console.ForegroundColor = bg;
+                    Console.Write(">");
+                    Console.BackgroundColor = bg;
+                    Console.ForegroundColor = color;
+                }
+
+                Console.Write(" ");
                 Console.WriteLine(line);
             }
             finally
             {
-                Console.ForegroundColor = color;
+                Console.ForegroundColor = fg;
+                Console.BackgroundColor = bg;
             }
         }
     }
 
     private void OnWrite(ReadOnlySpan<byte> data)
     {
-        OnData(data, writeStream, ref writeReader, ConsoleColor.Green);
+        OnData(data, writeStream, ref writeReader, true);
     }
 
     private void OnRead(ReadOnlySpan<byte> data)
     {
-        OnData(data, readStream, ref readReader, ConsoleColor.Yellow);
+        OnData(data, readStream, ref readReader, false);
     }
 
     public override int Read(byte[] buffer, int offset, int count)
