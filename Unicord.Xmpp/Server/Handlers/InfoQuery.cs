@@ -7,23 +7,9 @@ using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal abstract class GetSetInfoQuery : InfoQueryHandler<ICommandContext>, IStanzaCommandHandler
+internal abstract class GetSetInfoQuery : InfoQueryHandler<ICommandContext>, ICommandHandler
 {
     bool? handled;
-
-    public required override ICommandContext Context {
-#nullable disable
-        get => base.Context; init => base.Context = value;
-#nullable restore
-    }
-    public StanzaType? Type { get; }
-    public XmppResource? From { get; }
-    public XmppResource? To { get; }
-
-    public GetSetInfoQuery(in Stanza stanza)
-    {
-        (Type, From, To) = this.OpenStanza(stanza);
-    }
 
     protected void SetHandled()
     {
@@ -46,11 +32,6 @@ internal abstract class GetSetInfoQuery : InfoQueryHandler<ICommandContext>, ISt
 
 internal abstract class GetInfoQuery : GetSetInfoQuery
 {
-    public GetInfoQuery(in Stanza stanza) : base(stanza)
-    {
-
-    }
-
     protected async sealed override ValueTask<IAuthQueryHandler> OnAuthQuery()
     {
         SetHandled();
@@ -61,11 +42,6 @@ internal abstract class GetInfoQuery : GetSetInfoQuery
 
 internal abstract class SetInfoQuery : GetSetInfoQuery
 {
-    public SetInfoQuery(in Stanza stanza) : base(stanza)
-    {
-
-    }
-
     protected async sealed override ValueTask<IAuthQueryHandler> OnAuthQuery()
     {
         SetHandled();
@@ -96,11 +72,6 @@ internal abstract class SetInfoQuery : GetSetInfoQuery
 
 internal class GetServerInfoQuery : GetInfoQuery, IInfoQueryHandler
 {
-    public GetServerInfoQuery(in Stanza stanza) : base(stanza)
-    {
-
-    }
-
     protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
     {
         SetHandled();
@@ -142,11 +113,6 @@ internal class GetServerInfoQuery : GetInfoQuery, IInfoQueryHandler
 
 internal class SetServerInfoQuery : SetInfoQuery, IInfoQueryHandler
 {
-    public SetServerInfoQuery(in Stanza stanza) : base(stanza)
-    {
-
-    }
-
     protected async override ValueTask OnPing()
     {
         SetHandled();
@@ -155,12 +121,7 @@ internal class SetServerInfoQuery : SetInfoQuery, IInfoQueryHandler
 
 internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
 {
-    XmppAddress Address => (To ?? Context.Session.RemoteResource)?.Address ?? throw new InvalidOperationException("Account address is missing.");
-
-    public GetAccountInfoQuery(in Stanza stanza) : base(stanza)
-    {
-        
-    }
+    XmppAddress Address => (this.GetStanza().To ?? this.TryGetRemoteResource())?.Address ?? throw new InvalidOperationException("Account address is missing.");
 
     protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
     {
@@ -211,11 +172,6 @@ internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
 
 internal class SetAccountInfoQuery : SetInfoQuery, IInfoQueryHandler
 {
-    public SetAccountInfoQuery(in Stanza stanza) : base(stanza)
-    {
-
-    }
-
     protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
     {
         SetHandled();

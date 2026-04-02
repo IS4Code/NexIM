@@ -33,10 +33,12 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
     IXmppReceivingHandler mainHandler = NullHandler.Instance;
     readonly PayloadHandlers handlers = new();
     readonly List<Event> eventsToSend = new();
-    StanzaInfo? lastStanza;
+
+    StanzaKind? lastStanzaKind;
+    Stanza lastStanza;
 
     ICollection<Event> ICommandContext.EventsToSend => eventsToSend;
-    Token<StanzaIdentifier>? ICommandContext.Identifier => lastStanza?.Identifier;
+    ref readonly Stanza ICommandContext.LastStanza => ref lastStanza;
 
     protected abstract ValueTask Read(CancellationToken cancellationToken);
 
@@ -55,10 +57,10 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 {
                     await Read(cancellationToken);
                 }
-                catch(Exception e) when(lastStanza is { } stanza && GetXmppException<XmppStanzaException>(e, out var xe))
+                catch(Exception e) when(lastStanzaKind is { } stanzaKind && GetXmppException<XmppStanzaException>(e, out var xe))
                 {
                     // TODO Log suppressed exceptions
-                    await HandleException(xe, stanza);
+                    await HandleException(xe, stanzaKind);
                 }
                 catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
                 {
@@ -206,11 +208,11 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         return default;
     }
 
-    async ValueTask<bool> HandleException(XmppStanzaException exception, StanzaInfo lastStanza)
+    async ValueTask<bool> HandleException(XmppStanzaException exception, StanzaKind lastStanzaKind)
     {
         AbortCommand();
 
-        if(lastStanza.Type is StanzaType.Result or StanzaType.Error)
+        if(lastStanza.Type?.ToEnum() is StanzaType.Result or StanzaType.Error)
         {
             return false;
         }
@@ -219,7 +221,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza.Identifier);
 
         IStanzaHandler command;
-        switch(lastStanza.Kind)
+        switch(lastStanzaKind)
         {
             case StanzaKind.Message:
                 command = await errorHandler.Message(stanza);
@@ -306,21 +308,21 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             {
                 case 2 when elementName == InfoQuery:
                 {
-                    var stanza = ParseStanza(reader);
-                    lastStanza = new(StanzaKind.InfoQuery, stanza.Type?.ToEnum(), stanza.Identifier);
-                    return Success(mainHandler.InfoQuery(stanza));
+                    lastStanzaKind = StanzaKind.InfoQuery;
+                    lastStanza = ParseStanza(reader);
+                    return Success(mainHandler.InfoQuery(lastStanza));
                 }
                 case 7 when elementName == Message:
                 {
-                    var stanza = ParseStanza(reader);
-                    lastStanza = new(StanzaKind.Message, stanza.Type?.ToEnum(), stanza.Identifier);
-                    return Success(mainHandler.Message(stanza));
+                    lastStanzaKind = StanzaKind.Message;
+                    lastStanza = ParseStanza(reader);
+                    return Success(mainHandler.Message(lastStanza));
                 }
                 case 8 when elementName == Presence:
                 {
-                    var stanza = ParseStanza(reader);
-                    lastStanza = new(StanzaKind.Presence, stanza.Type?.ToEnum(), stanza.Identifier);
-                    return Success(mainHandler.Presence(stanza));
+                    lastStanzaKind = StanzaKind.Presence;
+                    lastStanza = ParseStanza(reader);
+                    return Success(mainHandler.Presence(lastStanza));
                 }
                 case 3:
                 case 4:
@@ -332,7 +334,8 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         }
 
         // Not a stanza - decode normally
-        lastStanza = null;
+        lastStanzaKind = null;
+        lastStanza = default;
         return decoder.DecodePayload(reader, mainHandler);
 
         static async ValueTask<Decoder.Result> Success<THandler>(ValueTask<THandler> task) where THandler : IPayloadHandler
@@ -407,8 +410,6 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 return false;
         }
     }
-
-    readonly record struct StanzaInfo(StanzaKind Kind, StanzaType? Type, Token<StanzaIdentifier>? Identifier);
 
     sealed class PayloadHandlers : Stack<IPayloadHandler>, IDisposable
     {

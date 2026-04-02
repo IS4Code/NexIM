@@ -10,34 +10,17 @@ namespace Unicord.Xmpp.Server.Handlers;
 /// <summary>
 /// Handles incoming message commands.
 /// </summary>
-internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, IStanzaCommandHandler
+internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     LocalizedString subject, body;
     string? nick, thread;
     ConversationState? state;
 
-    public required override ICommandContext Context {
-#nullable disable
-        get => base.Context; init => base.Context = value;
-#nullable restore
-    }
-
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    public StanzaType? Type { get; }
-    public XmppResource? From { get; }
-    public XmppResource? To { get; }
-
-    protected DateTimeOffset ConstructedTime { get; }
+    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
     protected DateTimeOffset? WrittenTime { get; private set; }
-
-    public Message(in Stanza stanza)
-    {
-        ConstructedTime = DateTimeOffset.UtcNow;
-
-        (Type, From, To) = this.OpenStanza(stanza);
-    }
 
     protected async sealed override ValueTask OnBody(LanguageTaggedString? text)
     {
@@ -115,7 +98,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         return new MessageEvent
         {
             Origin = this.GetOrigin(),
-            Type = Type.ToMessageType(),
+            Type = (this.GetStanza().Type?.ToEnum()).ToMessageType(),
             Processing = new()
             {
                 Received = ConstructedTime,
@@ -139,7 +122,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     }
 }
 
-internal class ErrorMessage(in Stanza stanza) : Message(stanza)
+internal class ErrorMessage : Message
 {
     // TODO Error data
 

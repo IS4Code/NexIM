@@ -12,35 +12,18 @@ namespace Unicord.Xmpp.Server.Handlers;
 /// <summary>
 /// Handles incoming presence commands.
 /// </summary>
-internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresenceHandler>, EmptyDisposable, ICommandContext>, IStanzaCommandHandler
+internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresenceHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     StatusType? show;
     LocalizedString statusText;
     string? nick;
     sbyte? priority;
 
-    public required override ICommandContext Context {
-#nullable disable
-        get => base.Context; init => base.Context = value;
-#nullable restore
-    }
-
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    public StanzaType? Type { get; }
-    public XmppResource? From { get; }
-    public XmppResource? To { get; }
-
-    protected DateTimeOffset ConstructedTime { get; }
+    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
     protected DateTimeOffset? WrittenTime { get; private set; }
-
-    public Presence(in Stanza stanza)
-    {
-        ConstructedTime = DateTimeOffset.UtcNow;
-
-        (Type, From, To) = this.OpenStanza(stanza);
-    }
 
     protected async override ValueTask OnShow(Token<StatusType>? text)
     {
@@ -50,7 +33,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
 
     protected async override ValueTask OnStatus(LanguageTaggedString? text)
     {
-        statusText = statusText.Add(text, Context.Session.RemoteLanguage);
+        statusText = statusText.Add(text, this.GetSession().RemoteLanguage);
         WrittenTime = DateTimeOffset.UtcNow;
     }
 
@@ -140,7 +123,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         return new PresenceData {
             Status = new(
                 show?.ToAvailability()
-                ?? (Type == StanzaType.Unavailable ? Availability.Unavailable : Availability.Available),
+                ?? (this.GetStanza().Type?.ToEnum() == StanzaType.Unavailable ? Availability.Unavailable : Availability.Available),
                 statusText
             ),
             Presentation = new(Nickname: nick),
@@ -158,7 +141,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             Published = DateTimeOffset.UtcNow
         };
         var data = GetPresence();
-        return Type switch {
+        return this.GetStanza().Type?.ToEnum() switch {
             null or StanzaType.Unavailable => new StatusUpdateEvent {
                 Origin = origin,
                 Processing = processing,

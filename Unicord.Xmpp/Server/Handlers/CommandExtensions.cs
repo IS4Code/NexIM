@@ -63,6 +63,11 @@ internal static class CommandExtensions
         return GetContext(handler).Server;
     }
 
+    public static ref readonly Stanza GetStanza(this ICommandHandler handler)
+    {
+        return ref GetContext(handler).LastStanza;
+    }
+
     public static bool IsSecureSession(this ICommandHandler handler)
     {
         return GetSession(handler).IsSecure;
@@ -83,7 +88,7 @@ internal static class CommandExtensions
 
     public static Stanza NewResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null)
     {
-        return new Stanza(Type: type?.ToToken(), Identifier: GetContext(handler).Identifier, From: from ?? TryGetLocalResource(handler), To: TryGetRemoteResource(handler));
+        return new Stanza(Type: type?.ToToken(), Identifier: GetStanza(handler).Identifier, From: from ?? TryGetLocalResource(handler), To: TryGetRemoteResource(handler));
     }
 
     public static ValueTask<IInfoQueryHandler> CreateResponse(this ICommandHandler handler, StanzaType? type = StanzaType.Result, XmppResource? from = null)
