@@ -51,7 +51,7 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
             NewLineChars = "\n",
             NewLineHandling = NewLineHandling.Entitize,
             OmitXmlDeclaration = true,
-            NewLineOnAttributes = PrettyOutput,
+            NewLineOnAttributes = false,
             WriteEndDocumentOnClose = false
         };
     }
