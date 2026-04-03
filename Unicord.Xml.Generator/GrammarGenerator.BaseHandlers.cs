@@ -175,8 +175,9 @@ partial class GrammarGenerator
             writer.Indent--;
             writer.WriteLine("}");
 
-            // Affect methods to include those from base
-            interfaces.Insert(0, primaryInterface);
+            // Include whole interface hierarchy in members
+            interfaces = type.AllInterfaces.Where(t => t.ContainingNamespace.Equals(container, SymbolEqualityComparer.Default)).ToList();
+            methods = type.GetMembers().Concat(interfaces.SelectMany(i => i.GetMembers())).OfType<IMethodSymbol>();
 
             // Require all methods to be overridden
             writer.WriteLine($"public abstract class Base{name}<TContext> : {name}<TContext> where TContext : IPayloadHandlerContext");
@@ -228,7 +229,8 @@ partial class GrammarGenerator
                 writer.WriteLine("}");
             }
 
-            writer.WriteLine("protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;");
+            // Never called because all methods are implemented
+            writer.WriteLine("protected sealed override ValueTask OnUnrecognized(XmlReader payloadReader) => default;");
 
             writer.WriteLine("public async override ValueTask DisposeAsync()");
             writer.WriteLine("{");

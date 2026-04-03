@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
+using Unicord.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
@@ -44,9 +46,20 @@ public partial class CapturingHandler<THandler> : IPayloadHandler, ICapturingHan
         calls.Add(call);
     }
 
-    ValueTask IPayloadHandler.Other(XmlReader payloadReader)
+    async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
-        return default;
+        var container = new XElement("_");
+        using(var writer = container.CreateWriter().WithAsyncSupport())
+        {
+            await writer.WriteNodeAsync(payloadReader, false);
+        }
+        Capture<IPayloadHandler>(async handler => {
+            foreach(var node in container.Nodes())
+            {
+                using var reader = node.CreateReader().WithAsyncSupport();
+                await handler.Other(reader);
+            }
+        });
     }
 
     public ValueTask DisposeAsync()
@@ -55,7 +68,6 @@ public partial class CapturingHandler<THandler> : IPayloadHandler, ICapturingHan
         return default;
     }
 }
-
 
 interface ICapturingHandler<out THandler>
 {

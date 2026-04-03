@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Xml;
@@ -150,6 +151,11 @@ internal sealed class XmlAsyncOverSyncWriter(XmlWriter inner) : XmlWriter
 
     public override Task WriteNodeAsync(XmlReader reader, bool defattr)
     {
+        if(reader.Settings.Async)
+        {
+            // Read asynchronously but write synchronously
+            return CopyNodeAsync(reader, defattr);
+        }
         try
         {
             WriteNode(reader, defattr);
@@ -158,6 +164,73 @@ internal sealed class XmlAsyncOverSyncWriter(XmlWriter inner) : XmlWriter
         catch(Exception e)
         {
             return Task.FromException(e);
+        }
+    }
+
+    private async Task CopyNodeAsync(XmlReader reader, bool defattr)
+    {
+        int depth = reader.NodeType == XmlNodeType.None ? -1 : reader.Depth;
+        while(await reader.ReadAsync() && depth < reader.Depth)
+        {
+            switch(reader.NodeType)
+            {
+                case XmlNodeType.Element:
+                    WriteStartElement(reader.Prefix, reader.LocalName, reader.NamespaceURI);
+                    WriteAttributes(reader, defattr);
+                    if(reader.IsEmptyElement)
+                    {
+                        WriteEndElement();
+                    }
+                    break;
+                case XmlNodeType.Text:
+                    if(!reader.CanReadValueChunk)
+                    {
+                        WriteString(await reader.GetValueAsync());
+                        break;
+                    }
+                    var pool = ArrayPool<char>.Shared;
+                    var array = pool.Rent(256);
+                    try
+                    {
+                        int read;
+                        while((read = await reader.ReadValueChunkAsync(array, 0, array.Length)) != 0)
+                        {
+                            WriteChars(array, 0, read);
+                        }
+                    }
+                    finally
+                    {
+                        pool.Return(array);
+                    }
+                    break;
+                case XmlNodeType.Whitespace:
+                case XmlNodeType.SignificantWhitespace:
+                    WriteWhitespace(await reader.GetValueAsync());
+                    break;
+                case XmlNodeType.CDATA:
+                    WriteCData(await reader.GetValueAsync());
+                    break;
+                case XmlNodeType.EntityReference:
+                    WriteEntityRef(reader.Name);
+                    break;
+                case XmlNodeType.XmlDeclaration:
+                case XmlNodeType.ProcessingInstruction:
+                    WriteProcessingInstruction(reader.Name, await reader.GetValueAsync());
+                    break;
+                case XmlNodeType.DocumentType:
+                    WriteDocType(reader.Name, reader.GetAttribute("PUBLIC"), reader.GetAttribute("SYSTEM"), await reader.GetValueAsync());
+                    break;
+                case XmlNodeType.Comment:
+                    WriteComment(await reader.GetValueAsync());
+                    break;
+                case XmlNodeType.EndElement:
+                    WriteFullEndElement();
+                    break;
+            }
+        }
+        if(depth == reader.Depth && reader.NodeType == XmlNodeType.EndElement)
+        {
+            await reader.ReadAsync();
         }
     }
 
