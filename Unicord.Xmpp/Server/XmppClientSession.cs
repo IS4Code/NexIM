@@ -124,6 +124,11 @@ public class XmppClientSession : ClientSession
                 await output.Status(description);
             }
 
+            if(data.Priority is { } priority)
+            {
+                await output.Priority(priority);
+            }
+
             // Supported extensions
 
             await WriteSender(data.Presentation, output);

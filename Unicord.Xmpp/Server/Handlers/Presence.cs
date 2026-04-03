@@ -127,7 +127,8 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
                 statusText
             ),
             Presentation = new(Nickname: nick),
-            Priority = priority
+            Priority = priority,
+            Extensions = new(InnerHandler.Calls.Count > 0 ? InnerHandler : null)
         };
     }
 
