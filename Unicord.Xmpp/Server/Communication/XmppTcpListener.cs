@@ -43,9 +43,9 @@ public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
         {
             await Start(client, cancellationToken);
         }
-        catch(Exception e) when(Program.SuppressUnexpectedExceptions())
+        catch(Exception e) when(Program.OnUnexpectedException(e))
         {
-            Console.WriteLine(e);
+
         }
         finally
         {

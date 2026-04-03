@@ -22,8 +22,12 @@ internal class Program
         throw new NotImplementedException(null, XmppStanzaException.FeatureNotImplemented());
     }
 
-    internal static bool SuppressUnexpectedExceptions()
+    internal static bool OnUnexpectedException(Exception e)
     {
+        lock(typeof(Console))
+        {
+            Console.WriteLine(e);
+        }
         Debugger.Break();
         return true;
     }

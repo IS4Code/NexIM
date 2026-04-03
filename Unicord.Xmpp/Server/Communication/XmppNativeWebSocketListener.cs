@@ -52,9 +52,9 @@ public class XmppNativeWebSocketListener : XmppServerListener<(HttpListenerReque
 
             await Start((context.Request, wsContext), cancellationToken);
         }
-        catch(Exception e) when(Program.SuppressUnexpectedExceptions())
+        catch(Exception e) when(Program.OnUnexpectedException(e))
         {
-            Console.WriteLine(e);
+
         }
     }
 

@@ -57,10 +57,18 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 {
                     await Read(cancellationToken);
                 }
-                catch(Exception e) when(lastStanzaKind is { } stanzaKind && GetXmppException<XmppStanzaException>(e, out var xe))
+                catch(Exception e) when(
+                    lastStanzaKind is { } stanzaKind &&
+                    GetXmppException<XmppStanzaException>(e, out var xe) && (
+                        (
+                            HandleException(xe, stanzaKind)
+                            // If cannot be handled
+                            ?? (Program.OnUnexpectedException(e) ? default(ValueTask) : null)
+                        ) is { } handleTask
+                    )
+                )
                 {
-                    // TODO Log suppressed exceptions
-                    await HandleException(xe, stanzaKind);
+                    await handleTask;
                 }
                 catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
                 {
@@ -96,7 +104,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             await HandleException(xe);
             throw;
         }
-        catch when(Program.SuppressUnexpectedExceptions())
+        catch(Exception e) when(Program.OnUnexpectedException(e))
         {
             await HandleException(XmppStreamException.InternalServerError());
             throw;
@@ -208,42 +216,45 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         return default;
     }
 
-    async ValueTask<bool> HandleException(XmppStanzaException exception, StanzaKind lastStanzaKind)
+    ValueTask? HandleException(XmppStanzaException exception, StanzaKind lastStanzaKind)
     {
         AbortCommand();
 
         if(lastStanza.Type?.ToEnum() is StanzaType.Result or StanzaType.Error)
         {
-            return false;
+            return null;
         }
 
-        IStreamHandler errorHandler = this;
-        var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza.Identifier);
+        return Inner();
+        async ValueTask Inner()
+        {
+            IStreamHandler errorHandler = this;
+            var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza.Identifier);
 
-        IStanzaHandler command;
-        switch(lastStanzaKind)
-        {
-            case StanzaKind.Message:
-                command = await errorHandler.Message(stanza);
-                break;
-            case StanzaKind.Presence:
-                command = await errorHandler.Presence(stanza);
-                break;
-            case StanzaKind.InfoQuery:
-                command = await errorHandler.InfoQuery(stanza);
-                break;
-            default:
-                throw new InvalidOperationException("Invalid stanza type.");
-        }
-        try
-        {
-            await using var err = await command.Error(exception.Type?.ToToken(), exception.Code, LocalResource);
-            await exception.Output(err);
-            return true;
-        }
-        finally
-        {
-            await command.DisposeAsync();
+            IStanzaHandler command;
+            switch(lastStanzaKind)
+            {
+                case StanzaKind.Message:
+                    command = await errorHandler.Message(stanza);
+                    break;
+                case StanzaKind.Presence:
+                    command = await errorHandler.Presence(stanza);
+                    break;
+                case StanzaKind.InfoQuery:
+                    command = await errorHandler.InfoQuery(stanza);
+                    break;
+                default:
+                    throw new InvalidOperationException("Invalid stanza type.");
+            }
+            try
+            {
+                await using var err = await command.Error(exception.Type?.ToToken(), exception.Code, LocalResource);
+                await exception.Output(err);
+            }
+            finally
+            {
+                await command.DisposeAsync();
+            }
         }
     }
 

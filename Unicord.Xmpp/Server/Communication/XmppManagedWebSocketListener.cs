@@ -68,9 +68,9 @@ public class XmppManagedWebSocketListener : XmppServerListener<vtortola.WebSocke
 
             await Start(socket, cancellationToken);
         }
-        catch(Exception e) when(Program.SuppressUnexpectedExceptions())
+        catch(Exception e) when(Program.OnUnexpectedException(e))
         {
-            Console.WriteLine(e);
+
         }
     }
 
