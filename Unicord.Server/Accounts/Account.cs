@@ -21,7 +21,7 @@ public partial class Account
         Name = name;
         PasswordHash = passwordHash;
 
-        InitEvents(out router, out messageTarget, out presenceTarget);
+        InitEvents(out router, out messageTarget, out presenceTarget, out generalTarget);
     }
 
     public Contact? GetContact(AccountName name)

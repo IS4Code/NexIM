@@ -75,6 +75,20 @@ internal static class AdapterExtensions
         );
     }
 
+    public static Stanza ToStanza(this QueryEvent evnt, IXmppSession session)
+    {
+        return new(
+            Type: evnt switch {
+                RetrieveEvent => StanzaType.Get.ToToken(),
+                UpdateEvent => StanzaType.Set.ToToken(),
+                ResponseEvent => StanzaType.Result.ToToken()
+            },
+            From: evnt.From.ToResource(),
+            To: evnt.To.ToResource(),
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
+        );
+    }
+
     public static Token<StanzaType>? ToStanzaType(this MessageType type)
     {
         return type switch

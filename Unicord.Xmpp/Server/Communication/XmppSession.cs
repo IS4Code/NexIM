@@ -34,7 +34,7 @@ public interface IXmppSession : IXmppSendingHandler
     bool IsAuthenticated { get; }
 
     void RegisterCallback(Token<StanzaIdentifier> identifier, Func<ValueTask<IInfoQueryHandler>> callback);
-    ValueTask<IInfoQueryHandler> FinishCallback(Token<StanzaIdentifier>? identifier);
+    ValueTask<IInfoQueryHandler>? FinishCallback(Token<StanzaIdentifier>? identifier);
 
     Token<T> GetToken<T>(string value) where T : Enum => GetToken<T>(value.AsMemory());
     Token<T> GetToken<T>(ReadOnlyMemory<char> value) where T : Enum;
@@ -79,12 +79,12 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
         }
     }
 
-    public ValueTask<IInfoQueryHandler> FinishCallback(Token<StanzaIdentifier>? identifier)
+    public ValueTask<IInfoQueryHandler>? FinishCallback(Token<StanzaIdentifier>? identifier)
     {
         if(identifier is not { Value: var value } || !callbacks.TryRemove(value, out var callback))
         {
             // Unidentified response cannot be dispatched
-            return new(NullHandler.Instance);
+            return null;
         }
         return callback();
     }

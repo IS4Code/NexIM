@@ -2,36 +2,95 @@
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives.Xml;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal abstract class GetSetInfoQuery : InfoQueryHandler<ICommandContext>, ICommandHandler
+internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHandler<IInfoQueryHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     bool? handled;
+
+    protected sealed override CapturingHandler<IInfoQueryHandler> InnerHandler { get; } = new();
+    protected sealed override EmptyDisposable Disposable => default;
+
+    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
 
     protected void SetHandled()
     {
         this.SetOnce(ref handled, true);
     }
 
-    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    protected async override ValueTask OnOther(XmlReader payloadReader)
     {
-        await this.Unrecognized(payloadReader);
+        SetHandled();
+
+        // Captured
+        await base.OnOther(payloadReader);
     }
+
+    protected GeneralQueryData GetQuery()
+    {
+        return new GeneralQueryData
+        {
+            Extensions = new(InnerHandler.Calls.Count > 0 ? InnerHandler : null)
+        };
+    }
+
+    protected EventProcessing GetProcessing()
+    {
+        var time = DateTimeOffset.UtcNow;
+        return new() {
+            Received = ConstructedTime,
+            Accepted = time,
+            Published = time
+        };
+    }
+
+    protected abstract Event GetEvent();
 
     public async override ValueTask DisposeAsync()
     {
-        if(handled != true)
+        if(handled != true && InnerHandler.Calls.Count != 1)
         {
-            throw XmppStanzaException.ServiceUnavailable();
+            // No call or multiple unhandled calls
+            throw XmppStanzaException.BadRequest();
         }
+        if(InnerHandler.Calls.Count == 0)
+        {
+            return;
+        }
+        // General event
+        this.Post(GetEvent());
     }
 }
 
-internal abstract class GetInfoQuery : GetSetInfoQuery
+internal class ResultInfoQuery : InfoQuery
 {
+    protected override Event GetEvent()
+    {
+        return new ResponseEvent
+        {
+            Origin = this.GetOrigin(),
+            Processing = GetProcessing(),
+            Data = GetQuery()
+        };
+    }
+}
+
+internal class GetInfoQuery : InfoQuery
+{
+    protected override Event GetEvent()
+    {
+        return new RetrieveEvent
+        {
+            Origin = this.GetOrigin(),
+            Processing = GetProcessing(),
+            Data = GetQuery()
+        };
+    }
+
     protected async sealed override ValueTask<IAuthQueryHandler> OnAuthQuery()
     {
         SetHandled();
@@ -40,8 +99,18 @@ internal abstract class GetInfoQuery : GetSetInfoQuery
     }
 }
 
-internal abstract class SetInfoQuery : GetSetInfoQuery
+internal class SetInfoQuery : InfoQuery
 {
+    protected override Event GetEvent()
+    {
+        return new UpdateEvent
+        {
+            Origin = this.GetOrigin(),
+            Processing = GetProcessing(),
+            Data = GetQuery()
+        };
+    }
+
     protected async sealed override ValueTask<IAuthQueryHandler> OnAuthQuery()
     {
         SetHandled();
@@ -177,5 +246,21 @@ internal class SetAccountInfoQuery : SetInfoQuery, IInfoQueryHandler
         SetHandled();
         this.EnsureReceiverIsUserAccount();
         return this.GetHandler<SetRosterQuery>();
+    }
+}
+
+internal class ErrorInfoQuery : InfoQuery
+{
+    // TODO Error data
+
+    protected override Event GetEvent()
+    {
+        return new ErrorEvent
+        {
+            Origin = this.GetOrigin(),
+            Processing = GetProcessing(),
+            Data = new ErrorData(),
+            OriginalData = GetQuery()
+        };
     }
 }

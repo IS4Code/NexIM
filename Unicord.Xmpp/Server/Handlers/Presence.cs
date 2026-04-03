@@ -188,3 +188,25 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         }
     }
 }
+
+internal class ErrorPresence : Presence
+{
+    // TODO Error data
+
+    protected override Event GetEvent()
+    {
+        var time = DateTimeOffset.UtcNow;
+        return new ErrorEvent
+        {
+            Origin = this.GetOrigin(),
+            Processing = new()
+            {
+                Received = ConstructedTime,
+                Accepted = time,
+                Published = time
+            },
+            Data = new ErrorData(),
+            OriginalData = GetPresence()
+        };
+    }
+}

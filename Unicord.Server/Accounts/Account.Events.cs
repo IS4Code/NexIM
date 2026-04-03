@@ -12,6 +12,7 @@ partial class Account : IEventHandler
     readonly Func<Identifier, EnumWrapper<TargetType>> router;
     readonly Func<EnumWrapper<TargetType>, IdentifierSet, MessageEvent, ValueTask<ErrorCode>> messageTarget;
     readonly Func<EnumWrapper<TargetType>, IdentifierSet, PresenceEvent, ValueTask<ErrorCode>> presenceTarget;
+    readonly Func<EnumWrapper<TargetType>, IdentifierSet, Event, ValueTask<ErrorCode>> generalTarget;
 
     public ValueTask<ErrorCode> Post(Event evnt)
     {
@@ -22,7 +23,12 @@ partial class Account : IEventHandler
             case PresenceEvent presEvent:
                 return PostPresence(presEvent);
             default:
-                return new(ErrorCode.InvalidRequest);
+                if(evnt.To.IsEmpty)
+                {
+                    // No recipient
+                    return new(ErrorCode.InvalidRequest);
+                }
+                return evnt.To.Route(router, generalTarget, evnt);
         }
     }
 
@@ -73,10 +79,11 @@ partial class Account : IEventHandler
         return presEvent.To.Route(router, presenceTarget, presEvent);
     }
 
-    private void InitEvents(out Func<Identifier, EnumWrapper<TargetType>> router, out Func<EnumWrapper<TargetType>, IdentifierSet, MessageEvent, ValueTask<ErrorCode>> messageTarget, out Func<EnumWrapper<TargetType>, IdentifierSet, PresenceEvent, ValueTask<ErrorCode>> presenceTarget)
+    private void InitEvents(out Func<Identifier, EnumWrapper<TargetType>> router, out Func<EnumWrapper<TargetType>, IdentifierSet, MessageEvent, ValueTask<ErrorCode>> messageTarget, out Func<EnumWrapper<TargetType>, IdentifierSet, PresenceEvent, ValueTask<ErrorCode>> presenceTarget, out Func<EnumWrapper<TargetType>, IdentifierSet, Event, ValueTask<ErrorCode>> generalTarget)
     {
         messageTarget = RouteMessage;
         presenceTarget = RoutePresence;
+        generalTarget = RouteEvent;
         router =
             identifier =>
                 identifier.Account == Name
@@ -146,6 +153,22 @@ partial class Account : IEventHandler
         }
 
         return tasks.Combine();
+    }
+
+    private ValueTask<ErrorCode> RouteEvent(EnumWrapper<TargetType> targetType, IdentifierSet targetTo, Event evnt)
+    {
+        switch(targetType.Value)
+        {
+            case TargetType.Server:
+                return Server.Post(evnt);
+            case TargetType.Sessions:
+                var tasks = new List<ValueTask<ErrorCode>>();
+                RouteToSessions(evnt, targetTo, tasks);
+                return tasks.Combine();
+            default:
+                // Can't process arbitrary event
+                return new(ErrorCode.Unrecognized);
+        }
     }
 
     private void RouteToSessions(Event evnt, IdentifierSet sessions, List<ValueTask<ErrorCode>> tasks)

@@ -31,14 +31,16 @@ public class XmppClientSession : ClientSession
         switch(evnt)
         {
             case MessageEvent msgEvent:
-                return WriteMessage(msgEvent.ToStanza(xmpp), msgEvent, msgEvent.Data);
+                return WriteMessage(msgEvent.ToStanza(xmpp), msgEvent.Data);
             case PresenceEvent presEvent:
-                return WritePresence(presEvent.ToStanza(xmpp), presEvent, presEvent.Data);
+                return WritePresence(presEvent.ToStanza(xmpp), presEvent.Data);
+            case QueryEvent queryEvent:
+                return WriteInfoQuery(queryEvent.ToStanza(xmpp), queryEvent.Data);
         }
         return new(ErrorCode.Unrecognized);
     }
 
-    private async ValueTask<ErrorCode> WriteMessage(Stanza stanza, Event evnt, MessageData? data)
+    private async ValueTask<ErrorCode> WriteMessage(Stanza stanza, MessageData? data)
     {
         await using var output = await xmpp.Message(stanza);
 
@@ -104,7 +106,7 @@ public class XmppClientSession : ClientSession
         return ErrorCode.Success;
     }
 
-    private async ValueTask<ErrorCode> WritePresence(Stanza stanza, Event evnt, PresenceData? data)
+    private async ValueTask<ErrorCode> WritePresence(Stanza stanza, PresenceData? data)
     {
         await using var output = await xmpp.Presence(stanza);
 
@@ -135,6 +137,26 @@ public class XmppClientSession : ClientSession
                     await capture.Replay(output);
                 }
             }
+        }
+
+        return ErrorCode.Success;
+    }
+
+    private async ValueTask<ErrorCode> WriteInfoQuery(Stanza stanza, QueryData? data)
+    {
+        await using var output = await xmpp.InfoQuery(stanza);
+
+        switch(data)
+        {
+            case GeneralQueryData:
+                foreach(var extension in data.Extensions)
+                {
+                    if(extension is CapturingHandler<IInfoQueryHandler> capture)
+                    {
+                        await capture.Replay(output);
+                    }
+                }
+                break;
         }
 
         return ErrorCode.Success;
