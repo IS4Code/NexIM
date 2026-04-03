@@ -126,17 +126,43 @@ public record struct EventProcessing
     public DateTimeOffset Created => Accepted ?? Published ?? Received;
 
     /// <summary>
-    /// Creates a new artificial <see cref="EventProcessing"/> instance for
+    /// Creates an <see cref="EventProcessing"/> instance for
     /// a newly produced event.
     /// </summary>
     public static EventProcessing NewInternal()
     {
-        var date = DateTime.UtcNow;
-        return new()
-        {
+        var date = DateTimeOffset.UtcNow;
+        return new() {
             Received = date,
             Accepted = date,
             Published = date
+        };
+    }
+
+    /// <summary>
+    /// Creates an <see cref="EventProcessing"/> instance for
+    /// a finished event.
+    /// </summary>
+    public static EventProcessing Finish(DateTimeOffset received)
+    {
+        var date = DateTimeOffset.UtcNow;
+        return new() {
+            Received = received,
+            Accepted = date,
+            Published = date
+        };
+    }
+
+    /// <summary>
+    /// Creates an <see cref="EventProcessing"/> instance for
+    /// a finished event.
+    /// </summary>
+    public static EventProcessing Finish(DateTimeOffset received, DateTimeOffset? accepted)
+    {
+        return new() {
+            Received = received,
+            Accepted = accepted,
+            Published = DateTimeOffset.UtcNow
         };
     }
 }

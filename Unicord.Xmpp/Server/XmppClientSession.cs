@@ -26,131 +26,140 @@ public class XmppClientSession : ClientSession
         receivesRosterUpdates = true;
     }
 
-    protected override ValueTask<ErrorCode> Write(Event evnt)
+    protected async override ValueTask<ErrorCode> Write(Event evnt)
     {
         switch(evnt)
         {
             case MessageEvent msgEvent:
-                return WriteMessage(msgEvent.ToStanza(xmpp), msgEvent.Data);
+            {
+                await using var output = await xmpp.Message(msgEvent.ToStanza(xmpp));
+                await WriteMessage(output, msgEvent.Data);
+                return ErrorCode.Success;
+            }
             case PresenceEvent presEvent:
-                return WritePresence(presEvent.ToStanza(xmpp), presEvent.Data);
+            {
+                await using var output = await xmpp.Presence(presEvent.ToStanza(xmpp));
+                await WritePresence(output, presEvent.Data);
+                return ErrorCode.Success;
+            }
             case QueryEvent queryEvent:
-                return WriteInfoQuery(queryEvent.ToStanza(xmpp), queryEvent.Data);
+            {
+                await using var output = await xmpp.InfoQuery(queryEvent.ToStanza(xmpp));
+                return await WriteInfoQuery(output, queryEvent.Data);
+            }
+            case ErrorEvent errorEvent:
+            {
+                return await WriteError(errorEvent.ToStanza(xmpp), errorEvent.Data);
+            }
         }
-        return new(ErrorCode.Unrecognized);
+        return ErrorCode.Unrecognized;
     }
 
-    private async ValueTask<ErrorCode> WriteMessage(Stanza stanza, MessageData? data)
+    private async ValueTask WriteMessage(IMessageHandler output, MessageData? data)
     {
-        await using var output = await xmpp.Message(stanza);
-
-        if(data is not null)
+        if(data is null)
         {
-            // Basic elements
-
-            foreach(var subject in data.Subject)
-            {
-                await output.Subject(subject);
-            }
-
-            foreach(var ((format, language), body) in data.Body.Data)
-            {
-                if(format is MessageFormat.Plain)
-                {
-                    // TODO Other formats
-                    await output.Body(new((string)body, language));
-                }
-            }
-
-            if(data.ThreadIdentifier is { } thread)
-            {
-                await output.Thread(thread);
-            }
-
-            // Supported extensions
-
-            await WriteSender(data.Presentation, output);
-
-            switch(data.State)
-            {
-                case ConversationState.Active:
-                    await output.Active();
-                    break;
-                case ConversationState.Inactive:
-                    await output.Inactive();
-                    break;
-                case ConversationState.Composing:
-                    await output.Composing();
-                    break;
-                case ConversationState.Paused:
-                    await output.Paused();
-                    break;
-                case ConversationState.Gone:
-                    await output.Gone();
-                    break;
-                default:
-                    break;
-            }
-
-            // General extensions
-
-            foreach(var extension in data.Extensions)
-            {
-                if(extension is CapturingHandler<IMessageHandler> capture)
-                {
-                    await capture.Replay(output);
-                }
-            }
+            return;
         }
 
-        return ErrorCode.Success;
-    }
+        // Basic elements
 
-    private async ValueTask<ErrorCode> WritePresence(Stanza stanza, PresenceData? data)
-    {
-        await using var output = await xmpp.Presence(stanza);
-
-        if(data is not null)
+        foreach(var subject in data.Subject)
         {
-            // Basic elements
+            await output.Subject(subject);
+        }
 
-            if(data.Status.Availability.ToStatusType() is { } statusType)
+        foreach(var ((format, language), body) in data.Body.Data)
+        {
+            if(format is MessageFormat.Plain)
             {
-                await output.Show(statusType.ToToken());
-            }
-
-            foreach(var description in data.Status.Description)
-            {
-                await output.Status(description);
-            }
-
-            if(data.Priority is { } priority)
-            {
-                await output.Priority(priority);
-            }
-
-            // Supported extensions
-
-            await WriteSender(data.Presentation, output);
-
-            // General extensions
-
-            foreach(var extension in data.Extensions)
-            {
-                if(extension is CapturingHandler<IPresenceHandler> capture)
-                {
-                    await capture.Replay(output);
-                }
+                // TODO Other formats
+                await output.Body(new((string)body, language));
             }
         }
 
-        return ErrorCode.Success;
+        if(data.ThreadIdentifier is { } thread)
+        {
+            await output.Thread(thread);
+        }
+
+        // Supported extensions
+
+        await WriteSender(data.Presentation, output);
+
+        switch(data.State)
+        {
+            case ConversationState.Active:
+                await output.Active();
+                break;
+            case ConversationState.Inactive:
+                await output.Inactive();
+                break;
+            case ConversationState.Composing:
+                await output.Composing();
+                break;
+            case ConversationState.Paused:
+                await output.Paused();
+                break;
+            case ConversationState.Gone:
+                await output.Gone();
+                break;
+            default:
+                break;
+        }
+
+        // General extensions
+
+        foreach(var extension in data.Extensions)
+        {
+            if(extension is CapturingHandler<IMessageHandler> capture)
+            {
+                await capture.Replay(output);
+            }
+        }
     }
 
-    private async ValueTask<ErrorCode> WriteInfoQuery(Stanza stanza, QueryData? data)
+    private async ValueTask WritePresence(IPresenceHandler output, PresenceData? data)
     {
-        await using var output = await xmpp.InfoQuery(stanza);
+        if(data is null)
+        {
+            return;
+        }
 
+        // Basic elements
+
+        if(data.Status.Availability.ToStatusType() is { } statusType)
+        {
+            await output.Show(statusType.ToToken());
+        }
+
+        foreach(var description in data.Status.Description)
+        {
+            await output.Status(description);
+        }
+
+        if(data.Priority is { } priority)
+        {
+            await output.Priority(priority);
+        }
+
+        // Supported extensions
+
+        await WriteSender(data.Presentation, output);
+
+        // General extensions
+
+        foreach(var extension in data.Extensions)
+        {
+            if(extension is CapturingHandler<IPresenceHandler> capture)
+            {
+                await capture.Replay(output);
+            }
+        }
+    }
+
+    private async ValueTask<ErrorCode> WriteInfoQuery(IInfoQueryHandler output, QueryData? data)
+    {
         switch(data)
         {
             case GeneralQueryData:
@@ -161,10 +170,68 @@ public class XmppClientSession : ClientSession
                         await capture.Replay(output);
                     }
                 }
-                break;
+                return ErrorCode.Success;
+        }
+        return ErrorCode.Unrecognized;
+    }
+
+    private async ValueTask<ErrorCode> WriteError(Stanza stanza, ErrorData? data)
+    {
+        switch(data?.OriginalData)
+        {
+            case MessageData msgData:
+            {
+                await using var output = await xmpp.Message(stanza);
+                await WriteMessage(output, msgData);
+                await WriteErrorData(output);
+                return ErrorCode.Success;
+            }
+            case PresenceData presData:
+            {
+                await using var output = await xmpp.Presence(stanza);
+                await WritePresence(output, presData);
+                await WriteErrorData(output);
+                return ErrorCode.Success;
+            }
+            case QueryData queryData:
+            {
+                await using var output = await xmpp.InfoQuery(stanza);
+                try
+                {
+                    return await WriteInfoQuery(output, queryData);
+                }
+                finally
+                {
+                    await WriteErrorData(output);
+                }
+            }
+            default:
+                return ErrorCode.Unrecognized;
         }
 
-        return ErrorCode.Success;
+        async ValueTask WriteErrorData(IStanzaHandler output)
+        {
+            await using var error = await output.Error(data.RecommendedAction.ToErrorType().ToToken(), (int?)data.StatusCode, data.Reporter?.ToResource());
+
+            // Basic elements
+
+            await data.ErrorCode.ToStanzaException().Output(error);
+
+            foreach(var text in data.Description)
+            {
+                await error.Text(text);
+            }
+
+            // General extensions
+
+            foreach(var extension in data.Extensions)
+            {
+                if(extension is CapturingHandler<IStanzaErrorHandler> capture)
+                {
+                    await capture.Replay(error);
+                }
+            }
+        }
     }
 
     async ValueTask WriteSender(SenderPresentation sender, IPresentationHandler presence)

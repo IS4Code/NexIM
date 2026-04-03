@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
+using System.Xml;
 using Unicord.Primitives.Xml;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 using Unicord.Xmpp.Server;
 using Unicord.Xmpp.Server.Communication;
 
@@ -89,6 +92,16 @@ internal static class AdapterExtensions
         );
     }
 
+    public static Stanza ToStanza(this ErrorEvent evnt, IXmppSession session)
+    {
+        return new(
+            Type: StanzaType.Error.ToToken(),
+            From: evnt.From.ToResource(),
+            To: evnt.To.ToResource(),
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
+        );
+    }
+
     public static Token<StanzaType>? ToStanzaType(this MessageType type)
     {
         return type switch
@@ -139,7 +152,93 @@ internal static class AdapterExtensions
         return code switch {
             ErrorCode.NotFound => XmppStanzaException.ItemNotFound(),
             ErrorCode.InvalidRequest => XmppStanzaException.BadRequest(),
-            ErrorCode.NotAvailable => XmppStanzaException.ServiceUnavailable()
+            ErrorCode.NotAvailable => XmppStanzaException.ServiceUnavailable(),
+            ErrorCode.NotAuthorized => XmppStanzaException.NotAuthorized(),
+            ErrorCode.Unrecognized => XmppStanzaException.FeatureNotImplemented()
         };
+    }
+
+    public static ErrorCode ToErrorCode(this XmppStanzaException exception)
+    {
+        var handler = new ErrorHandler();
+        var task = exception.Output(handler);
+        if(!task.IsCompletedSuccessfully)
+        {
+            // Should not happen since handler calls are synchronous
+            task.AsTask().GetAwaiter().GetResult();
+        }
+        return handler.Code ?? ErrorCode.Unrecognized;
+    }
+
+    public static RecommendedErrorAction ToRecommendedAction(this ErrorType errorType)
+    {
+        return errorType switch {
+            ErrorType.Auth => RecommendedErrorAction.Authenticate,
+            ErrorType.Cancel => RecommendedErrorAction.Abandon,
+            ErrorType.Continue => RecommendedErrorAction.Proceed,
+            ErrorType.Modify => RecommendedErrorAction.Modify,
+            ErrorType.Wait => RecommendedErrorAction.TryAgain
+        };
+    }
+
+    public static ErrorType ToErrorType(this RecommendedErrorAction action)
+    {
+        return action switch {
+            RecommendedErrorAction.Abandon => ErrorType.Cancel,
+            RecommendedErrorAction.Authenticate => ErrorType.Auth,
+            RecommendedErrorAction.Modify => ErrorType.Modify,
+            RecommendedErrorAction.Proceed => ErrorType.Continue,
+            RecommendedErrorAction.TryAgain => ErrorType.Wait
+        };
+    }
+
+    public static EventExtensions ToExtensions<THandler>(this CapturingHandler<THandler> handler) where THandler : IPayloadHandler
+    {
+        return new(handler.Calls.Count > 0 ? handler : null);
+    }
+
+    sealed class ErrorHandler : StanzaErrorHandler<EmptyPayloadHandlerContext>
+    {
+        public ErrorCode? Code { get; private set; }
+
+        protected override ValueTask OnItemNotFound()
+        {
+            Code = ErrorCode.NotFound;
+            return default;
+        }
+
+        protected override ValueTask OnBadRequest()
+        {
+            Code = ErrorCode.InvalidRequest;
+            return default;
+        }
+
+        protected override ValueTask OnServiceUnavailable()
+        {
+            Code = ErrorCode.NotAvailable;
+            return default;
+        }
+
+        protected override ValueTask OnNotAuthorized()
+        {
+            Code = ErrorCode.NotAuthorized;
+            return default;
+        }
+
+        protected override ValueTask OnFeatureNotImplemented()
+        {
+            Code = ErrorCode.Unrecognized;
+            return default;
+        }
+
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader)
+        {
+            return default;
+        }
+
+        public override ValueTask DisposeAsync()
+        {
+            return default;
+        }
     }
 }

@@ -12,6 +12,8 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
 {
     bool? handled;
 
+    protected bool Handled => handled == true || InnerHandler.Calls.Count != 0;
+
     protected sealed override CapturingHandler<IInfoQueryHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
@@ -34,36 +36,13 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
     {
         return new GeneralQueryData
         {
-            Extensions = new(InnerHandler.Calls.Count > 0 ? InnerHandler : null)
-        };
-    }
-
-    protected EventProcessing GetProcessing()
-    {
-        var time = DateTimeOffset.UtcNow;
-        return new() {
-            Received = ConstructedTime,
-            Accepted = time,
-            Published = time
+            Extensions = InnerHandler.ToExtensions()
         };
     }
 
     protected abstract Event GetEvent();
 
-    public async override ValueTask DisposeAsync()
-    {
-        if(handled != true && InnerHandler.Calls.Count != 1)
-        {
-            // No call or multiple unhandled calls
-            throw XmppStanzaException.BadRequest();
-        }
-        if(InnerHandler.Calls.Count == 0)
-        {
-            return;
-        }
-        // General event
-        this.Post(GetEvent());
-    }
+    public abstract override ValueTask DisposeAsync();
 }
 
 internal class ResultInfoQuery : InfoQuery
@@ -73,20 +52,37 @@ internal class ResultInfoQuery : InfoQuery
         return new ResponseEvent
         {
             Origin = this.GetOrigin(),
-            Processing = GetProcessing(),
+            Processing = EventProcessing.Finish(ConstructedTime),
             Data = GetQuery()
         };
     }
+
+    public async override ValueTask DisposeAsync()
+    {
+        this.Post(GetEvent());
+    }
 }
 
-internal class GetInfoQuery : InfoQuery
+internal abstract class GetSetInfoQuery : InfoQuery
+{
+    public async override ValueTask DisposeAsync()
+    {
+        if(!Handled)
+        {
+            throw XmppStanzaException.BadRequest();
+        }
+        this.Post(GetEvent());
+    }
+}
+
+internal class GetInfoQuery : GetSetInfoQuery
 {
     protected override Event GetEvent()
     {
         return new RetrieveEvent
         {
             Origin = this.GetOrigin(),
-            Processing = GetProcessing(),
+            Processing = EventProcessing.Finish(ConstructedTime),
             Data = GetQuery()
         };
     }
@@ -99,14 +95,14 @@ internal class GetInfoQuery : InfoQuery
     }
 }
 
-internal class SetInfoQuery : InfoQuery
+internal class SetInfoQuery : GetSetInfoQuery
 {
     protected override Event GetEvent()
     {
         return new UpdateEvent
         {
             Origin = this.GetOrigin(),
-            Processing = GetProcessing(),
+            Processing = EventProcessing.Finish(ConstructedTime),
             Data = GetQuery()
         };
     }
@@ -137,6 +133,14 @@ internal class SetInfoQuery : InfoQuery
         await this.SendResponse();
     }
 
+    public async override ValueTask DisposeAsync()
+    {
+        if(!Handled)
+        {
+            throw XmppStanzaException.BadRequest();
+        }
+        await base.DisposeAsync();
+    }
 }
 
 internal class GetServerInfoQuery : GetInfoQuery, IInfoQueryHandler
@@ -251,16 +255,29 @@ internal class SetAccountInfoQuery : SetInfoQuery, IInfoQueryHandler
 
 internal class ErrorInfoQuery : InfoQuery
 {
-    // TODO Error data
+    ErrorParser? errorParser;
+
+    protected async sealed override ValueTask<IStanzaErrorHandler> OnError(Token<ErrorType>? type, int? code, XmppResource? by)
+    {
+        return this.SetOnce(ref errorParser, new(type, code, by) { Context = Context });
+    }
 
     protected override Event GetEvent()
     {
+        if(errorParser == null)
+        {
+            throw XmppStanzaException.BadRequest();
+        }
         return new ErrorEvent
         {
             Origin = this.GetOrigin(),
-            Processing = GetProcessing(),
-            Data = new ErrorData(),
-            OriginalData = GetQuery()
+            Processing = EventProcessing.Finish(ConstructedTime),
+            Data = errorParser.GetError(GetQuery())
         };
+    }
+
+    public async override ValueTask DisposeAsync()
+    {
+        this.Post(GetEvent());
     }
 }

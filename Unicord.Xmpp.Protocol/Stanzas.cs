@@ -65,5 +65,5 @@ public partial interface IUniversalHandler : IPayloadHandler
 public interface IStanzaHandler : IPayloadHandler
 {
     [Name("error")]
-    ValueTask<IStanzaErrorHandler> Error([Name("type")] Token<ErrorType>? type, [Name("code")] int? code);
+    ValueTask<IStanzaErrorHandler> Error([Name("type")] Token<ErrorType>? type, [Name("code")] int? code, [Name("by")] XmppResource? by);
 }

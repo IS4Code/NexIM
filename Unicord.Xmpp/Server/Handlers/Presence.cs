@@ -128,19 +128,14 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             ),
             Presentation = new(Nickname: nick),
             Priority = priority,
-            Extensions = new(InnerHandler.Calls.Count > 0 ? InnerHandler : null)
+            Extensions = InnerHandler.ToExtensions()
         };
     }
 
     protected virtual Event GetEvent()
     {
         var origin = this.GetOrigin();
-        var processing = new EventProcessing()
-        {
-            Received = ConstructedTime,
-            Accepted = WrittenTime,
-            Published = DateTimeOffset.UtcNow
-        };
+        var processing = EventProcessing.Finish(ConstructedTime, WrittenTime);
         var data = GetPresence();
         return this.GetStanza().Type?.ToEnum() switch {
             null or StanzaType.Unavailable => new StatusUpdateEvent {
@@ -192,22 +187,24 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
 
 internal class ErrorPresence : Presence
 {
-    // TODO Error data
+    ErrorParser? errorParser;
+
+    protected async sealed override ValueTask<IStanzaErrorHandler> OnError(Token<ErrorType>? type, int? code, XmppResource? by)
+    {
+        return this.SetOnce(ref errorParser, new(type, code, by) { Context = Context });
+    }
 
     protected override Event GetEvent()
     {
-        var time = DateTimeOffset.UtcNow;
+        if(errorParser == null)
+        {
+            throw XmppStanzaException.BadRequest();
+        }
         return new ErrorEvent
         {
             Origin = this.GetOrigin(),
-            Processing = new()
-            {
-                Received = ConstructedTime,
-                Accepted = time,
-                Published = time
-            },
-            Data = new ErrorData(),
-            OriginalData = GetPresence()
+            Processing = EventProcessing.Finish(ConstructedTime),
+            Data = errorParser.GetError(GetPresence())
         };
     }
 }

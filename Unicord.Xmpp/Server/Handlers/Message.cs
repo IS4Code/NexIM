@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Unicord.Primitives;
+using Unicord.Primitives.Xml;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
@@ -89,7 +90,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             ThreadIdentifier = thread,
             Presentation = new(Nickname: nick),
             State = state ?? ConversationState.Unspecified,
-            Extensions = new(InnerHandler.Calls.Count > 0 ? InnerHandler : null)
+            Extensions = InnerHandler.ToExtensions()
         };
     }
 
@@ -99,12 +100,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         {
             Origin = this.GetOrigin(),
             Type = (this.GetStanza().Type?.ToEnum()).ToMessageType(),
-            Processing = new()
-            {
-                Received = ConstructedTime,
-                Accepted = WrittenTime,
-                Published = DateTimeOffset.UtcNow
-            },
+            Processing = EventProcessing.Finish(ConstructedTime, WrittenTime),
             Data = GetMessage()
         };
     }
@@ -124,22 +120,24 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
 
 internal class ErrorMessage : Message
 {
-    // TODO Error data
+    ErrorParser? errorParser;
+
+    protected async sealed override ValueTask<IStanzaErrorHandler> OnError(Token<ErrorType>? type, int? code, XmppResource? by)
+    {
+        return this.SetOnce(ref errorParser, new(type, code, by) { Context = Context });
+    }
 
     protected override Event GetEvent()
     {
-        var time = DateTimeOffset.UtcNow;
+        if(errorParser == null)
+        {
+            throw XmppStanzaException.BadRequest();
+        }
         return new ErrorEvent
         {
             Origin = this.GetOrigin(),
-            Processing = new()
-            {
-                Received = ConstructedTime,
-                Accepted = time,
-                Published = time
-            },
-            Data = new ErrorData(),
-            OriginalData = GetMessage()
+            Processing = EventProcessing.Finish(ConstructedTime),
+            Data = errorParser.GetError(GetMessage())
         };
     }
 }

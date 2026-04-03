@@ -237,7 +237,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         }
         try
         {
-            await using var err = await command.Error(exception.Type?.ToToken(), exception.Code);
+            await using var err = await command.Error(exception.Type?.ToToken(), exception.Code, LocalResource);
             await exception.Output(err);
             return true;
         }

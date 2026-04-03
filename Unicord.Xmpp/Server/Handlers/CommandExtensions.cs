@@ -118,13 +118,13 @@ internal static class CommandExtensions
         return GetSession(handler).InfoQuery(request);
     }
 
-    public static void SetOnce<T>(this ICommandHandler handler, ref T storage, T value)
+    public static T SetOnce<T>(this ICommandHandler handler, ref T? storage, T value)
     {
         if(storage != null)
         {
             throw XmppStanzaException.BadRequest("Property set multiple times.");
         }
-        storage = value;
+        return storage = value;
     }
 
     public static void ValidateSender(this ICommandHandler handler, in Stanza stanza)
