@@ -54,10 +54,17 @@ partial class Account
 
     public async ValueTask<bool> SetContact(Contact info)
     {
-        var success = SetContact(info, out _, out var updated, out var contacts);
-        if(!success || updated is null)
+        var changed = SetContact(info, out _, out var updated, out var contacts);
+        if(updated is null)
         {
+            // Cannot add/not present
             return false;
+        }
+
+        if(!changed)
+        {
+            // Unmodified but successful
+            return true;
         }
 
         foreach(var session in GetSessions(false))
