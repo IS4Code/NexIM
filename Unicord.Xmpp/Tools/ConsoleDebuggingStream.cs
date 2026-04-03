@@ -135,13 +135,13 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
                 {
                     Console.BackgroundColor = bg;
                     Console.ForegroundColor = color;
-                    Console.Write("<");
+                    Console.Write("<-");
                 }
                 else
                 {
                     Console.BackgroundColor = color;
                     Console.ForegroundColor = bg;
-                    Console.Write(">");
+                    Console.Write("->");
                     Console.BackgroundColor = bg;
                     Console.ForegroundColor = color;
                 }
