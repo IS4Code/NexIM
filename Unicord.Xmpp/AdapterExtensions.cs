@@ -11,6 +11,8 @@ using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp;
 
+#pragma warning disable 8509, 8524
+
 internal static class AdapterExtensions
 {
     public static Identifier ToIdentifier(this XmppResource resource)

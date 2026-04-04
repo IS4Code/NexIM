@@ -201,6 +201,7 @@ public class XmppManagedWebSocketListener : XmppServerListener<vtortola.WebSocke
                 return messageType switch {
                     vtortola.WebSockets.WebSocketMessageType.Binary => WebSocketMessageType.Binary,
                     vtortola.WebSockets.WebSocketMessageType.Text => WebSocketMessageType.Text,
+                    _ => throw new System.ComponentModel.InvalidEnumArgumentException(nameof(messageType), (int)messageType, typeof(vtortola.WebSockets.WebSocketMessageType))
                 };
             }
 
@@ -209,10 +210,10 @@ public class XmppManagedWebSocketListener : XmppServerListener<vtortola.WebSocke
                 if(writer == null)
                 {
                     writer = webSocket.CreateMessageWriter(
-                        messageType switch
-                        {
+                        messageType switch {
                             WebSocketMessageType.Binary => vtortola.WebSockets.WebSocketMessageType.Binary,
-                            WebSocketMessageType.Text => vtortola.WebSockets.WebSocketMessageType.Text
+                            WebSocketMessageType.Text => vtortola.WebSockets.WebSocketMessageType.Text,
+                            _ => throw new System.ComponentModel.InvalidEnumArgumentException(nameof(messageType), (int)messageType, typeof(vtortola.WebSockets.WebSocketMessageType))
                         }
                     );
                 }
