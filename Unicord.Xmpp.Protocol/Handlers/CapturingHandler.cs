@@ -48,18 +48,8 @@ public partial class CapturingHandler<THandler> : IPayloadHandler, ICapturingHan
 
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
-        var container = new XElement("_");
-        using(var writer = container.CreateWriter().WithAsyncSupport())
-        {
-            await writer.WriteNodeAsync(payloadReader, false);
-        }
-        Capture<IPayloadHandler>(async handler => {
-            foreach(var node in container.Nodes())
-            {
-                using var reader = node.CreateReader().WithAsyncSupport();
-                await handler.Other(reader);
-            }
-        });
+        var container = await payloadReader.CaptureContent();
+        Capture<IPayloadHandler>(handler => container.RestoreContent(handler.Other));
     }
 
     public ValueTask DisposeAsync()

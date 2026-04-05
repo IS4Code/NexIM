@@ -12,7 +12,7 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
 
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
-        await Writer.WriteNodeAsync(payloadReader, false);
+        await Writer.WriteNodeWithLanguageAsync(payloadReader, false);
     }
 
     async ValueTask IValueXmlEncoder<XmppResource>.Encode(XmlWriter writer, XmppResource value)
