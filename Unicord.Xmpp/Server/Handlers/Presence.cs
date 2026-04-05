@@ -33,7 +33,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
 
     protected async override ValueTask OnStatus(LanguageTaggedString? text)
     {
-        statusText = statusText.Add(text, this.GetSession().RemoteLanguage);
+        statusText = statusText.Add(text);
         WrittenTime = DateTimeOffset.UtcNow;
     }
 

@@ -8,7 +8,7 @@ using Unicord.Server.Accounts;
 
 namespace Unicord.Server.Events;
 
-using MessageBodyCollectionData = ImmutableDictionary<(MessageFormat format, string language), object>;
+using MessageBodyCollectionData = ImmutableDictionary<(MessageFormat format, LanguageCode language), object>;
 
 /// <summary>
 /// Stores data for a message.

@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 using Unicord.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol.Grammar;
@@ -12,6 +14,9 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
 
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
+        // An unrecognized element might differ in original xml:lang
+        // with the parent, however this does not happen directly
+        // in a stanza, because stanza language is always replicated.
         await Writer.WriteNodeWithLanguageAsync(payloadReader, false);
     }
 
@@ -28,33 +33,57 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
 
     ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
     {
-        var copy = stanza;
+        ValueTask task;
+        try
+        {
+            task = WriteStanza(StanzaKind.Message.ToToken(), stanza);
+        }
+        catch(Exception e)
+        {
+            task = new(Task.FromException(e));
+        }
         return Inner();
         async ValueTask<IMessageHandler> Inner()
         {
-            await WriteStanza(StanzaKind.Message.ToToken(), copy);
+            await task;
             return await ForkInner();
         }
     }
 
     ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
     {
-        var copy = stanza;
+        ValueTask task;
+        try
+        {
+            task = WriteStanza(StanzaKind.Presence.ToToken(), stanza);
+        }
+        catch(Exception e)
+        {
+            task = new(Task.FromException(e));
+        }
         return Inner();
         async ValueTask<IPresenceHandler> Inner()
         {
-            await WriteStanza(StanzaKind.Presence.ToToken(), copy);
+            await task;
             return await ForkInner();
         }
     }
 
     ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
     {
-        var copy = stanza;
+        ValueTask task;
+        try
+        {
+            task = WriteStanza(StanzaKind.InfoQuery.ToToken(), stanza);
+        }
+        catch(Exception e)
+        {
+            task = new(Task.FromException(e));
+        }
         return Inner();
         async ValueTask<IInfoQueryHandler> Inner()
         {
-            await WriteStanza(StanzaKind.InfoQuery.ToToken(), copy);
+            await task;
             return await ForkInner();
         }
     }
@@ -79,6 +108,10 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
         if(stanza.Identifier is { } identifier)
         {
             await writer.WriteAttributeStringAsync(null, Vocabulary.Standard.Id.Value, null, identifier.Value);
+        }
+        if(stanza.Language is { } lang && !lang.Equals(new(writer.XmlLang)))
+        {
+            await writer.WriteAttributeStringAsync("xml", "lang", XNamespace.Xml.NamespaceName, lang.Value);
         }
     }
 }

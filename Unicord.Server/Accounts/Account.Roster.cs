@@ -27,7 +27,8 @@ partial class Account
                 {
                     From = new(Name, null),
                     To = new(new Identifier(target, null)),
-                    TransactionIdentifier = null
+                    TransactionIdentifier = null,
+                    TransactionLanguage = null
                 },
                 Processing = EventProcessing.NewInternal(),
                 Data = null
@@ -42,7 +43,8 @@ partial class Account
                 {
                     From = new(Name, null),
                     To = new(new Identifier(target, null)),
-                    TransactionIdentifier = null
+                    TransactionIdentifier = null,
+                    TransactionLanguage = null
                 },
                 Processing = EventProcessing.NewInternal(),
                 Data = null

@@ -229,7 +229,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         async ValueTask Inner()
         {
             IStreamHandler errorHandler = this;
-            var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza.Identifier);
+            var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza.Identifier ?? default);
 
             IStanzaHandler command;
             switch(lastStanzaKind)
@@ -358,6 +358,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
     private Stanza ParseStanza(XmlReader reader)
     {
         var stanza = new Stanza();
+        stanza.Language = new(reader.XmlLang);
         if(reader.MoveToFirstAttribute())
         {
             do

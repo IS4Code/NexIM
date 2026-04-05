@@ -243,7 +243,7 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
             reader.GetAttribute("lang", "http://www.w3.org/XML/1998/namespace") is { } lang
             ? (lang, true)
             : (reader.XmlLang, false);
-        return new(await reader.ReadContentAsStringAsync(), language)
+        return new(await reader.ReadContentAsStringAsync(), new(language))
         {
             Explicit = isExplicit
         };

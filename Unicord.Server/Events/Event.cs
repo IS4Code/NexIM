@@ -1,4 +1,5 @@
 ﻿using System;
+using Unicord.Primitives;
 using Unicord.Server.Accounts;
 
 namespace Unicord.Server.Events;
@@ -18,39 +19,28 @@ public abstract record Event
     /// </summary>
     public required EventProcessing Processing { get; set; }
 
-    /// <summary>
-    /// The identifier of the originating party.
-    /// </summary>
+    /// <inheritdoc cref="EventOrigin.From"/>
     public Identifier From => Origin.From;
 
-    /// <summary>
-    /// The identifiers of the parties this event is being delivered to.
-    /// </summary>
+    /// <inheritdoc cref="EventOrigin.To"/>
     public IdentifierSet To => Origin.To;
 
-    /// <summary>
-    /// The identifier of the event within the scope of the session between the two parties.
-    /// </summary>
+    /// <inheritdoc cref="EventOrigin.TransactionIdentifier"/>
     public Identifier? TransactionIdentifier => Origin.TransactionIdentifier;
 
-    /// <summary>
-    /// The date and time this event was received by the server.
-    /// </summary>
+    /// <inheritdoc cref="EventOrigin.TransactionLanguage"/>
+    public LanguageCode? TransactionLanguage => Origin.TransactionLanguage;
+
+    /// <inheritdoc cref="EventProcessing.Received"/>
     public DateTimeOffset Received => Processing.Received;
 
-    /// <summary>
-    /// The date and time this event's main content was received by the server.
-    /// </summary>
+    /// <inheritdoc cref="EventProcessing.Accepted"/>
     public DateTimeOffset? Accepted => Processing.Accepted;
 
-    /// <summary>
-    /// The date and time this event was fully processed by the server.
-    /// </summary>
+    /// <inheritdoc cref="EventProcessing.Published"/>
     public DateTimeOffset? Published => Processing.Published;
 
-    /// <summary>
-    /// The canonical date and time of this event.
-    /// </summary>
+    /// <inheritdoc cref="EventProcessing.Created"/>
     public DateTimeOffset Created => Processing.Created;
 }
 
@@ -85,6 +75,11 @@ public record struct EventOrigin
     /// The identifier of the event within the scope of the session between the two parties.
     /// </summary>
     public required Identifier? TransactionIdentifier { get; set; }
+
+    /// <summary>
+    /// The language that was used when constructing the event.
+    /// </summary>
+    public required LanguageCode? TransactionLanguage { get; set; }
 }
 
 /// <summary>

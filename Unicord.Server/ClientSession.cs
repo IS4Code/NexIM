@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Unicord.Primitives;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
 
@@ -19,12 +20,14 @@ namespace Unicord.Server;
 /// </remarks>
 public abstract class ClientSession : IAsyncDisposable
 {
-    static readonly PresenceData DefaultPresence = new()
-    {
-        Presentation = default,
-        Status = default,
-        Priority = default
-    };
+    static readonly PresenceStore DefaultPresence = new(
+        new()
+        {
+            Presentation = default,
+            Status = default,
+            Priority = default
+        }
+    );
 
     const bool ReportUnavailableStatus = false;
 
@@ -36,7 +39,7 @@ public abstract class ClientSession : IAsyncDisposable
     /// The set of targets to which directed presence has been sent and which
     /// must be informed when this session is closed.
     /// </summary>
-    readonly ConcurrentDictionary<Identifier, PresenceData> directedPresence = new();
+    readonly ConcurrentDictionary<Identifier, PresenceStore> directedPresence = new();
 
     /// <summary>
     /// The unique local identifier of this session for the account.
@@ -53,10 +56,17 @@ public abstract class ClientSession : IAsyncDisposable
     /// </summary>
     public sbyte Priority => Presence.Priority ?? 0;
 
+    PresenceStore currentPresence = DefaultPresence;
+
     /// <summary>
     /// The last presence data of this session.
     /// </summary>
-    public PresenceData Presence { get; protected set; } = DefaultPresence;
+    public PresenceData Presence => currentPresence.Data;
+
+    /// <summary>
+    /// The language of the last presence data of this session.
+    /// </summary>
+    public LanguageCode? PresenceLanguage => currentPresence.Language;
 
     public ClientSession(Account account, string? resource)
     {
@@ -72,8 +82,8 @@ public abstract class ClientSession : IAsyncDisposable
         Account.AddSession(this);
     }
 
-    static readonly Func<Identifier, PresenceData, PresenceData> addFactory = (_, value) => value;
-    static readonly Func<Identifier, PresenceData, PresenceData, PresenceData> keepOriginalIfSameUpdateFactory = (_, previous, updated) => previous == updated ? previous : updated;
+    static readonly Func<Identifier, PresenceStore, PresenceStore> addFactory = (_, value) => value;
+    static readonly Func<Identifier, PresenceStore, PresenceStore, PresenceStore> keepOriginalIfSameUpdateFactory = (_, previous, updated) => previous == updated ? previous : updated;
 
     public async ValueTask<ErrorCode> Inbound(Event evnt)
     {
@@ -89,34 +99,42 @@ public abstract class ClientSession : IAsyncDisposable
                 var to = statusEvent.To;
                 var presence = statusEvent.Data;
 
-                if(presence is null || presence == DefaultPresence)
+                if(presence is null || presence == DefaultPresence.Data)
                 {
                     // Deduplicate
-                    presence = DefaultPresence;
+                    presence = DefaultPresence.Data;
                 }
+
+                // Remember original language
+                var presenceLanguage = evnt.Origin.TransactionLanguage;
 
                 if(to.IsEmpty)
                 {
                     // Broadcast event
 
-                    if(presence == Presence)
+                    if(presence == Presence && presenceLanguage == PresenceLanguage)
                     {
                         // No update
                         return ErrorCode.Success;
                     }
 
-                    if(presence.Status.Availability != Availability.Unavailable && Presence.Status.Availability == Availability.Unavailable)
-                    {
-                        // Going live - probe other contacts
-                        await ProbeContacts(presence);
-                    }
+                    var previousStatus = Presence.Status;
 
                     // Preserve the status data
-                    Presence = presence;
+                    currentPresence = new(presence, presenceLanguage);
 
                     Account.AddOrUpdateSession(this);
+
+                    if(presence.Status.Availability != Availability.Unavailable && previousStatus.Availability == Availability.Unavailable)
+                    {
+                        // Going live - probe other contacts
+                        await ProbeContacts(presence, presenceLanguage);
+                    }
+
                     break;
                 }
+
+                var presenceStore = new PresenceStore(presence, presenceLanguage);
 
                 List<Identifier>? notUpdatedRecipients = null;
 
@@ -124,16 +142,16 @@ public abstract class ClientSession : IAsyncDisposable
                 foreach(var target in statusEvent.To)
                 {
                     // Update current presence
-                    var result = directedPresence.AddOrUpdate(target, addFactory, keepOriginalIfSameUpdateFactory, presence);
-                    if(!Object.ReferenceEquals(result, presence))
+                    var result = directedPresence.AddOrUpdate(target, addFactory, keepOriginalIfSameUpdateFactory, presenceStore);
+                    if(!Object.ReferenceEquals(result, presenceStore))
                     {
                         // Not updated - remove from to
                         (notUpdatedRecipients ??= new()).Add(target);
                     }
-                    else if(Object.ReferenceEquals(presence, DefaultPresence))
+                    else if(Object.ReferenceEquals(presence, DefaultPresence.Data))
                     {
                         // No extra information other than unavailable, can be removed
-                        directedPresence.TryRemove(new(target, presence));
+                        directedPresence.TryRemove(new(target, presenceStore));
                     }
                 }
 
@@ -152,12 +170,12 @@ public abstract class ClientSession : IAsyncDisposable
         if(evnt is StatusRequestEvent)
         {
             // Respond with the last known presence immediately
-            if(!directedPresence.TryGetValue(evnt.From, out var presence))
+            if(!directedPresence.TryGetValue(evnt.From, out var presenceStore))
             {
                 // Assume authorized to use global presence (otherwise the account should block it)
-                presence = Presence;
+                presenceStore = currentPresence;
             }
-            if(!ReportUnavailableStatus && presence.Status.Availability == Availability.Unavailable)
+            if(!ReportUnavailableStatus && presenceStore.Data.Status.Availability == Availability.Unavailable)
             {
                 // Not needed to report unavailable
                 return new(ErrorCode.Success);
@@ -168,10 +186,11 @@ public abstract class ClientSession : IAsyncDisposable
                 {
                     From = Identifier,
                     To = new(evnt.From),
-                    TransactionIdentifier = default
+                    TransactionIdentifier = default,
+                    TransactionLanguage = presenceStore.Language
                 },
                 Processing = EventProcessing.NewInternal(),
-                Data = presence
+                Data = presenceStore.Data
             });
         }
 
@@ -189,7 +208,7 @@ public abstract class ClientSession : IAsyncDisposable
     protected internal abstract ValueTask<ErrorCode> ContactUpdated(Contact contact, ICollection<Contact> current);
     protected internal abstract ValueTask<ErrorCode> ContactRemoved(Contact contact, ICollection<Contact> current);
 
-    private async ValueTask ProbeContacts(PresenceData data)
+    private async ValueTask ProbeContacts(PresenceData data, LanguageCode? dataLanguage)
     {
         // Broadcast status information request of all contacts
         var evnt = new StatusRequestEvent
@@ -198,7 +217,8 @@ public abstract class ClientSession : IAsyncDisposable
             {
                 From = Identifier,
                 To = default,
-                TransactionIdentifier = default
+                TransactionIdentifier = default,
+                TransactionLanguage = dataLanguage
             },
             Processing = EventProcessing.NewInternal(),
             Data = data
@@ -209,10 +229,10 @@ public abstract class ClientSession : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        Presence = DefaultPresence;
+        currentPresence = DefaultPresence;
 
         // Check entities to which directed presence is maintained
-        var to = new IdentifierSet(directedPresence.Where(p => p.Value.Status.Availability != Availability.Unavailable).Select(p => p.Key));
+        var to = new IdentifierSet(directedPresence.Where(p => p.Value.Data.Status.Availability != Availability.Unavailable).Select(p => p.Key));
         directedPresence.Clear();
 
         if(to.IsEmpty)
@@ -228,13 +248,16 @@ public abstract class ClientSession : IAsyncDisposable
             { 
                 From = Identifier,
                 To = to,
-                TransactionIdentifier = null
+                TransactionIdentifier = null,
+                TransactionLanguage = null
             },
             Processing = EventProcessing.NewInternal(),
-            Data = DefaultPresence
+            Data = DefaultPresence.Data
         };
 
         // Deliver this information
         await Account.Post(unavailableEvent);
     }
+
+    record PresenceStore(PresenceData Data, LanguageCode? Language = default);
 }

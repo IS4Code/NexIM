@@ -30,7 +30,7 @@ internal class ErrorParser : BaseDelegatingStanzaErrorHandler<XmppStanzaExceptio
 
     protected async override ValueTask OnText(LanguageTaggedString? text)
     {
-        description = description.Add(text, this.GetSession().RemoteLanguage);
+        description = description.Add(text);
     }
 
     protected override ValueTask OnOther(XmlReader payloadReader)

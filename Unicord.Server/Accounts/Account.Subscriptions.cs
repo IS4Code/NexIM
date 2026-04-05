@@ -57,7 +57,8 @@ partial class Account
                     {
                         From = targetAccountIdentifier,
                         To = new(new Identifier(Name, null)),
-                        TransactionIdentifier = null
+                        TransactionIdentifier = null,
+                        TransactionLanguage = evnt.TransactionLanguage
                     },
                     Processing = EventProcessing.NewInternal(),
                     Data = null
@@ -352,7 +353,8 @@ partial class Account
         {
             From = default, // Filled later
             To = targets,
-            TransactionIdentifier = null
+            TransactionIdentifier = null,
+            TransactionLanguage = null
         };
         var processing = EventProcessing.NewInternal();
         foreach(var session in GetSessions(false))
@@ -384,7 +386,8 @@ partial class Account
         {
             From = default, // Filled later
             To = targets,
-            TransactionIdentifier = null
+            TransactionIdentifier = null,
+            TransactionLanguage = null
         };
         var processing = EventProcessing.NewInternal();
         var data = new PresenceData

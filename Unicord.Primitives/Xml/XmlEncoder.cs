@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace Unicord.Primitives.Xml;
 
@@ -68,7 +69,7 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
 
     async ValueTask IValueXmlEncoder<LanguageTaggedString>.Encode(XmlWriter writer, LanguageTaggedString value)
     {
-        if(!value.Explicit && String.Equals(writer.XmlLang, value.LanguageTag, StringComparison.OrdinalIgnoreCase))
+        if(!value.Explicit && value.Language.Equals(new(writer.XmlLang)))
         {
             // No need to write language
             await writer.WriteStringAsync(value.Value);
@@ -81,13 +82,13 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
             await writer.WriteStringAsync(value.Value);
             await writer.WriteEndAttributeAsync();
 
-            await writer.WriteStartAttributeAsync("xml", "lang", "http://www.w3.org/XML/1998/namespace");
-            await writer.WriteStringAsync(value.LanguageTag);
+            await writer.WriteStartAttributeAsync("xml", "lang", XNamespace.Xml.NamespaceName);
+            await writer.WriteStringAsync(value.Language.Value);
         }
         else
         {
             // Write xml:lang as the last attribute
-            await writer.WriteAttributeStringAsync("xml", "lang", "http://www.w3.org/XML/1998/namespace", value.LanguageTag);
+            await writer.WriteAttributeStringAsync("xml", "lang", XNamespace.Xml.NamespaceName, value.Language.Value);
             await writer.WriteStringAsync(value.Value);
         }
     }

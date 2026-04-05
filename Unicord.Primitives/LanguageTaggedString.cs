@@ -1,11 +1,10 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace Unicord.Primitives;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly record struct LanguageTaggedString(string Value, string LanguageTag)
+public readonly record struct LanguageTaggedString(string Value, LanguageCode Language)
 {
     public bool Explicit { get; init; }
 
@@ -20,22 +19,9 @@ public readonly record struct LanguageTaggedString(string Value, string Language
         }
     }
 
-    public LanguageTaggedString(string value) : this(value, DefaultLanguage)
+    public LanguageTaggedString(string value) : this(value, new(DefaultLanguage))
     {
 
-    }
-
-    public bool Equals(LanguageTaggedString other)
-    {
-        return Value == other.Value && LanguageTag.Equals(other.LanguageTag, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public override int GetHashCode()
-    {
-        var hashCode = new HashCode();
-        hashCode.Add(LanguageTag ?? "", StringComparer.OrdinalIgnoreCase);
-        hashCode.Add(Value ?? "");
-        return hashCode.ToHashCode();
     }
 
     public override string ToString()

@@ -26,12 +26,12 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected async sealed override ValueTask OnBody(LanguageTaggedString? text)
     {
         WrittenTime = DateTimeOffset.UtcNow;
-        body = body.Add(text, this.GetLanguage());
+        body = body.Add(text);
     }
 
     protected async sealed override ValueTask OnSubject(LanguageTaggedString? text)
     {
-        subject = subject.Add(text, this.GetLanguage());
+        subject = subject.Add(text);
     }
 
     protected async sealed override ValueTask OnThread(string? identifier)
@@ -80,7 +80,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         foreach(var body in this.body)
         {
             // TODO XHTML
-            content[(MessageFormat.Plain, body.LanguageTag)] = body.Value;
+            content[(MessageFormat.Plain, body.Language)] = body.Value;
         }
 
         return new MessageData

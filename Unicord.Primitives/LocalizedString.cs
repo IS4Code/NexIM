@@ -8,23 +8,34 @@ namespace Unicord.Primitives;
 
 public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerable<LanguageTaggedString>
 {
-    static readonly ImmutableSortedDictionary<string, string> empty = ImmutableSortedDictionary<string, string>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase);
+    static readonly ImmutableSortedDictionary<LanguageCode, string> empty = ImmutableSortedDictionary<LanguageCode, string>.Empty;
 
-    readonly ImmutableSortedDictionary<string, string>? _data;
-    ImmutableSortedDictionary<string, string> data => _data ?? empty;
+    // Sorted to allow sequential equality check
+    readonly ImmutableSortedDictionary<LanguageCode, string>? _data;
+    ImmutableSortedDictionary<LanguageCode, string> data => _data ?? empty;
 
-    public IReadOnlyDictionary<string, string> Data => data;
+    public IReadOnlyDictionary<LanguageCode, string> Data => data;
 
     public bool Empty => data.Count == 0;
 
-    private LocalizedString(ImmutableSortedDictionary<string, string> data)
+    private LocalizedString(ImmutableSortedDictionary<LanguageCode, string> data)
     {
         _data = data;
     }
 
     public LocalizedString(LanguageTaggedString initial)
     {
-        _data = empty.SetItem(initial.LanguageTag, initial.Value);
+        _data = empty.SetItem(initial.Language, initial.Value);
+    }
+
+    public LocalizedString Add(LanguageTaggedString other)
+    {
+        return new(data.Add(other.Language, other.Value));
+    }
+
+    public LocalizedString Add(LanguageTaggedString? other)
+    {
+        return other is { } value ? Add(value) : this;
     }
 
     public LocalizedString Add(LocalizedString other)
@@ -35,17 +46,6 @@ public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerabl
     public LocalizedString Add(LocalizedString? other)
     {
         return other is { } value ? Add(value) : this;
-    }
-
-    public LocalizedString Add(LanguageTaggedString other, string? defaultLanguage)
-    {
-        var languageTag = other.LanguageTag;
-        return new(data.Add(String.IsNullOrEmpty(languageTag) ? (defaultLanguage ?? "") : languageTag, other.Value));
-    }
-
-    public LocalizedString Add(LanguageTaggedString? other, string? defaultLanguage)
-    {
-        return other is { } value ? Add(value, defaultLanguage) : this;
     }
 
     public override bool Equals(object obj)
@@ -86,21 +86,18 @@ public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerabl
         return String.Join(", ", data.Values);
     }
 
-    sealed class EqualityComparer : IEqualityComparer<KeyValuePair<string, string>>
+    sealed class EqualityComparer : IEqualityComparer<KeyValuePair<LanguageCode, string>>
     {
         public static readonly EqualityComparer Instance = new();
 
-        public bool Equals(KeyValuePair<string, string> x, KeyValuePair<string, string> y)
+        public bool Equals(KeyValuePair<LanguageCode, string> x, KeyValuePair<LanguageCode, string> y)
         {
-            return x.Key.Equals(y.Key, StringComparison.OrdinalIgnoreCase) && x.Value == y.Value;
+            return new LanguageTaggedString(x.Value, x.Key) == new LanguageTaggedString(y.Value, y.Key);
         }
 
-        public int GetHashCode(KeyValuePair<string, string> obj)
+        public int GetHashCode(KeyValuePair<LanguageCode, string> obj)
         {
-            var hashCode = new HashCode();
-            hashCode.Add(obj.Key, StringComparer.OrdinalIgnoreCase);
-            hashCode.Add(obj.Value);
-            return hashCode.ToHashCode();
+            return new LanguageTaggedString(obj.Value, obj.Key).GetHashCode();
         }
     }
 }

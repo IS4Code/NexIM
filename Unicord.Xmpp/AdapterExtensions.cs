@@ -59,7 +59,8 @@ internal static class AdapterExtensions
             Type: evnt.Type.ToStanzaType(),
             From: evnt.From.ToResource(),
             To: evnt.To.ToResource(),
-            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
+            Language: evnt.TransactionLanguage
         );
     }
 
@@ -76,7 +77,8 @@ internal static class AdapterExtensions
             },
             From: evnt.From.ToResource(),
             To: evnt.To.ToResource(),
-            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
+            Language: evnt.TransactionLanguage
         );
     }
 
@@ -90,7 +92,8 @@ internal static class AdapterExtensions
             },
             From: evnt.From.ToResource(),
             To: evnt.To.ToResource(),
-            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
+            Language: evnt.TransactionLanguage
         );
     }
 
@@ -100,7 +103,8 @@ internal static class AdapterExtensions
             Type: StanzaType.Error.ToToken(),
             From: evnt.From.ToResource(),
             To: evnt.To.ToResource(),
-            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session)
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
+            Language: evnt.TransactionLanguage
         );
     }
 

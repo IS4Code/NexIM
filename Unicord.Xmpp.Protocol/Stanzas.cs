@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Grammar;
 
@@ -39,10 +40,11 @@ public enum StanzaType
 
 [StructLayout(LayoutKind.Auto)]
 public record struct Stanza(
-    Token<StanzaType>? Type = null,
+    Token<StanzaType>? Type,
     XmppResource? From = null,
     XmppResource? To = null,
-    Token<StanzaIdentifier>? Identifier = null
+    Token<StanzaIdentifier>? Identifier = null,
+    LanguageCode? Language = null
 );
 
 [SimpleType]
