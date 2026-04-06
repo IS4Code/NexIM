@@ -18,6 +18,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     LocalizedString statusText;
     string? nick;
     sbyte? priority;
+    CapabilitiesHandle? caps;
 
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -52,71 +53,17 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         // Ignore
     }
 
-    /*protected async override ValueTask OnCapabilities(Token<CapabilitiesHash>? hash, string? node, string? version)
+    protected async override ValueTask OnCapabilities(Token<CapabilitiesHash>? hash, string? node, string? version, string? extension)
     {
-        if(hash?.ToEnum() != CapabilitiesHash.Sha1)
+        if(node is null || version is null || hash is not { } hashValue || extension is not null)
         {
-            return;
-        }
-        if(node == null || version == null)
-        {
+            // Unrecognized - store as extension
+            await base.OnCapabilities(hash, node, version, extension);
             return;
         }
 
-        var nodeToken = Context.Session.GetToken<DiscoNode>(node + "#" + version);
-
-        // Request capabilities
-        await using var iq = await this.CreateRequest(async () => new CapabilitiesResultInfoQuery(nodeToken, version)
-        {
-            Context = Context with { Identifier = null }
-        });
-        await using var query = await iq.DiscoInfoQuery(nodeToken);
+        this.SetOnce(ref caps, this.GetClientSession().GetCapabilities(hashValue, node, version));
     }
-
-    class CapabilitiesResultInfoQuery(Token<DiscoNode> nodeToken, string expectedHash) : InfoQueryHandler<CommandContext>
-    {
-        CapabilitiesParser<CommandContext>? handler;
-
-        protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
-        {
-            if(node != nodeToken)
-            {
-                // Wrong result
-                return NullHandler.Instance;
-            }
-
-            return handler = new() { Context = Context };
-        }
-
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader)
-        {
-            return default;
-        }
-
-        public async override ValueTask DisposeAsync()
-        {
-            if(handler != null)
-            {
-                var capabilities = handler.Capabilities;
-                using var sha1 = SHA1.Create();
-
-                var computedHash = capabilities.ComputeHashCode(sha1, false);
-                
-                if(computedHash != expectedHash)
-                {
-                    // Try explicit language-only
-                    computedHash = capabilities.ComputeHashCode(sha1, true);
-                    if(computedHash != expectedHash)
-                    {
-                        // Fake or difference in algorithm
-                        return;
-                    }
-                }
-
-                // TODO Remember globally
-            }
-        }
-    }*/
 
     protected virtual PresenceData GetPresence()
     {
@@ -128,6 +75,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             ),
             Presentation = new(Nickname: nick),
             Priority = priority,
+            Capabilities = caps,
             Extensions = InnerHandler.ToExtensions()
         };
     }

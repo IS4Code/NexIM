@@ -1,4 +1,5 @@
-﻿using Unicord.Server.Accounts;
+﻿using Unicord.Primitives;
+using Unicord.Server.Accounts;
 
 namespace Unicord.Server.Events;
 
@@ -21,4 +22,18 @@ public sealed record PresenceData : EventData
     /// The sender's message priority.
     /// </summary>
     public required sbyte? Priority { get; init; }
+
+    /// <summary>
+    /// The sender's capabilities.
+    /// </summary>
+    public required CapabilitiesHandle? Capabilities { get; init; }
+}
+
+public record struct CapabilitiesIdentifier(string Application, string Version, string VersionType);
+
+public record struct CapabilitiesHandle(CapabilitiesIdentifier Identifier, Cached<ICapabilities> Value);
+
+public interface ICapabilities
+{
+
 }

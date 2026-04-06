@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
@@ -15,18 +16,19 @@ using static Capabilities;
 internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext> where TContext : IPayloadHandlerContext
 {
     readonly SortedSet<Identity> identities = new(Comparer.Instance);
-    // Identities where non-explicit xml:lang is removed, if they differ
-    SortedSet<Identity>? explicitLanguageIdentities;
     readonly SortedSet<Token<DiscoFeature>> features = new(Comparer.Instance);
     readonly SortedDictionary<Token<FieldValue>, Form> forms = new(Comparer.Instance);
 
-    public Capabilities Capabilities => new()
-    {
-        Identities = identities,
-        ExplicitLanguageIdentities = explicitLanguageIdentities ?? identities,
-        Features = features,
-        Forms = forms
-    };
+    /// <summary>
+    /// Identities where non-explicit <c>xml:lang</c> is removed, if they differ from <see cref="identities"/>.
+    /// </summary>
+    /// <remarks>
+    /// The <c>xml:lang</c> attribute affects all texts within the element it is attached to,
+    /// including descendant elements, and thus all identities. However, some clients
+    /// do not consider an implicit <c>xml:lang</c> in the capabilities hash,
+    /// which means its effect must be disregarded before the capabilities are processed.
+    /// </remarks>
+    SortedSet<Identity>? alternateIdentities;
 
     protected async override ValueTask OnIdentity(LanguageTaggedString? name, Token<DiscoCategory>? category, Token<DiscoType>? type)
     {
@@ -39,12 +41,12 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
 
         if(name is { Explicit: false } nameValue)
         {
-            // The language is not explicit - strip off
-            (explicitLanguageIdentities ??= new(identities, Comparer.Instance)).Add(identity with { Name = nameValue with { LanguageTag = "" } });
+            // The language is not explicit - strip off for alternate
+            (alternateIdentities ??= new(identities, Comparer.Instance)).Add(new(nameValue with { Language = default }, categoryValue, typeValue));
         }
         else
         {
-            explicitLanguageIdentities?.Add(identity);
+            alternateIdentities?.Add(identity);
         }
         identities.Add(identity);
     }
@@ -66,6 +68,62 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
     protected override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
         return default;
+    }
+
+    public static bool IsSupportedHashAlgorithm(Token<CapabilitiesHash> hashAlgorithm)
+    {
+        return hashAlgorithm.ToEnum() is CapabilitiesHash.Sha1;
+    }
+
+    public Capabilities GetCapabilities(Token<CapabilitiesHash> hashAlgorithm, string expectedHash)
+    {
+        if(hashAlgorithm.ToEnum() != CapabilitiesHash.Sha1)
+        {
+            // Unknown hash algorithm
+            return new()
+            {
+                Verified = false,
+                Identities = identities,
+                Features = features,
+                Forms = forms
+            };
+        }
+
+        using var sha1 = SHA1.Create();
+
+        var computedHash = ComputeHashCode(sha1, identities, features, forms);
+
+        bool verified;
+        if(computedHash == expectedHash)
+        {
+            verified = true;
+        }
+        else if(
+            alternateIdentities is { } alternate &&
+            expectedHash == ComputeHashCode(sha1, alternate, features, forms)
+        )
+        {
+            // Hash matches when the alternate identities are used
+            return new()
+            {
+                Verified = true,
+                Identities = alternate,
+                Features = features,
+                Forms = forms
+            };
+        }
+        else
+        {
+            verified = false;
+        }
+
+        return new()
+        {
+            Verified = verified,
+            Identities = identities,
+            Features = features,
+            Forms = forms
+        };
     }
 
     public override ValueTask DisposeAsync()
@@ -165,7 +223,7 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
             {
                 return cmp;
             }
-            cmp = octetComparer.Compare(x.Name?.LanguageTag ?? "", y.Name?.LanguageTag ?? "");
+            cmp = octetComparer.Compare((x.Name?.Language ?? default).Value, (y.Name?.Language ?? default).Value);
             if(cmp != 0)
             {
                 return cmp;

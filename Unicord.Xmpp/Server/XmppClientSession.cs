@@ -1,13 +1,21 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Xml;
+using Unicord.Primitives;
+using Unicord.Primitives.Xml;
 using Unicord.Server;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
+using Unicord.Xmpp.Model;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 using Unicord.Xmpp.Server.Communication;
+using Unicord.Xmpp.Server.Handlers;
+using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Server;
+
+using CapabilitiesCache = FallbackCache<CapabilitiesIdentifier, ICapabilities>;
 
 public class XmppClientSession : ClientSession
 {
@@ -15,6 +23,8 @@ public class XmppClientSession : ClientSession
 
     bool receivesRosterUpdates;
     ICollection<Contact>? lastUpdatedRoster;
+
+    readonly CapabilitiesCache capabilitiesCache = new();
 
     public XmppClientSession(Account account, string? resource, IXmppSession xmpp) : base(account, resource)
     {
@@ -239,6 +249,85 @@ public class XmppClientSession : ClientSession
         if(sender.Nickname is { } nick)
         {
             await presence.Nickname(nick);
+        }
+    }
+
+    internal CapabilitiesHandle GetCapabilities(Token<CapabilitiesHash> hash, string node, string version)
+    {
+        var identifier = new CapabilitiesIdentifier(node, version, hash.Value);
+        var task = capabilitiesCache.Get(identifier, async () => {
+            // Not used locally yet
+            var tcs = new TaskCompletionSource<ICapabilities>();
+
+            if(!CapabilitiesParser<ICommandContext>.IsSupportedHashAlgorithm(hash))
+            {
+                // No way to verify - request only locally and wait for result
+                await RequestCapabilities(hash, node, version, tcs);
+                return await tcs.Task;
+            }
+
+            // May be unverified regardless, but we still want to retrieve the local result
+
+            return await await Task.WhenAny(tcs.Task, CapabilitiesCache.Global.Get(identifier, async () => {
+                await RequestCapabilities(hash, node, version, tcs);
+                var result = await tcs.Task;
+                if(result is Capabilities { Verified: false })
+                {
+                    // Must not be stored globally
+                    return null;
+                }
+                return result;
+            }));
+        });
+
+        return new(identifier, Cached<ICapabilities>.FromTask(task));
+    }
+
+    private async ValueTask RequestCapabilities(Token<CapabilitiesHash> hash, string node, string version, TaskCompletionSource<ICapabilities> tcs)
+    {
+        // Atomize full node to verify quickly
+        var nodeToken = xmpp.GetToken<DiscoNode>(node + "#" + version);
+
+        var identifier = xmpp.NewStanzaIdentifier();
+        xmpp.RegisterCallback(identifier, () => new(new CapabilitiesResultInfoQuery(nodeToken, hash, version, tcs)
+        {
+            Context = (ICommandContext)xmpp
+        }));
+
+        await using var iq = await xmpp.InfoQuery(new(Type: StanzaType.Get.ToToken(), From: xmpp.LocalResource, Identifier: identifier));
+        await using var query = await iq.DiscoInfoQuery(nodeToken);
+    }
+
+    class CapabilitiesResultInfoQuery(Token<DiscoNode> nodeToken, Token<CapabilitiesHash> hashAlgorithm, string expectedHash, TaskCompletionSource<ICapabilities> tcs) : InfoQueryHandler<ICommandContext>
+    {
+        CapabilitiesParser<ICommandContext>? handler;
+
+        protected async override ValueTask<IDiscoInfoQueryHandler> OnDiscoInfoQuery(Token<DiscoNode>? node)
+        {
+            if(node != nodeToken)
+            {
+                // Wrong result
+                return NullHandler.Instance;
+            }
+
+            return this.SetOnce(ref handler, new() { Context = Context });
+        }
+
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader)
+        {
+            return default;
+        }
+
+        public async override ValueTask DisposeAsync()
+        {
+            if(handler == null)
+            {
+                // TODO Ask again?
+                return;
+            }
+
+            // Store result
+            tcs.TrySetResult(handler.GetCapabilities(hashAlgorithm, expectedHash));
         }
     }
 

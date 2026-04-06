@@ -394,7 +394,8 @@ partial class Account
         {
             Presentation = default,
             Priority = null,
-            Status = new Status(Availability.Unavailable)
+            Status = new Status(Availability.Unavailable),
+            Capabilities = null
         };
         foreach(var session in GetSessions(false))
         {

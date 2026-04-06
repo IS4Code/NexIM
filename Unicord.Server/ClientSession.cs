@@ -25,7 +25,8 @@ public abstract class ClientSession : IAsyncDisposable
         {
             Presentation = default,
             Status = default,
-            Priority = default
+            Priority = null,
+            Capabilities = null
         }
     );
 

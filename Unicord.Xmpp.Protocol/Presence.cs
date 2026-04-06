@@ -19,7 +19,8 @@ public interface ICapabilitiesHandler : IPayloadHandler
     ValueTask Capabilities(
         [Name("hash")] Token<CapabilitiesHash>? hash,
         [Name("node")] string? node,
-        [Name("ver")] string? version
+        [Name("ver")] string? version,
+        [Name("ext")] string? extension
     );
 }
 

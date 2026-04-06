@@ -7,21 +7,35 @@ using System.Security.Cryptography;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Model;
 
-[StructLayout(LayoutKind.Auto)]
-public readonly record struct Capabilities
+public record Capabilities : ICapabilities
 {
-    // Assume these are already pre-sorted
-    public IReadOnlySet<Identity> Identities { get; init; }
-    public IReadOnlySet<Identity> ExplicitLanguageIdentities { get; init; }
-    public IReadOnlySet<Token<DiscoFeature>> Features { get; init; }
-    public IReadOnlyDictionary<Token<FieldValue>, Form> Forms { get; init; }
+    public required bool Verified { get; init; }
 
-    static readonly XmlWriterSettings hashWriterSettings = new()
+    public required IReadOnlySet<Identity> Identities { get; init; }
+    public required IReadOnlySet<Token<DiscoFeature>> Features { get; init; }
+    public required IReadOnlyDictionary<Token<FieldValue>, Form> Forms { get; init; }
+
+    internal static string ComputeHashCode(HashAlgorithm algorithm, IReadOnlySet<Identity> identities, IReadOnlySet<Token<DiscoFeature>> features, IReadOnlyDictionary<Token<FieldValue>, Form> forms)
+    {
+        using var stream = new HashStream(algorithm);
+
+        using(var writer = new StreamWriter(stream, leaveOpen: true))
+        {
+            // Write data directly to the hasher
+            Serialize(writer, identities, features, forms);
+        }
+
+        Span<byte> result = stackalloc byte[stream.HashSize];
+        return Convert.ToBase64String(stream.ComputeHash(result));
+    }
+
+    static readonly XmlWriterSettings textWriterSettings = new()
     {
         Async = false,
         CheckCharacters = false,
@@ -32,67 +46,59 @@ public readonly record struct Capabilities
         OmitXmlDeclaration = true
     };
 
-    public string ComputeHashCode(HashAlgorithm algorithm, bool requireExplicitLanguage = false)
+    private static void Serialize(TextWriter writer, IReadOnlySet<Identity> identities, IReadOnlySet<Token<DiscoFeature>> features, IReadOnlyDictionary<Token<FieldValue>, Form> forms)
     {
-        using var stream = new HashStream(algorithm);
+        // The specification is shaky about escaping, but this prevents attacks at the cost of ambiguities in the resulting hash
+        using var xmlWriter = XmlWriter.Create(writer, textWriterSettings);
 
-        using(var writer = new StreamWriter(stream, leaveOpen: true))
+        foreach(var identity in identities)
         {
-            // The specification is shaky about escaping, but this prevents attacks at the cost of ambiguities in the resulting hash
-            using var xmlWriter = XmlWriter.Create(writer, hashWriterSettings);
-
-            foreach(var identity in requireExplicitLanguage ? ExplicitLanguageIdentities : Identities)
+            Write(identity.Category.Value);
+            WriteDelimiter("/");
+            Write(identity.Type.Value);
+            WriteDelimiter("/");
+            Write(identity.Name?.Language.Value ?? "");
+            WriteDelimiter("/");
+            Write(identity.Name?.Value ?? "");
+            WriteDelimiter("<");
+        }
+        foreach(var feature in features)
+        {
+            Write(feature.Value);
+            WriteDelimiter("<");
+        }
+        foreach(var form in forms)
+        {
+            Write(form.Key.Value);
+            WriteDelimiter("<");
+            foreach(var field in form.Value.Fields)
             {
-                Write(identity.Category.Value);
-                WriteDelimiter("/");
-                Write(identity.Type.Value);
-                WriteDelimiter("/");
-                Write(identity.Name?.LanguageTag ?? "");
-                WriteDelimiter("/");
-                Write(identity.Name?.Value ?? "");
+                Write(field.Key.Value);
                 WriteDelimiter("<");
-            }
-            foreach(var feature in Features)
-            {
-                Write(feature.Value);
-                WriteDelimiter("<");
-            }
-            foreach(var form in Forms)
-            {
-                Write(form.Key.Value);
-                WriteDelimiter("<");
-                foreach(var field in form.Value.Fields)
+                foreach(var value in field.Value.Values)
                 {
-                    Write(field.Key.Value);
+                    Write(value.Value);
                     WriteDelimiter("<");
-                    foreach(var value in field.Value.Values)
-                    {
-                        Write(value.Value);
-                        WriteDelimiter("<");
-                    }
                 }
-            }
-
-            void Write(string str)
-            {
-                xmlWriter.WriteString(str);
-            }
-
-            void WriteDelimiter(string str)
-            {
-                xmlWriter.WriteRaw(str);
             }
         }
 
-        Span<byte> result = stackalloc byte[stream.HashSize];
-        return Convert.ToBase64String(stream.ComputeHash(result));
+        void Write(string str)
+        {
+            xmlWriter.WriteString(str);
+        }
+
+        void WriteDelimiter(string str)
+        {
+            xmlWriter.WriteRaw(str);
+        }
     }
 
-    public bool Equals(Capabilities other)
+    public virtual bool Equals(Capabilities? other)
     {
         return
+            other is not null &&
             Identities.SetEquals(other.Identities) &&
-            ((Identities == ExplicitLanguageIdentities && other.Identities == other.ExplicitLanguageIdentities) || ExplicitLanguageIdentities.SetEquals(other.ExplicitLanguageIdentities)) &&
             Features.SetEquals(other.Features) &&
             Forms.Count == other.Forms.Count &&
             Forms.All(p => other.Forms.TryGetValue(p.Key, out var v) && p.Value == v);
@@ -105,13 +111,6 @@ public readonly record struct Capabilities
         {
             hashCode.Add(identity);
         }
-        if(Identities != ExplicitLanguageIdentities)
-        {
-            foreach(var identity in ExplicitLanguageIdentities)
-            {
-                hashCode.Add(identity);
-            }
-        }
         foreach(var feature in Features)
         {
             hashCode.Add(feature);
@@ -122,6 +121,13 @@ public readonly record struct Capabilities
             hashCode.Add(pair.Value);
         }
         return hashCode.ToHashCode();
+    }
+
+    public override string ToString()
+    {
+        using var writer = new StringWriter();
+        Serialize(writer, Identities, Features, Forms);
+        return writer.ToString();
     }
 
     [StructLayout(LayoutKind.Auto)]
