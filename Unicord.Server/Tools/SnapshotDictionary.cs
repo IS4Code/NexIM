@@ -18,6 +18,20 @@ internal struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TVa
 
     public readonly IDictionary<TKey, TValue> Snapshot => storage;
 
+    public SnapshotDictionary(IDictionary<TKey, TValue> entries)
+    {
+        _storage = entries switch {
+            ImmutableDictionary<TKey, TValue> existing => existing,
+            ImmutableDictionary<TKey, TValue>.Builder builder => builder.ToImmutable(),
+            _ => ImmutableDictionary.CreateRange(entries)
+        };
+    }
+
+    public IDictionary<TKey, TValue> CreateBuilder()
+    {
+        return storage.ToBuilder();
+    }
+
     public readonly Enumerator GetEnumerator()
     {
         return new(storage.GetEnumerator());

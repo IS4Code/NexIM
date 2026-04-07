@@ -74,7 +74,7 @@ partial class Account
             }
 
             // Inform of subscribing to contact
-            ContactUpdate(updated, contacts, tasks);
+            await ContactUpdate(updated, contacts, tasks);
 
             // Pass the event through
             (targetsList ??= new()).Add(targetAccountIdentifier);
@@ -158,12 +158,12 @@ partial class Account
                 }
 
                 // Only approved - update contact
-                ContactUpdate(updated, contacts, tasks);
+                await ContactUpdate(updated, contacts, tasks);
                 continue;
             }
 
             // Inform of updated contact
-            ContactUpdate(updated, contacts, tasks);
+            await ContactUpdate(updated, contacts, tasks);
 
             // Pass the event through
             var targetAccountIdentifier = new Identifier(targetAccount, null);
@@ -194,7 +194,7 @@ partial class Account
         }
 
         // Inform of updated contact
-        ContactUpdate(updated, contacts, tasks);
+        await ContactUpdate(updated, contacts, tasks);
 
         // Route to sessions
         foreach(var session in GetSessions(false))
@@ -225,7 +225,7 @@ partial class Account
             }
 
             // Inform of updated contact
-            ContactUpdateOrRemove(previous, updated, contacts, tasks);
+            await ContactUpdateOrRemove(previous, updated, contacts, tasks);
 
             var targetAccountIdentifier = new Identifier(targetAccount, null);
 
@@ -278,7 +278,7 @@ partial class Account
         }
 
         // Inform of updated contact (must be after)
-        ContactUpdate(updated, contacts, tasks);
+        await ContactUpdate(updated, contacts, tasks);
     }
 
     private async ValueTask HandleOutgoingSubscriptionCancellation(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
@@ -302,7 +302,7 @@ partial class Account
             }
 
             // Inform of unsubscribing from contact
-            ContactUpdate(updated, contacts, tasks);
+            await ContactUpdate(updated, contacts, tasks);
 
             // Pass the event through
             var targetAccountIdentifier = new Identifier(targetAccount, null);
@@ -340,7 +340,7 @@ partial class Account
             tasks.Add(session.Outbound(evnt));
         }
 
-        ContactUpdateOrRemove(previous, updated, contacts, tasks);
+        await ContactUpdateOrRemove(previous, updated, contacts, tasks);
 
         // Send as unavailable
         OnUnsubscribed(new(identifier), tasks);

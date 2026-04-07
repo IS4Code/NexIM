@@ -5,13 +5,23 @@ namespace Unicord.Server.Accounts;
 
 using static SubscriptionLevel;
 
-public record Contact(
-    AccountName Account,
-    SubscriptionState SubscriptionState,
-    string? Name = null,
-    string? Group = null
-)
+public record Contact
 {
+    public required AccountName Account { get; init; }
+    public required SubscriptionState SubscriptionState { get; init; }
+    public string? Name { get; init; }
+    public string? Group { get; init; }
+
+    internal string? User {
+        get => Account.User;
+        init => Account = Account with { User = value };
+    }
+
+    internal string Host {
+        get => Account.Host;
+        init => Account = Account with { Host = value };
+    }
+
     public Contact WithSubscriptionState(SubscriptionState newState)
     {
         if(SubscriptionState == newState)

@@ -10,6 +10,7 @@ public partial class Server
     public Server()
     {
         InitDelivery(out accountTarget);
+        InitDatabase(out database);
     }
 
     public ValueTask<Account?> Authenticate(AccountName accountName, TemporaryString? password)

@@ -51,6 +51,8 @@ partial class Account
             });
         }
 
+        await Server.SaveDatabase();
+
         return true;
     }
 
@@ -69,39 +71,42 @@ partial class Account
             return true;
         }
 
-        foreach(var session in GetSessions(false))
-        {
-            await session.ContactUpdated(updated, contacts);
-        }
+        var tasks = new List<ValueTask<ErrorCode>>();
+        await ContactUpdate(updated, contacts, tasks);
+        await tasks.Combine();
 
         return true;
     }
 
-    private void ContactUpdate(Contact contact, ICollection<Contact> contacts, List<ValueTask<ErrorCode>> tasks)
+    private async ValueTask ContactUpdate(Contact contact, ICollection<Contact> contacts, List<ValueTask<ErrorCode>> tasks)
     {
         foreach(var session in GetSessions(false))
         {
             tasks.Add(session.ContactUpdated(contact, contacts));
         }
+
+        await Server.SaveDatabase();
     }
 
-    private void ContactRemove(Contact contact, ICollection<Contact> contacts, List<ValueTask<ErrorCode>> tasks)
+    private async ValueTask ContactRemove(Contact contact, ICollection<Contact> contacts, List<ValueTask<ErrorCode>> tasks)
     {
         foreach(var session in GetSessions(false))
         {
             tasks.Add(session.ContactRemoved(contact, contacts));
         }
+
+        await Server.SaveDatabase();
     }
 
-    private void ContactUpdateOrRemove(Contact previous, Contact? updated, ICollection<Contact> contacts, List<ValueTask<ErrorCode>> tasks)
+    private ValueTask ContactUpdateOrRemove(Contact previous, Contact? updated, ICollection<Contact> contacts, List<ValueTask<ErrorCode>> tasks)
     {
         if(updated is not null)
         {
-            ContactUpdate(updated, contacts, tasks);
+            return ContactUpdate(updated, contacts, tasks);
         }
         else
         {
-            ContactRemove(previous, contacts, tasks);
+            return ContactRemove(previous, contacts, tasks);
         }
     }
 }

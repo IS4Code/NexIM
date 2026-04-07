@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Unicord.Server.Database;
 using Unicord.Server.Tools;
 
 namespace Unicord.Server.Accounts;
@@ -9,19 +11,31 @@ public partial class Account
 {
     public Server Server { get; }
 
-    public AccountName Name { get; }
+    public AccountName Name => new(User, Host);
     internal byte[] PasswordHash { get; }
+
+    public string User { get; private set; }
+    public string Host { get; private set; }
+
     SnapshotDictionary<AccountName, Contact> contacts = default;
 
     public ICollection<Contact> Contacts => contacts.Snapshot.Values;
 
-    public Account(Server server, AccountName name, byte[] passwordHash)
+    internal ContactsBuilderCollection ContactsBuilder => new(this);
+
+    public Account(Server server, string user, string host, byte[] passwordHash)
     {
         Server = server;
-        Name = name;
+        User = user;
+        Host = host;
         PasswordHash = passwordHash;
 
         InitEvents(out router, out messageTarget, out presenceTarget, out generalTarget);
+    }
+
+    internal Account(AccountsContext context, string user, string host, byte[] passwordHash) : this(context.Server, user, host, passwordHash)
+    {
+
     }
 
     public Contact? GetContact(AccountName name)
@@ -82,7 +96,10 @@ public partial class Account
         return success;
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetPendingSubscriptionTo = (name, _) => new Contact(name, SubscriptionState: SubscriptionState.InitialPendingTo);
+    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetPendingSubscriptionTo = (name, _) => new Contact {
+        Account = name,
+        SubscriptionState = SubscriptionState.InitialPendingTo
+    };
     static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetPendingSubscriptionTo = (name, existing, _) => {
         var existingState = existing.SubscriptionState;
         if(existingState.AcceptedTo || existingState.PendingTo)
@@ -98,7 +115,10 @@ public partial class Account
         return AddOrUpdateContact(name, addTrySetPendingSubscriptionTo, updateTrySetPendingSubscriptionTo, out previous, out updated, out finalContacts);
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetPendingSubscriptionFrom = (name, _) => new Contact(name, SubscriptionState: SubscriptionState.InitialPendingFrom);
+    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetPendingSubscriptionFrom = (name, _) => new Contact {
+        Account = name,
+        SubscriptionState = SubscriptionState.InitialPendingFrom
+    };
     static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetPendingSubscriptionFrom = (name, existing, _) => {
         var existingState = existing.SubscriptionState;
         if(existingState.AcceptedFrom)
@@ -121,7 +141,10 @@ public partial class Account
         return AddOrUpdateContact(name, addTrySetPendingSubscriptionFrom, updateTrySetPendingSubscriptionFrom, out previous, out updated, out finalContacts);
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetAcceptedSubscriptionFrom = (name, _) => new Contact(name, SubscriptionState: SubscriptionState.InitialApprovedFrom);
+    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetAcceptedSubscriptionFrom = (name, _) => new Contact {
+        Account = name,
+        SubscriptionState = SubscriptionState.InitialApprovedFrom
+    };
     static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetAcceptedSubscriptionFrom = (name, existing, _) => {
         var existingState = existing.SubscriptionState;
         if(existingState.AcceptedFrom || existingState.ApprovedFrom)
@@ -201,5 +224,62 @@ public partial class Account
     public bool TrySetCancelledSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
     {
         return AddOrUpdateContact(name, addTrySetCancelledSubscriptionTo, updateTrySetCancelledSubscriptionTo, out previous, out updated, out finalContacts);
+    }
+
+    internal sealed class ContactsBuilderCollection(Account account) : ICollection<Contact>
+    {
+        readonly IDictionary<AccountName, Contact> data = account.contacts.CreateBuilder();
+
+        public int Count => data.Count;
+
+        public bool IsReadOnly => false;
+
+        private void Update()
+        {
+            // TODO Avoid replacing every time
+            account.contacts = new(data);
+        }
+
+        public void Add(Contact item)
+        {
+            data.Add(item.Account, item);
+            Update();
+        }
+
+        public void Clear()
+        {
+            data.Clear();
+            Update();
+        }
+
+        public bool Contains(Contact item)
+        {
+            return data.Contains(new(item.Account, item));
+        }
+
+        public void CopyTo(Contact[] array, int arrayIndex)
+        {
+            data.Values.CopyTo(array, arrayIndex);
+        }
+
+        public bool Remove(Contact item)
+        {
+            if(data.Remove(new KeyValuePair<AccountName, Contact>(item.Account, item)))
+            {
+                Update();
+                return true;
+            }
+            return false;
+        }
+
+        public IEnumerator<Contact> GetEnumerator()
+        {
+            return data.Values.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 }

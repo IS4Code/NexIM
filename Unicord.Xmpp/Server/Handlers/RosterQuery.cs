@@ -90,7 +90,12 @@ internal class SetRosterQuery : BaseRosterQueryHandler<ICommandContext>
         }
         else
         {
-            if(!await account.SetContact(new Contact(target, SubscriptionState.InitialApprovedTo, Name: name, Group: group)))
+            if(!await account.SetContact(new Contact {
+                Account = target,
+                SubscriptionState = SubscriptionState.InitialApprovedTo,
+                Name = name,
+                Group = group
+            }))
             {
                 throw XmppStanzaException.ItemNotFound();
             }

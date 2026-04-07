@@ -1,0 +1,48 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Unicord.Server.Accounts;
+
+namespace Unicord.Server.Database;
+
+internal class AccountsContext : DbContext
+{
+    public Server Server { get; }
+
+    public DbSet<Account> Accounts { get; set; }
+
+    static AccountsContext()
+    {
+        SQLitePCL.Batteries_V2.Init();
+    }
+
+    public AccountsContext(Server server)
+    {
+        Server = server;
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+    {
+        options.UseSqlite("Data Source=accounts.db");
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Account>(e => {
+            e.Ignore(x => x.Name);
+            e.HasKey(x => new { x.Host, x.User });
+
+            e.Property(x => x.PasswordHash);
+
+            e.Ignore(x => x.Contacts);
+            e.OwnsMany(x => x.ContactsBuilder, e => {
+                e.Ignore(x => x.Account);
+
+                e.HasKey(x => new { x.Host, x.User });
+
+                e.Property(x => x.SubscriptionState).HasConversion(
+                    x => (ushort)((byte)x.From | ((byte)x.To << 8)),
+                    x => new((SubscriptionLevel)(x & 0xFF), (SubscriptionLevel)(x >> 8))
+                );
+            });
+        });
+    }
+}
