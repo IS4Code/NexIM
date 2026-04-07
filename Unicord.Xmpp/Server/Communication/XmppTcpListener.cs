@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace Unicord.Xmpp.Server.Communication;
 
@@ -12,6 +13,8 @@ namespace Unicord.Xmpp.Server.Communication;
 public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
 {
     protected override bool PrettyOutput => true;
+
+    protected override ConformanceLevel ConformanceLevel => ConformanceLevel.Document;
 
     XmppServer Server => (XmppServer)base.Receiver;
     readonly TcpListener listener;

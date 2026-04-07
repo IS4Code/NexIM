@@ -17,7 +17,7 @@ namespace Unicord.Xmpp.Server.Communication;
 /// </typeparam>
 public abstract class XmppServerListener<TConnection, TSession> : XmppXmlListener<TSession> where TSession : XmppHandlerSession
 {
-    public XmppServerListener(IXmppReceiver<TSession> receiver) : base(receiver, ConformanceLevel.Document)
+    public XmppServerListener(IXmppReceiver<TSession> receiver) : base(receiver)
     {
 
     }

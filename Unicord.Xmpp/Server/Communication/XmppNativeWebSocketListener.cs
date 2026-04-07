@@ -11,11 +11,11 @@ namespace Unicord.Xmpp.Server.Communication;
 /// <summary>
 /// Listens to WebSocket XMPP connections using a native implementation.
 /// </summary>
-public class XmppNativeWebSocketListener : XmppServerListener<(HttpListenerRequest request, WebSocketContext context), XmppFrameSession>
+public class XmppNativeWebSocketListener : XmppWebSocketListener<(HttpListenerRequest request, WebSocketContext context)>
 {
     readonly HttpListener listener;
 
-    public ICollection<string> Prefixes => listener.Prefixes;
+    public override ICollection<string> Prefixes => listener.Prefixes;
 
     XmppServer Server => (XmppServer)base.Receiver;
 
