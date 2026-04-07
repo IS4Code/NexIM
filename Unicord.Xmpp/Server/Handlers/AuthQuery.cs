@@ -124,7 +124,7 @@ internal class SetAuthQuery : BaseAuthQueryHandler<ICommandContext>, IDisposable
 
             var identifier = new XmppResource(username, this.GetLocalResource().Address.Host, resource);
 
-            var accountName = XmppClientSession.GetAccount(identifier, out _);
+            var accountName = identifier.ToAccountName(out _);
 
             var session = this.GetSession();
 

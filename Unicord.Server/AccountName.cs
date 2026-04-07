@@ -1,52 +1,14 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
+﻿namespace Unicord.Server;
 
-namespace Unicord.Server;
-
-public readonly struct AccountName : IEquatable<AccountName>
+public readonly record struct AccountName(string? User, string Host)
 {
-    public object? Identifier { get; }
-
-    [MemberNotNullWhen(true, nameof(Identifier))]
-    public bool IsValid => Identifier != null;
-
-    private AccountName(object? identifier)
-    {
-        Identifier = identifier;
-    }
-
-    public static AccountName Get(object? identifier)
-    {
-        return new(identifier);
-    }
-
-    public bool Equals(AccountName other)
-    {
-        return Object.Equals(Identifier, other.Identifier);
-    }
-
-    public override bool Equals([NotNullWhen(true)] object? obj)
-    {
-        return obj is AccountName name ? Equals(name) : false;
-    }
-
-    public static bool operator ==(AccountName a, AccountName b)
-    {
-        return a.Equals(b);
-    }
-
-    public static bool operator !=(AccountName a, AccountName b)
-    {
-        return !a.Equals(b);
-    }
-
-    public override int GetHashCode()
-    {
-        return Identifier?.GetHashCode() ?? 0;
-    }
+    public bool IsValid => User != null;
 
     public override string? ToString()
     {
-        return Identifier?.ToString();
+        return
+            User is { } user
+            ? $"{user}@{Host}"
+            : Host;
     }
 }

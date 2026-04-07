@@ -80,7 +80,7 @@ internal class SetRosterQuery : BaseRosterQueryHandler<ICommandContext>
 
         var account = this.GetAccount();
 
-        var target = XmppClientSession.GetAccount(id.Address);
+        var target = id.Address.ToAccountName();
         if(remove)
         {
             if(!await account.RemoveContact(target))

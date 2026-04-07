@@ -224,7 +224,7 @@ internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
     {
         SetHandled();
 
-        if(this.GetServer().GetAccount(XmppClientSession.GetAccount(Address)) != null)
+        if(this.GetServer().GetAccount(Address.ToAccountName()) != null)
         {
             // Account exists
             await this.SendResponse();

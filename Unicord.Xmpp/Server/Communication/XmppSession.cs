@@ -56,7 +56,7 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract X509Certificate? RemoteCertificate { get; }
     public abstract CancellationToken CancellationToken { get; }
 
-    public AccountName AccountName => ClientSession?.Account.Name ?? XmppClientSession.GetAccount(RemoteResource?.Address ?? throw new InvalidOperationException("This session has not been authenticated."));
+    public AccountName AccountName => ClientSession?.Account.Name ?? RemoteResource?.Address.ToAccountName() ?? throw new InvalidOperationException("This session has not been authenticated.");
     public XmppClientSession? ClientSession { get; set; }
     public bool IsAuthenticated => ClientSession != null;
 

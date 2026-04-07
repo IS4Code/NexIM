@@ -386,7 +386,7 @@ public class XmppClientSession : ClientSession
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: StanzaType.Set.ToToken()));
 
         await using var roster = await iq.RosterQuery(GetContactsVersion(current));
-        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, RosterSubscriptionDirection.Remove.ToToken(), null, null);
+        await using var item = await roster.Item(contact.Account.ToResource(null), contact.Name, RosterSubscriptionDirection.Remove.ToToken(), null, null);
         return ErrorCode.Success;
     }
 
@@ -398,7 +398,7 @@ public class XmppClientSession : ClientSession
             return;
         }
 
-        await using var item = await roster.Item(GetResource(contact.Account, null), contact.Name, contact.SubscriptionState.Direction switch
+        await using var item = await roster.Item(contact.Account.ToResource(null), contact.Name, contact.SubscriptionState.Direction switch
         {
             SubscriptionDirection.To => RosterSubscriptionDirection.To.ToToken(),
             SubscriptionDirection.From => RosterSubscriptionDirection.From.ToToken(),
@@ -410,34 +410,5 @@ public class XmppClientSession : ClientSession
         {
             await item.Group(group);
         }
-    }
-
-    internal static XmppAddress GetAddress(AccountName account)
-    {
-        return account.Identifier is XmppAddress addr ? addr : XmppResource.Parse(account.ToString() ?? "").Address;
-    }
-
-    internal static XmppResource GetResource(AccountName account, string? resourceIdentifier)
-    {
-        return new(
-            GetAddress(account),
-            resourceIdentifier
-        );
-    }
-
-    internal static XmppResource GetResource(Sender sender)
-    {
-        return GetResource(sender.Account, sender.Identifier);
-    }
-
-    internal static AccountName GetAccount(XmppAddress address)
-    {
-        return AccountName.Get(address);
-    }
-
-    internal static AccountName GetAccount(XmppResource resource, out string? identifier)
-    {
-        identifier = resource.ResourceIdentifier;
-        return AccountName.Get(resource.Address);
     }
 }

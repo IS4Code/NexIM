@@ -127,7 +127,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
 
         var session = this.GetSession();
 
-        if(await this.GetServer().AuthenticatePlain(data, username => XmppClientSession.GetAccount(new XmppAddress(username, this.GetLocalResource().Address.Host))) is not { } account)
+        if(await this.GetServer().AuthenticatePlain(data, username => new XmppAddress(username, this.GetLocalResource().Address.Host).ToAccountName()) is not { } account)
         {
             throw XmppSaslException.NotAuthorized();
         }

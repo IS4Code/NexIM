@@ -41,7 +41,7 @@ internal class SetBind : BindHandler<ICommandContext>
         // Auto-generate resource name if missing
         resource ??= Guid.NewGuid().ToString("N");
         clientSession.Bind(resource);
-        session.RemoteResource = new XmppResource(XmppClientSession.GetAddress(accountName), resource);
+        session.RemoteResource = accountName.ToResource(resource);
 
         // Inform of the full resource
         await using var iq = await this.CreateResponse();

@@ -2,11 +2,11 @@
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives.Xml;
+using Unicord.Server;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server;
 using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp;
@@ -17,7 +17,7 @@ internal static class AdapterExtensions
 {
     public static Identifier ToIdentifier(this XmppResource resource)
     {
-        return new(XmppClientSession.GetAccount(resource, out var id), id);
+        return new(ToAccountName(resource, out var id), id);
     }
 
     public static Identifier ToIdentifier(this Token<StanzaIdentifier> identifier)
@@ -32,7 +32,7 @@ internal static class AdapterExtensions
             // TODO Adapt other identifier formats
             throw new NotImplementedException();
         }
-        return XmppClientSession.GetResource(account, resource);
+        return ToResource(account, resource);
     }
 
     public static XmppResource? ToResource(this IdentifierSet identifiers)
@@ -41,6 +41,27 @@ internal static class AdapterExtensions
             identifiers.TryGetSingle(out var identifier)
             ? ToResource(identifier)
             : null;
+    }
+
+    public static XmppAddress ToAddress(this AccountName accountName)
+    {
+        return new(accountName.User, accountName.Host);
+    }
+
+    public static XmppResource ToResource(this AccountName accountName, string? resourceIdentifier)
+    {
+        return new(ToAddress(accountName), resourceIdentifier);
+    }
+
+    public static AccountName ToAccountName(this XmppAddress address)
+    {
+        return new(address.User, address.Host);
+    }
+
+    public static AccountName ToAccountName(this XmppResource resource, out string? resourceIdentifier)
+    {
+        resourceIdentifier = resource.ResourceIdentifier;
+        return ToAccountName(resource.Address);
     }
 
     public static Token<StanzaIdentifier> ToStanzaIdentifier(this Identifier identifier, IXmppSession session)
