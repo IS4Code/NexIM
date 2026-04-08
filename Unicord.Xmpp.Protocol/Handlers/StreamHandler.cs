@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Unicord.Primitives.Xml.Handlers;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 

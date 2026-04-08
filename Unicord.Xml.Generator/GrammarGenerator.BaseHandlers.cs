@@ -18,6 +18,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
+        writer.WriteLine("using Unicord.Primitives.Xml.Handlers;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
 
@@ -29,13 +30,8 @@ partial class GrammarGenerator
             }
 
             // Check all implemented interfaces in the same namespace
-            var interfaces = type.Interfaces.Where(t => t.ContainingNamespace.Equals(container, SymbolEqualityComparer.Default)).ToList();
-            if(interfaces.Count == 0)
-            {
-                // Base class is implemented manually
-                continue;
-            }
-
+            var interfaces = type.Interfaces.Where(t => t.Name == "IPayloadHandler" || t.ContainingNamespace.Equals(container, SymbolEqualityComparer.Default)).ToList();
+            
             var name = type.Name.Substring(1);
             writer.Write($"public abstract class {name}<TContext> : ");
 

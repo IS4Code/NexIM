@@ -6,7 +6,7 @@ namespace Unicord.Xmpp.Protocol.Handlers;
 /// <summary>
 /// Provides a handler with empty implementation of all handler methods.
 /// </summary>
-public partial class NullHandler : IAsyncDisposable, IXmppReceivingHandler, IXmppSendingHandler
+public partial class NullHandler : IAsyncDisposable, IXmppReceivingHandler, IXmppSendingHandler, IStreamHandler
 {
     public static readonly NullHandler Instance = new();
 
@@ -22,15 +22,12 @@ public partial class NullHandler : IAsyncDisposable, IXmppReceivingHandler, IXmp
 
     }
 
-    ValueTask IXmppReceivingHandler.StreamStarted()
-    {
-        return default;
-    }
+    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza) => new(this);
+    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza) => new(this);
+    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza) => new(this);
 
-    ValueTask IXmppReceivingHandler.StreamStopped()
-    {
-        return default;
-    }
+    ValueTask IXmppReceivingHandler.StreamStarted() => default;
+    ValueTask IXmppReceivingHandler.StreamStopped() => default;
 
     ValueTask IAsyncDisposable.DisposeAsync()
     {

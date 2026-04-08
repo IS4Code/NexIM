@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives.Xml;
+using Unicord.Primitives.Xml.Handlers;
 
 namespace Unicord.Xmpp.Protocol.Grammar;
 

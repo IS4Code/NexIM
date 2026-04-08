@@ -15,17 +15,15 @@ partial class GrammarGenerator
 
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
+        writer.WriteLine("using Unicord.Primitives.Xml.Handlers;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
-        writer.WriteLine("partial class NullHandler : IUniversalHandler, IStreamHandler");
+        writer.WriteLine("partial class NullHandler : IUniversalHandler");
         writer.WriteLine("{");
         writer.Indent++;
         {
             // Implement other methods
 
-            writer.WriteLine("ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza) => new(this);");
-            writer.WriteLine("ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza) => new(this);");
-            writer.WriteLine("ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza) => new(this);");
             writer.WriteLine("ValueTask IPayloadHandler.Other(System.Xml.XmlReader payloadReader) => default;");
 
             foreach(var type in types)

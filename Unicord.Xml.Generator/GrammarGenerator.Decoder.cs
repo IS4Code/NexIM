@@ -21,6 +21,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
         writer.WriteLine("using Unicord.Primitives.Xml;");
+        writer.WriteLine("using Unicord.Primitives.Xml.Handlers;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
         writer.WriteLine("partial class Vocabulary");
@@ -142,7 +143,7 @@ partial class GrammarGenerator
         writer.WriteLine("{");
         writer.Indent++;
         {
-            writer.WriteLine($"public partial async ValueTask<Result> DecodePayload(XmlReader reader, {Format(container)}.IPayloadHandler handler)");
+            writer.WriteLine($"public partial async ValueTask<Result> DecodePayload(XmlReader reader, IPayloadHandler handler)");
             writer.WriteLine("{");
             writer.Indent++;
             {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace Unicord.Primitives.Xml.Handlers;
 
 public readonly struct EmptyDisposable : IAsyncDisposable
 {

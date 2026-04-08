@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Unicord.Primitives.Xml;
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Communication;
 

@@ -1,8 +1,8 @@
-﻿global using ICommandHandler = Unicord.Xmpp.Protocol.Handlers.IPayloadHandler<Unicord.Xmpp.Server.Handlers.ICommandContext>;
+﻿global using ICommandHandler = Unicord.Primitives.Xml.Handlers.IPayloadHandler<Unicord.Xmpp.Server.Handlers.ICommandContext>;
 using System.Collections.Generic;
+using Unicord.Primitives.Xml.Handlers;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
 using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp.Server.Handlers;

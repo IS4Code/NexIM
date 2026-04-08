@@ -1,16 +1,21 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace Unicord.Primitives.Xml.Handlers;
 
-internal abstract class DefaultImplementation<T>
+public abstract class DefaultImplementation<T>
 {
     private protected static readonly Task<T> DefaultTask = Task.FromException<T>(DefaultImplementation.Exception);
 
     public static ValueTask<T> ValueTask => new(DefaultTask);
+
+    internal DefaultImplementation()
+    {
+
+    }
 }
 
-internal abstract class DefaultImplementation : DefaultImplementation<object>
+public abstract class DefaultImplementation : DefaultImplementation<object>
 {
     public static readonly Exception Exception;
 
@@ -26,5 +31,10 @@ internal abstract class DefaultImplementation : DefaultImplementation<object>
         {
             Exception = e;
         }
+    }
+
+    internal DefaultImplementation()
+    {
+
     }
 }

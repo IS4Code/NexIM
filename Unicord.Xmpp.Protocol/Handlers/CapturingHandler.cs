@@ -1,49 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using System.Xml;
-using System.Xml.Linq;
 using Unicord.Primitives.Xml;
+using Unicord.Primitives.Xml.Handlers;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
-/// <summary>
-/// Provides a handler that captures all its method calls for later playback.
-/// </summary>
-/// <typeparam name="THandler">
-/// The supported type of the handler.
-/// </typeparam>
-public partial class CapturingHandler<THandler> : IPayloadHandler, ICapturingHandler<THandler> where THandler : IPayloadHandler
+/// <inheritdoc/>
+public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>, IPayloadHandler, IStreamHandler where THandler : IPayloadHandler
 {
-    readonly List<Func<THandler, ValueTask>> calls = new();
-    bool disposed;
-
-    public IReadOnlyList<Func<THandler, ValueTask>> Calls => calls;
-
     protected virtual CapturingHandler<TNewHandler> ForkInner<TNewHandler>() where TNewHandler : IPayloadHandler
     {
         return new CapturingHandler<TNewHandler>();
     }
 
-    public async ValueTask Replay(THandler handler)
+    ValueTask<IInfoQueryHandler> IStreamHandler.InfoQuery(in Stanza stanza)
     {
-        foreach(var call in calls)
-        {
-            await call(handler);
-        }
+        var copy = stanza;
+        var inner = ForkInner<IInfoQueryHandler>();
+        Capture<IStreamHandler>(async h => {
+            await using var handler = await h.InfoQuery(copy);
+            await inner.Replay(handler);
+        });
+        return new(inner);
     }
 
-    private void Capture<TImplHandler>(Func<TImplHandler, ValueTask> call)
+    ValueTask<IMessageHandler> IStreamHandler.Message(in Stanza stanza)
     {
-        if(!disposed && this is ICapturingHandler<TImplHandler> handler)
-        {
-            handler.Capture(call);
-        }
+        var copy = stanza;
+        var inner = ForkInner<IMessageHandler>();
+        Capture<IStreamHandler>(async h => {
+            await using var handler = await h.Message(copy);
+            await inner.Replay(handler);
+        });
+        return new(inner);
     }
 
-    void ICapturingHandler<THandler>.Capture(Func<THandler, ValueTask> call)
+    ValueTask<IPresenceHandler> IStreamHandler.Presence(in Stanza stanza)
     {
-        calls.Add(call);
+        var copy = stanza;
+        var inner = ForkInner<IPresenceHandler>();
+        Capture<IStreamHandler>(async h => {
+            await using var handler = await h.Presence(copy);
+            await inner.Replay(handler);
+        });
+        return new(inner);
     }
 
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
@@ -51,15 +51,4 @@ public partial class CapturingHandler<THandler> : IPayloadHandler, ICapturingHan
         var container = await payloadReader.CaptureContent();
         Capture<IPayloadHandler>(handler => container.RestoreContent(handler.Other));
     }
-
-    public ValueTask DisposeAsync()
-    {
-        disposed = true;
-        return default;
-    }
-}
-
-interface ICapturingHandler<out THandler>
-{
-    void Capture(Func<THandler, ValueTask> call);
 }

@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives.Xml;
+using Unicord.Primitives.Xml.Handlers;
+using Unicord.Server;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Grammar;
@@ -104,7 +106,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             await HandleException(xe);
             throw;
         }
-        catch(Exception e) when(Program.OnUnexpectedException(e))
+        catch(Exception e) when(Configuration.OnUnexpectedException(e))
         {
             await HandleException(XmppStreamException.InternalServerError());
             throw;

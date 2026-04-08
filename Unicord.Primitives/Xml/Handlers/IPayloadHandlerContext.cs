@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace Unicord.Primitives.Xml.Handlers;
 
 public interface IPayloadHandlerContext
 {

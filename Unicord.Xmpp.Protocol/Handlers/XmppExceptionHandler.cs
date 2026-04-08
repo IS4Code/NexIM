@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
+using Unicord.Primitives.Xml.Handlers;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 

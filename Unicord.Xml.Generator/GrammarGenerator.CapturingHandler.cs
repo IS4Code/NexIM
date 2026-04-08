@@ -17,9 +17,10 @@ partial class GrammarGenerator
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
-        writer.Write("partial class CapturingHandler<THandler> : IStreamHandler");
+        writer.Write("partial class CapturingHandler<THandler>");
 
         // Implement all interfaces
+        bool first = true;
         foreach(var type in types)
         {
             if(type.TypeKind != TypeKind.Interface)
@@ -27,7 +28,15 @@ partial class GrammarGenerator
                 continue;
             }
 
-            writer.Write(", ");
+            if(first)
+            {
+                first = false;
+                writer.Write(" : ");
+            }
+            else
+            {
+                writer.Write(", ");
+            }
             writer.Write(GetQualifiedName(type));
         }
 
@@ -36,33 +45,6 @@ partial class GrammarGenerator
         writer.Indent++;
         {
             // Implement other methods
-
-            StanzaHandler("IInfoQueryHandler", "InfoQuery");
-            StanzaHandler("IMessageHandler", "Message");
-            StanzaHandler("IPresenceHandler", "Presence");
-
-            void StanzaHandler(string type, string name)
-            {
-                writer.WriteLine($"ValueTask<{type}> IStreamHandler.{name}(in Stanza stanza)");
-
-                writer.WriteLine("{");
-                writer.Indent++;
-
-                writer.WriteLine("var copy = stanza;");
-                writer.WriteLine($"var inner = this.ForkInner<{type}>();");
-                writer.WriteLine("this.Capture<IStreamHandler>(async h => {");
-                writer.Indent++;
-
-                writer.WriteLine($"await using var handler = await h.{name}(copy);");
-                writer.WriteLine("await inner.Replay(handler);");
-
-                writer.Indent--;
-                writer.WriteLine("});");
-                writer.WriteLine("return new(inner);");
-
-                writer.Indent--;
-                writer.WriteLine("}");
-            }
 
             foreach(var type in types)
             {

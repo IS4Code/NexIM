@@ -5,6 +5,7 @@ using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Grammar;
+using Unicord.Primitives.Xml.Handlers;
 
 namespace Unicord.Xmpp.Protocol;
 
@@ -51,11 +52,6 @@ public record struct Stanza(
 public enum StanzaIdentifier
 {
 
-}
-
-public interface IPayloadHandler : IAsyncDisposable
-{
-    ValueTask Other(XmlReader payloadReader);
 }
 
 public partial interface IUniversalHandler : IPayloadHandler

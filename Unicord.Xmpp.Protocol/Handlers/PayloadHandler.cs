@@ -5,75 +5,13 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Unicord.Primitives.Xml;
+using Unicord.Primitives.Xml.Handlers;
 using Unicord.Xmpp.Protocol.Grammar;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
-public interface IPayloadHandler<TContext> : IPayloadHandler where TContext : IPayloadHandlerContext
+public abstract class PayloadHandler<TContext> : BasePayloadHandler<TContext> where TContext : IPayloadHandlerContext
 {
-    TContext? Context { get; init; }
-}
-
-public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where TContext : IPayloadHandlerContext
-{
-    private protected bool Decoding { get; private set; }
-
-    public virtual TContext? Context { get; init; }
-
-    protected abstract ValueTask OnUnrecognized(XmlReader payloadReader);
-
-    protected virtual ValueTask OnOther(XmlReader payloadReader)
-    {
-        return DefaultImplementation.ValueTask;
-    }
-
-    protected virtual ValueTask<bool> OnEnter() => default;
-    protected virtual ValueTask OnExit() => default;
-
-    async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
-    {
-        bool exit = !Decoding && await OnEnter();
-        try
-        {
-            var task = OnOther(payloadReader);
-            if(!task.Equals(DefaultImplementation.ValueTask))
-            {
-                // Successfully handled
-                await task;
-                return;
-            }
-        }
-        finally
-        {
-            if(exit)
-            {
-                await OnExit();
-            }
-        }
-
-        if(Decoding)
-        {
-            // Called recursively without being handled
-            return;
-        }
-
-        ValueTask result;
-
-        Decoding = true;
-        try
-        {
-            // Prevent recursion in concrete methods
-            result = await Decode(payloadReader, this);
-        }
-        finally
-        {
-            Decoding = false;
-        }
-
-        // Wait for inner handlers
-        await result;
-    }
-
     static readonly ConditionalWeakTable<string, Decoder> fallbackDecoders = new();
     static readonly ConditionalWeakTable<string, Decoder>.CreateValueCallback fallbackDecoderFactory = ns => new FallbackDecoder(ns);
 
@@ -82,7 +20,7 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
         return new(this, exit);
     }
 
-    private async ValueTask<ValueTask> Decode(XmlReader reader, IPayloadHandler handler)
+    protected async override ValueTask<ValueTask> Decode(XmlReader reader, IPayloadHandler handler)
     {
         bool isEmpty = reader.IsEmptyElement;
         var decoder = fallbackDecoders.GetValue(Context?.DefaultNamespace ?? String.Empty, fallbackDecoderFactory);
@@ -155,8 +93,6 @@ public abstract class PayloadHandler<TContext> : IPayloadHandler<TContext> where
             return default;
         }
     }
-
-    public abstract ValueTask DisposeAsync();
 
     private protected struct ExitDisposable(PayloadHandler<TContext> instance) : IAsyncDisposable
     {
