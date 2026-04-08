@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Server;
 
 namespace Unicord.Xmpp.Server.Communication;
 
@@ -46,7 +47,7 @@ public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
         {
             await Start(client, cancellationToken);
         }
-        catch(Exception e) when(Program.OnUnexpectedException(e))
+        catch(Exception e) when(Configuration.OnUnexpectedException(e))
         {
 
         }

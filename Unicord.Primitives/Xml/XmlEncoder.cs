@@ -8,7 +8,7 @@ namespace Unicord.Primitives.Xml;
 /// <summary>
 /// Provides support for encoding to XML.
 /// </summary>
-public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>, IValueXmlEncoder<DateTime>, IValueXmlEncoder<DateTimeOffset>, IValueXmlEncoder<TimeZoneOffset>
+public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>, IValueXmlEncoder<DateTime>, IValueXmlEncoder<DateTimeOffset>, IValueXmlEncoder<TimeZoneOffset>, IValueXmlEncoder<Uri>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -111,6 +111,11 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
     {
         var dateTime = new DateTimeOffset(62135596800 * TimeSpan.TicksPerSecond, value.Value);
         await writer.WriteStringAsync(XmlConvert.ToString(dateTime, "zzzzzzz"));
+    }
+
+    async ValueTask IValueXmlEncoder<Uri>.Encode(XmlWriter writer, Uri value)
+    {
+        await writer.WriteStringAsync(value.OriginalString);
     }
 }
 

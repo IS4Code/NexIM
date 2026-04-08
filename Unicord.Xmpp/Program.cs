@@ -1,7 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Unicord.Xmpp.Protocol;
+﻿using System.Threading.Tasks;
+using Unicord.Metadata;
 using Unicord.Xmpp.Server;
 using Unicord.Xmpp.Server.Communication;
 
@@ -11,24 +9,20 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        var server = new XmppTcpListener(new XmppServer());
+        var server = new XmppServer();
 
-        await server.RunAsync();
-    }
+        var tcpListener = new XmppTcpListener(server);
+        var wsListener = new XmppWebSocketListener(server);
+        wsListener.Prefixes.Add("http://+:800/xmpp/");
 
-    internal static async ValueTask<TResult> NotImplemented<TResult>()
-    {
-        Debugger.Break();
-        throw new NotImplementedException(null, XmppStanzaException.FeatureNotImplemented());
-    }
+        var metadataServer = new WellKnownServices();
+        metadataServer.Prefixes.Add("http://+:800/.well-known/");
+        metadataServer.MetadataProviders.Add(wsListener);
 
-    internal static bool OnUnexpectedException(Exception e)
-    {
-        lock(typeof(Console))
-        {
-            Console.WriteLine(e);
-        }
-        Debugger.Break();
-        return true;
+        await Task.WhenAll(
+            tcpListener.RunAsync(),
+            wsListener.RunAsync(),
+            metadataServer.RunAsync()
+        );
     }
 }

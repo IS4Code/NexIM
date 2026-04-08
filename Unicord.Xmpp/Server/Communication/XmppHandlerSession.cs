@@ -65,7 +65,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                         (
                             HandleException(xe, stanzaKind)
                             // If cannot be handled
-                            ?? (Program.OnUnexpectedException(e) ? default(ValueTask) : null)
+                            ?? (Configuration.OnUnexpectedException(e) ? default(ValueTask) : null)
                         ) is { } handleTask
                     )
                 )

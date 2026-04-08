@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml;
@@ -138,9 +140,15 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
         await session.SaslSuccess();
     }
 
+    static async ValueTask<TResult> NotImplemented<TResult>()
+    {
+        Debugger.Break();
+        throw new NotImplementedException(null, XmppStanzaException.FeatureNotImplemented());
+    }
+
     protected async override ValueTask OnSaslResponse(TemporaryUtf8String? data)
     {
-        await Program.NotImplemented<object>();
+        await NotImplemented<object>();
     }
 
     protected async override ValueTask OnSaslAbort()
@@ -179,46 +187,46 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
 
     protected override ValueTask<IFeaturesHandler> OnFeatures()
     {
-        return Program.NotImplemented<IFeaturesHandler>();
+        return NotImplemented<IFeaturesHandler>();
     }
 
     protected override ValueTask<IStreamErrorHandler> OnError()
     {
-        return Program.NotImplemented<IStreamErrorHandler>();
+        return NotImplemented<IStreamErrorHandler>();
     }
 
     protected async override ValueTask OnTlsProceed()
     {
-        await Program.NotImplemented<object>();
+        await NotImplemented<object>();
     }
 
     protected async override ValueTask OnTlsFailure()
     {
-        await Program.NotImplemented<object>();
+        await NotImplemented<object>();
     }
 
     protected override ValueTask<ICompressionFailureHandler> OnCompressionFailure()
     {
-        return Program.NotImplemented<ICompressionFailureHandler>();
+        return NotImplemented<ICompressionFailureHandler>();
     }
 
     protected async override ValueTask OnCompressed()
     {
-        await Program.NotImplemented<object>();
+        await NotImplemented<object>();
     }
 
     protected async override ValueTask OnSaslChallenge(TemporaryUtf8String? data)
     {
-        await Program.NotImplemented<object>();
+        await NotImplemented<object>();
     }
 
     protected override ValueTask<ISaslFailureHandler> OnSaslFailure()
     {
-        return Program.NotImplemented<ISaslFailureHandler>();
+        return NotImplemented<ISaslFailureHandler>();
     }
 
     protected async override ValueTask OnSaslSuccess()
     {
-        await Program.NotImplemented<object>();
+        await NotImplemented<object>();
     }
 }

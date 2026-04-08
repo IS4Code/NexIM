@@ -91,7 +91,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     private static bool UseCustomEncodingForSystemType(ITypeSymbol type)
     {
         var name = GetQualifiedName(type);
-        return name == typeof(DateTime).FullName || name == typeof(DateTimeOffset).FullName;
+        return name == typeof(DateTime).FullName || name == typeof(DateTimeOffset).FullName || name == typeof(Uri).FullName;
     }
     
     private static void Partition<TElement>(IndentedTextWriter writer, string nameVariable, Action<TElement> handler, IEnumerable<(string name, TElement element)> names)

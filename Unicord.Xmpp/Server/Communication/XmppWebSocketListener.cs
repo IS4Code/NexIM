@@ -3,17 +3,21 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Metadata;
+using Unicord.Server;
 using Unicord.Server.Net;
+using Unicord.Xrd.Protocol;
 
 namespace Unicord.Xmpp.Server.Communication;
 
 /// <summary>
 /// Listens to WebSocket XMPP connections.
 /// </summary>
-public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest request, WebSocketContext context), XmppFrameSession>
+public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest request, WebSocketContext context), XmppFrameSession>, IMetadataProvider, IMetadataDescriptor
 {
     readonly IHttpListener listener;
 
@@ -23,9 +27,9 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
 
     XmppServer Server => (XmppServer)base.Receiver;
 
-    public XmppWebSocketListener(XmppServer server, Func<IHttpListener> httpListenerFactory) : base(server)
+    public XmppWebSocketListener(XmppServer server) : base(server)
     {
-        listener = httpListenerFactory();
+        listener = Configuration.CreateHttpListener();
     }
 
     public async override Task RunAsync(CancellationToken cancellationToken = default)
@@ -56,7 +60,7 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
 
             await Start((context.Request, wsContext), cancellationToken);
         }
-        catch(Exception e) when(Program.OnUnexpectedException(e))
+        catch(Exception e) when(Configuration.OnUnexpectedException(e))
         {
 
         }
@@ -67,6 +71,40 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
         var request = info.request;
         var wrapper = new Request(request, request.IsSecureConnection ? await request.GetClientCertificateAsync() : null);
         return new XmppWebSocketSession(Server, wrapper, info.context, ReaderSettings, WriterSettings, cancellationToken);
+    }
+
+    ValueTask<IMetadataDescriptor?> IMetadataProvider.GetHostDescriptor(Uri uri)
+    {
+        return new(this);
+    }
+
+    ValueTask IMetadataDescriptor.Properties(Uri uri, IResourceDescriptorHandler handler)
+    {
+        return default;
+    }
+
+    static readonly Regex prefixRegex = new(@"^http(s?)://([^:/]*)(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+    async ValueTask IMetadataDescriptor.Links(Uri uri, IResourceDescriptorHandler handler)
+    {
+        foreach(var prefix in Prefixes)
+        {
+            if(prefixRegex.Match(prefix) is not { Success: true } match)
+            {
+                continue;
+            }
+
+            var host = match.Groups[2].Value;
+            if(host is "+" or "*")
+            {
+                // Works for any host, so pick whichever was used
+                host = uri.Host;
+            }
+
+            var href = $"ws{match.Groups[1].Value}://{host}{match.Groups[3].Value}";
+
+            await using var link = await handler.Link(LinkRelation.WebSocketConnection.ToToken(), null, new(href), null);
+        }
     }
 
     class Request(IHttpListenerRequest request, X509Certificate? certificate) : IWebSocketRequest

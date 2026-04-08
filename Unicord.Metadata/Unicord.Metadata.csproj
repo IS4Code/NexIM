@@ -1,19 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <LangVersion>12.0</LangVersion>
     <Nullable>enable</Nullable>
-    <!--<PublishAot>true</PublishAot>-->
-    <InvariantGlobalization>true</InvariantGlobalization>
     <NoWarn>CS1998</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Unicord.Metadata\Unicord.Metadata.csproj" />
     <ProjectReference Include="..\Unicord.Server\Unicord.Server.csproj" />
-    <ProjectReference Include="..\Unicord.Xmpp.Protocol\Unicord.Xmpp.Protocol.csproj" />
+    <ProjectReference Include="..\Unicord.Xrd.Protocol\Unicord.Xrd.Protocol.csproj" />
   </ItemGroup>
 
 </Project>
