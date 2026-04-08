@@ -179,7 +179,7 @@ public static class XmlExtensions
 
     public static Task WriteNodeWithLanguageAsync(this XmlWriter writer, XmlReader reader, bool defattr)
     {
-        if(String.Equals(writer.XmlLang, reader.XmlLang, StringComparison.OrdinalIgnoreCase))
+        if(String.Equals(writer.XmlLang ?? "", reader.XmlLang ?? "", StringComparison.OrdinalIgnoreCase))
         {
             // Compatible language
             return writer.WriteNodeAsync(reader, defattr);
