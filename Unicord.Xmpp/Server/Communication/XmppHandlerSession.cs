@@ -58,6 +58,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 try
                 {
                     await Read(cancellationToken);
+                    await DispatchPendingEvents();
                 }
                 catch(Exception e) when(
                     lastStanzaKind is { } stanzaKind &&
@@ -75,25 +76,6 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 catch(Exception e) when(GetXmppException<XmppSaslException>(e, out var xe))
                 {
                     await HandleException(xe);
-                }
-
-                if(handlers.Count == 0)
-                {
-                    // Dispatch all created events
-                    try
-                    {
-                        if(ClientSession is { } session)
-                        {
-                            foreach(var evnt in eventsToSend)
-                            {
-                                await session.Inbound(evnt);
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        eventsToSend.Clear();
-                    }
                 }
             }
         }
@@ -288,6 +270,34 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         }
 
         await HandleException(XmppStreamException.XmlNotWellFormed());
+    }
+
+    async ValueTask DispatchPendingEvents()
+    {
+        if(handlers.Count != 0)
+        {
+            return;
+        }
+
+        // Dispatch all created events
+        try
+        {
+            if(ClientSession is { } session)
+            {
+                foreach(var evnt in eventsToSend)
+                {
+                    var result = await session.Inbound(evnt);
+                    if(result != ErrorCode.Success)
+                    {
+                        throw result.ToStanzaException();
+                    }
+                }
+            }
+        }
+        finally
+        {
+            eventsToSend.Clear();
+        }
     }
 
     void AbortCommand()
