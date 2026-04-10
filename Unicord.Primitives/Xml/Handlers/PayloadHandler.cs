@@ -14,6 +14,16 @@ public interface IPayloadHandler<TContext> : IPayloadHandler where TContext : IP
     TContext? Context { get; init; }
 }
 
+public interface IPayloadHandlerContext
+{
+    string DefaultNamespace { get; }
+}
+
+public readonly record struct EmptyPayloadHandlerContext() : IPayloadHandlerContext
+{
+    public string DefaultNamespace => String.Empty;
+}
+
 public abstract class BasePayloadHandler<TContext> : IPayloadHandler<TContext> where TContext : IPayloadHandlerContext
 {
     protected bool Decoding { get; private set; }

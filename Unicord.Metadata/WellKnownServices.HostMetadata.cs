@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using Newtonsoft.Json;
 using Unicord.Server.Net;
 using Unicord.Xrd.Protocol;
 using Unicord.Xrd.Protocol.Grammar;
@@ -81,7 +83,7 @@ partial class WellKnownServices
 
         if(useJson)
         {
-            // TODO
+            await OutputJrd(context, descriptors, cancellationToken);
         }
         else
         {
@@ -120,6 +122,24 @@ partial class WellKnownServices
         await OutputDescriptors(request.Url, encoder, descriptors);
     }
 
+    async Task OutputJrd(IHttpListenerContext context, IEnumerable<IMetadataDescriptor>? descriptors, CancellationToken cancellationToken)
+    {
+        var request = context.Request;
+        var response = context.Response;
+
+        response.ContentType = "application/jrd+json";
+
+        using var stream = response.OutputStream;
+        using var writer = new StreamWriter(stream);
+        using var jsonWriter = new JsonTextWriter(writer);
+
+        await jsonWriter.WriteStartObjectAsync();
+
+        var encoder = new JrdEncoder(jsonWriter, cancellationToken);
+
+        await OutputDescriptors(request.Url, encoder, descriptors);
+    }
+
     async Task OutputDescriptors(Uri uri, IResourceDescriptorHandler handler, IEnumerable<IMetadataDescriptor>? descriptors)
     {
         if(descriptors != null)
@@ -144,6 +164,33 @@ partial class WellKnownServices
         int level = 0;
 
         protected override ValueTask<Encoder> ForkInner()
+        {
+            // Reuse the current instance to encode nested elements
+            if(Interlocked.Increment(ref level) < 1)
+            {
+                throw new ObjectDisposedException(ToString());
+            }
+            return new(this);
+        }
+
+        public override ValueTask DisposeAsync()
+        {
+            if(Interlocked.Decrement(ref level) < 0)
+            {
+                return default;
+            }
+            return base.DisposeAsync();
+        }
+    }
+
+    class JrdEncoder(JsonWriter writer, CancellationToken cancellationToken) : JsonEncoder
+    {
+        protected override JsonWriter Writer => writer;
+        protected override CancellationToken CancellationToken => cancellationToken;
+
+        int level = 0;
+
+        protected override ValueTask<JsonEncoder> ForkInner()
         {
             // Reuse the current instance to encode nested elements
             if(Interlocked.Increment(ref level) < 1)

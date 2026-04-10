@@ -25,7 +25,7 @@ public abstract class BaseCapturingHandler<THandler> : ICapturingHandler<THandle
         }
     }
 
-    protected void Capture<TImplHandler>(Func<TImplHandler, ValueTask> call) where TImplHandler : IPayloadHandler
+    protected void Capture<TImplHandler>(Func<TImplHandler, ValueTask> call)
     {
         if(!disposed && this is ICapturingHandler<TImplHandler> handler)
         {
@@ -45,7 +45,7 @@ public abstract class BaseCapturingHandler<THandler> : ICapturingHandler<THandle
     }
 }
 
-interface ICapturingHandler<out THandler> : IAsyncDisposable where THandler : IPayloadHandler
+interface ICapturingHandler<out THandler> : IAsyncDisposable
 {
     void Capture(Func<THandler, ValueTask> call);
 }

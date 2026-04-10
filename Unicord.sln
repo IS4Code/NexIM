@@ -12,9 +12,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xmpp.Protocol", "Un
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Primitives", "Unicord.Primitives\Unicord.Primitives.csproj", "{310424AF-EC44-4415-AC8C-2A4AA88257FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Xrd.Protocol", "Unicord.Xrd.Protocol\Unicord.Xrd.Protocol.csproj", "{A3A96E77-82CD-411F-8070-632C705A0D50}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xrd.Protocol", "Unicord.Xrd.Protocol\Unicord.Xrd.Protocol.csproj", "{A3A96E77-82CD-411F-8070-632C705A0D50}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Metadata", "Unicord.Metadata\Unicord.Metadata.csproj", "{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Metadata", "Unicord.Metadata\Unicord.Metadata.csproj", "{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Json.Generator", "Unicord.Json.Generator\Unicord.Json.Generator.csproj", "{040A8DCB-6C8C-453D-AD35-6250E229B56B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +52,10 @@ Global
 		{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{040A8DCB-6C8C-453D-AD35-6250E229B56B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{040A8DCB-6C8C-453D-AD35-6250E229B56B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{040A8DCB-6C8C-453D-AD35-6250E229B56B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{040A8DCB-6C8C-453D-AD35-6250E229B56B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
