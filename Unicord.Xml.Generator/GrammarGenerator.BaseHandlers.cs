@@ -172,7 +172,7 @@ partial class GrammarGenerator
             writer.WriteLine("}");
 
             // Include whole interface hierarchy in members
-            interfaces = type.AllInterfaces.Where(t => t.ContainingNamespace.Equals(container, SymbolEqualityComparer.Default)).ToList();
+            interfaces = type.AllInterfaces.Where(t => t.Name == "IPayloadHandler" || t.ContainingNamespace.Equals(container, SymbolEqualityComparer.Default)).ToList();
             methods = type.GetMembers().Concat(interfaces.SelectMany(i => i.GetMembers())).OfType<IMethodSymbol>();
 
             // Require all methods to be overridden
