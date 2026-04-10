@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Primitives.Xml;
+using Unicord.Primitives;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;

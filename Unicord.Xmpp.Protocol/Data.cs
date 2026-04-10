@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using Unicord.Primitives;
-using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Grammar;
 using Unicord.Primitives.Xml.Handlers;
 

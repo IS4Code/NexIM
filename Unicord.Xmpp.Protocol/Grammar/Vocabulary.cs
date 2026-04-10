@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Unicord.Primitives;
 using Unicord.Primitives.Xml;
 
 namespace Unicord.Xmpp.Protocol.Grammar;

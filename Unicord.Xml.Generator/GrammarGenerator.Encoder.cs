@@ -16,6 +16,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
+        writer.WriteLine("using Unicord.Primitives;");
         writer.WriteLine("using Unicord.Primitives.Xml;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");

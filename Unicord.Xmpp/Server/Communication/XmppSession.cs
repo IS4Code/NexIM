@@ -6,7 +6,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Primitives.Xml;
+using Unicord.Primitives;
 using Unicord.Server;
 using Unicord.Xmpp.Protocol;
 

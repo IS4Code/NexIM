@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Xml;
 
-namespace Unicord.Primitives.Xml;
+namespace Unicord.Primitives;
 
 /// <summary>
 /// Represents an XML vocabulary token that can be compared by-reference

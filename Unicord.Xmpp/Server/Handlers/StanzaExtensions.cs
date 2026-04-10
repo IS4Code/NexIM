@@ -1,4 +1,4 @@
-﻿using Unicord.Primitives.Xml;
+﻿using Unicord.Primitives;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 
