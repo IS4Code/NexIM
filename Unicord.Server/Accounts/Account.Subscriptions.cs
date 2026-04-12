@@ -6,7 +6,7 @@ namespace Unicord.Server.Accounts;
 
 partial class Account
 {
-    private void ResendEvent(Event evnt, List<Identifier>? targetsList, List<ValueTask<ErrorCode>> tasks)
+    private void ResendEventFromAccount(Event evnt, List<Identifier>? targetsList, List<ValueTask<ErrorCode>> tasks)
     {
         if(targetsList == null || !Identifiers.TryCreateRange(targetsList, out var to))
         {
@@ -18,7 +18,7 @@ partial class Account
         // Update the event
         evnt = evnt.WithOrigin(
             evnt.Origin with {
-                From = new(Name, null),
+                From = Name.ToIdentifier(),
                 To = to
             }
         );
@@ -45,18 +45,13 @@ partial class Account
                 continue;
             }
 
-            var targetAccountIdentifier = new Identifier(targetAccount, null);
+            var targetAccountIdentifier = targetAccount.ToIdentifier();
 
             if(updated.SubscriptionState.AcceptedTo)
             {
                 // Already subscribed - confirm
                 RouteToSessions(new SubscriptionAcceptedEvent {
-                    Origin = new() {
-                        From = targetAccountIdentifier,
-                        To = new Identifier(Name, null),
-                        TransactionIdentifier = null,
-                        TransactionLanguage = evnt.TransactionLanguage
-                    },
+                    Origin = EventOrigin.FromTo(targetAccountIdentifier, Name.ToIdentifier(), evnt.TransactionLanguage),
                     Processing = EventProcessing.NewInternal(),
                     Data = null
                 }, source, tasks);
@@ -77,7 +72,7 @@ partial class Account
             (targetsList ??= new()).Add(targetAccountIdentifier);
         }
 
-        ResendEvent(evnt, targetsList, tasks);
+        ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
     private async ValueTask HandleIncomingSubscriptionRequest(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)
@@ -163,11 +158,10 @@ partial class Account
             await ContactUpdate(updated, contacts, tasks);
 
             // Pass the event through
-            var targetAccountIdentifier = new Identifier(targetAccount, null);
-            (targetsList ??= new()).Add(targetAccountIdentifier);
+            (targetsList ??= new()).Add(targetAccount.ToIdentifier());
         }
 
-        ResendEvent(evnt, targetsList, tasks);
+        ResendEventFromAccount(evnt, targetsList, tasks);
         OnSubscribed(targetsList, tasks);
     }
 
@@ -221,7 +215,7 @@ partial class Account
             // Inform of updated contact
             await ContactUpdateOrRemove(previous, updated, contacts, tasks);
 
-            var targetAccountIdentifier = new Identifier(targetAccount, null);
+            var targetAccountIdentifier = targetAccount.ToIdentifier();
 
             switch(previous.SubscriptionState)
             {
@@ -243,7 +237,7 @@ partial class Account
         }
 
         OnUnsubscribed(unavailableList, tasks);
-        ResendEvent(evnt, targetsList, tasks);
+        ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
     private async ValueTask HandleIncomingSubscriptionRejection(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)
@@ -296,11 +290,10 @@ partial class Account
             await ContactUpdate(updated, contacts, tasks);
 
             // Pass the event through
-            var targetAccountIdentifier = new Identifier(targetAccount, null);
-            (targetsList ??= new()).Add(targetAccountIdentifier);
+            (targetsList ??= new()).Add(targetAccount.ToIdentifier());
         }
 
-        ResendEvent(evnt, targetsList, tasks);
+        ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
     private async ValueTask HandleIncomingSubscriptionCancellation(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)

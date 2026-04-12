@@ -164,7 +164,7 @@ partial class Account : IEventHandler
                 }
                 return await Post(new ResponseEvent {
                     Origin = evnt.Origin with {
-                        From = new Identifier(Name, null),
+                        From = Name.ToIdentifier(),
                         To = evnt.From
                     },
                     Processing = EventProcessing.NewInternal(),

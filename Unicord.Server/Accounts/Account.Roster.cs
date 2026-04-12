@@ -22,12 +22,7 @@ partial class Account
         {
             // No longer subscribing to
             await Post(new SubscriptionCancelledEvent {
-                Origin = new() {
-                    From = new(Name, null),
-                    To = new Identifier(target, null),
-                    TransactionIdentifier = null,
-                    TransactionLanguage = null
-                },
+                Origin = EventOrigin.FromTo(Name.ToIdentifier(), target.ToIdentifier()),
                 Processing = EventProcessing.NewInternal(),
                 Data = null
             });
@@ -36,12 +31,7 @@ partial class Account
         {
             // No longer allowing subscription from
             await Post(new SubscriptionRejectedEvent {
-                Origin = new() {
-                    From = new(Name, null),
-                    To = new Identifier(target, null),
-                    TransactionIdentifier = null,
-                    TransactionLanguage = null
-                },
+                Origin = EventOrigin.FromTo(Name.ToIdentifier(), target.ToIdentifier()),
                 Processing = EventProcessing.NewInternal(),
                 Data = null
             });

@@ -211,12 +211,7 @@ public abstract class ClientSession : IAsyncDisposable
                 return new(ErrorCode.Success);
             }
             return Inbound(new StatusUpdateEvent {
-                Origin = new() {
-                    From = Identifier,
-                    To = evnt.From,
-                    TransactionIdentifier = default,
-                    TransactionLanguage = presenceStore.Language
-                },
+                Origin = EventOrigin.FromTo(Identifier, evnt.From, presenceStore.Language),
                 Processing = EventProcessing.NewInternal(),
                 Data = presenceStore.Data
             });
@@ -241,12 +236,7 @@ public abstract class ClientSession : IAsyncDisposable
     {
         // Broadcast status information request of all contacts
         var evnt = new StatusRequestEvent {
-            Origin = new() {
-                From = Identifier,
-                To = Identifier.Bare,
-                TransactionIdentifier = default,
-                TransactionLanguage = dataLanguage
-            },
+            Origin = EventOrigin.FromTo(Identifier, Identifier.Bare, dataLanguage),
             Processing = EventProcessing.NewInternal(),
             Data = data
         };

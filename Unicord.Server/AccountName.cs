@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using Unicord.Server.Accounts;
 
 namespace Unicord.Server;
 
@@ -9,6 +10,8 @@ public readonly record struct AccountName(string? User, string Host) : IComparab
 
     [MemberNotNullWhen(true, nameof(User))]
     public bool IsValid => User != null;
+
+    public Identifier ToIdentifier(string? resource = null) => new(this, resource);
 
     public int CompareTo(AccountName other)
     {

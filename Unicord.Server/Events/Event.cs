@@ -80,6 +80,20 @@ public record struct EventOrigin
     /// The language that was used when constructing the event.
     /// </summary>
     public required LanguageCode? TransactionLanguage { get; set; }
+
+    /// <summary>
+    /// Creates an <see cref="EventOrigin"/> instance
+    /// between two parties.
+    /// </summary>
+    public static EventOrigin FromTo(Identifier from, Identifiers to, LanguageCode? transactionLanguage = null)
+    {
+        return new() {
+            From = from,
+            To = to,
+            TransactionIdentifier = null,
+            TransactionLanguage = transactionLanguage
+        };
+    }
 }
 
 /// <summary>
