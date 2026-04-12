@@ -8,7 +8,7 @@ namespace Unicord.Primitives.Xml;
 /// <summary>
 /// Provides support for decoding from XML.
 /// </summary>
-public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<TemporaryUtf8String>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<Token<Enum>>, IValueXmlDecoder<LanguageTaggedString>, IValueXmlDecoder<DateTime>, IValueXmlDecoder<DateTimeOffset>, IValueXmlDecoder<TimeZoneOffset>, IValueXmlDecoder<Uri>
+public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlDecoder<TemporaryUtf8String>, IValueXmlDecoder<ArraySegment<byte>>, IValueXmlDecoder<TemporaryArray<byte>>, IValueXmlDecoder<TemporaryFile>, IValueXmlDecoder<Token<Enum>>, IValueXmlDecoder<LanguageTaggedString>, IValueXmlDecoder<DateTime>, IValueXmlDecoder<DateTimeOffset>, IValueXmlDecoder<TimeZoneOffset>, IValueXmlDecoder<Uri>
 {
     protected abstract void ThrowElementNotEmpty();
     protected abstract void ThrowElementNotSimple();
@@ -169,6 +169,11 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
             arr.Dispose();
             return false;
         }
+    }
+
+    ValueTask<TemporaryFile> IValueXmlDecoder<TemporaryFile>.Decode(XmlReader reader)
+    {
+        return TemporaryFile.ReadFromAsync(StorageQuota.Local, xmlTemporaryByteReader, reader);
     }
 
     protected async ValueTask<string> DecodeTokenAsync(XmlReader reader)

@@ -48,6 +48,12 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
 
 internal class ResultInfoQuery : InfoQuery
 {
+    protected async override ValueTask<IVCardHandler> OnVCard()
+    {
+        SetHandled();
+        return this.GetHandler<ResultVCardTemp>();
+    }
+
     protected override Event GetEvent()
     {
         return new ResponseEvent
@@ -78,6 +84,12 @@ internal abstract class GetSetInfoQuery : InfoQuery
 
 internal class GetInfoQuery : GetSetInfoQuery
 {
+    protected async override ValueTask<IVCardHandler> OnVCard()
+    {
+        SetHandled();
+        return this.GetHandler<GetVCardTemp>();
+    }
+
     protected override Event GetEvent()
     {
         return new RetrieveEvent
@@ -98,6 +110,12 @@ internal class GetInfoQuery : GetSetInfoQuery
 
 internal class SetInfoQuery : GetSetInfoQuery
 {
+    protected async override ValueTask<IVCardHandler> OnVCard()
+    {
+        SetHandled();
+        return this.GetHandler<SetVCardTemp>();
+    }
+
     protected override Event GetEvent()
     {
         return new UpdateEvent

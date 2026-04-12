@@ -9,7 +9,7 @@ using Unicord.Primitives.Xml.Handlers;
 
 namespace Unicord.Xmpp.Protocol.Grammar;
 
-public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHandler, IValueXmlEncoder<XmppResource>
+public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHandler, IValueXmlEncoder<XmppAddress>, IValueXmlEncoder<XmppResource>
 {
     protected abstract CancellationToken CancellationToken { get; }
     protected abstract ValueTask<Encoder> ForkInner();
@@ -20,6 +20,11 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
         // with the parent, however this does not happen directly
         // in a stanza, because stanza language is always replicated.
         await Writer.WriteNodeWithLanguageAsync(payloadReader, false);
+    }
+
+    async ValueTask IValueXmlEncoder<XmppAddress>.Encode(XmlWriter writer, XmppAddress value)
+    {
+        await writer.WriteStringAsync(value.ToString());
     }
 
     async ValueTask IValueXmlEncoder<XmppResource>.Encode(XmlWriter writer, XmppResource value)

@@ -48,6 +48,9 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
     {
         this.mainHandler = mainHandler;
 
+        // TODO Quotas
+        StorageQuota.Local = StorageQuota.Empty;
+
         try
         {
             // Dispose all handlers at the end

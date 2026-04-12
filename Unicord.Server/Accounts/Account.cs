@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Unicord.Server.Accounts.VCards;
 using Unicord.Server.Database;
 using Unicord.Server.Tools;
 
@@ -16,6 +17,8 @@ public partial class Account
 
     public string User { get; private set; }
     public string Host { get; private set; }
+
+    public VCard? VCard { get; set; }
 
     SnapshotDictionary<AccountName, Contact> contacts = default;
 

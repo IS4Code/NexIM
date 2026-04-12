@@ -32,6 +32,9 @@ public interface IInfoQueryHandler : IStanzaHandler
 
     [Name("time", XmppTime)]
     ValueTask<ITimeHandler> Time();
+
+    [Name("vCard", VCardTemp)]
+    ValueTask<IVCardHandler> VCard();
 }
 
 [ComplexType, Namespace(IqRoster)]

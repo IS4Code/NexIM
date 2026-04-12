@@ -220,9 +220,9 @@ internal static class AdapterExtensions
         };
     }
 
-    public static EventExtensions ToExtensions<THandler>(this CapturingHandler<THandler> handler) where THandler : IPayloadHandler
+    public static EventExtensions ToExtensions<THandler>(this CapturingHandler<THandler>? handler) where THandler : IPayloadHandler
     {
-        return new(handler.Calls.Count > 0 ? handler : null);
+        return new(handler?.Calls.Count > 0 ? handler : null);
     }
 
     sealed class ErrorHandler : StanzaErrorHandler<EmptyPayloadHandlerContext>

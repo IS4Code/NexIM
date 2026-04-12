@@ -7,5 +7,6 @@ public enum ErrorCode
     InvalidRequest,
     NotFound,
     Unrecognized,
+    // TODO Do not conflate with Forbidden
     NotAuthorized
 }

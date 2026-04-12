@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
+using Unicord.Primitives.Xml.Handlers;
 using Unicord.Server;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
@@ -9,6 +10,7 @@ using Unicord.Xmpp.Model;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
 using Unicord.Xmpp.Server.Communication;
+using Unicord.Xmpp.Server.Formats;
 using Unicord.Xmpp.Server.Handlers;
 using Unicord.Xmpp.Tools;
 
@@ -119,13 +121,7 @@ public class XmppClientSession : ClientSession
 
         // General extensions
 
-        foreach(var extension in data.Extensions)
-        {
-            if(extension is CapturingHandler<IMessageHandler> capture)
-            {
-                await capture.Replay(output);
-            }
-        }
+        await WriteExtensions(output, data.Extensions);
     }
 
     private async ValueTask WritePresence(IPresenceHandler output, PresenceData? data)
@@ -158,13 +154,7 @@ public class XmppClientSession : ClientSession
 
         // General extensions
 
-        foreach(var extension in data.Extensions)
-        {
-            if(extension is CapturingHandler<IPresenceHandler> capture)
-            {
-                await capture.Replay(output);
-            }
-        }
+        await WriteExtensions(output, data.Extensions);
     }
 
     private async ValueTask<ErrorCode> WriteInfoQuery(IInfoQueryHandler output, QueryData? data)
@@ -172,16 +162,31 @@ public class XmppClientSession : ClientSession
         switch(data)
         {
             case GeneralQueryData:
-                foreach(var extension in data.Extensions)
+                await WriteExtensions(output, data.Extensions);
+                return ErrorCode.Success;
+            case VCardQueryData vcardData:
+                await using(var vcardHandler = await output.VCard())
                 {
-                    if(extension is CapturingHandler<IInfoQueryHandler> capture)
+                    if(vcardData.VCard is { } vcard)
                     {
-                        await capture.Replay(output);
+                        await VCardFormatter.WriteTo(vcard, vcardHandler);
                     }
+                    await WriteExtensions(vcardHandler, data.Extensions);
                 }
                 return ErrorCode.Success;
         }
         return ErrorCode.Unrecognized;
+    }
+
+    private async ValueTask WriteExtensions<THandler>(THandler handler, EventExtensions extensions) where THandler : IPayloadHandler
+    {
+        foreach(var extension in extensions)
+        {
+            if(extension is CapturingHandler<THandler> capture)
+            {
+                await capture.Replay(handler);
+            }
+        }
     }
 
     private async ValueTask<ErrorCode> WriteError(Stanza stanza, ErrorData? data)
@@ -233,13 +238,7 @@ public class XmppClientSession : ClientSession
 
             // General extensions
 
-            foreach(var extension in data.Extensions)
-            {
-                if(extension is CapturingHandler<IStanzaErrorHandler> capture)
-                {
-                    await capture.Replay(error);
-                }
-            }
+            await WriteExtensions(error, data.Extensions);
         }
     }
 

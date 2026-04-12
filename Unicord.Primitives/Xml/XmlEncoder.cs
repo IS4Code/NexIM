@@ -8,7 +8,7 @@ namespace Unicord.Primitives.Xml;
 /// <summary>
 /// Provides support for encoding to XML.
 /// </summary>
-public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>, IValueXmlEncoder<DateTime>, IValueXmlEncoder<DateTimeOffset>, IValueXmlEncoder<TimeZoneOffset>, IValueXmlEncoder<Uri>
+public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<TemporaryFile>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>, IValueXmlEncoder<DateTime>, IValueXmlEncoder<DateTimeOffset>, IValueXmlEncoder<TimeZoneOffset>, IValueXmlEncoder<Uri>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -53,6 +53,11 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
     }
 
     ValueTask IValueXmlEncoder<TemporaryArray<byte>>.Encode(XmlWriter writer, TemporaryArray<byte> value)
+    {
+        return value.WriteToAsync(xmlTemporaryByteWriter, writer);
+    }
+
+    ValueTask IValueXmlEncoder<TemporaryFile>.Encode(XmlWriter writer, TemporaryFile value)
     {
         return value.WriteToAsync(xmlTemporaryByteWriter, writer);
     }

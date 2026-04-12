@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MessagePack;
+using Microsoft.EntityFrameworkCore;
 using Unicord.Server.Accounts;
+using Unicord.Server.Accounts.VCards;
 
 namespace Unicord.Server.Database;
 
@@ -32,6 +34,11 @@ internal class AccountsContext : DbContext
 
             e.Property(x => x.PasswordHash);
 
+            e.Property(x => x.VCard).HasConversion(
+                x => SaveVCard(x),
+                x => LoadVCard(x)
+            );
+
             e.Ignore(x => x.Contacts);
             e.OwnsMany(x => x.ContactsBuilder, e => {
                 e.Ignore(x => x.Account);
@@ -44,5 +51,25 @@ internal class AccountsContext : DbContext
                 );
             });
         });
+    }
+
+    static readonly MessagePackSerializerOptions vcardSerializerOptions = MessagePackSerializerOptions.Standard;
+
+    private static byte[]? SaveVCard(VCard? vcard)
+    {
+        if(vcard == null)
+        {
+            return null;
+        }
+        return MessagePackSerializer.Serialize(vcard, vcardSerializerOptions);
+    }
+
+    private static VCard? LoadVCard(byte[]? data)
+    {
+        if(data == null)
+        {
+            return null;
+        }
+        return MessagePackSerializer.Deserialize<VCard>(data, vcardSerializerOptions);
     }
 }

@@ -24,4 +24,5 @@ static class Constants
     public const string AmpCondition = Amp + "?condition=";
     public const string XData = "jabber:x:data";
     public const string Caps = "http://jabber.org/protocol/caps";
+    public const string VCardTemp = "vcard-temp";
 }

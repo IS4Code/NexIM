@@ -103,7 +103,7 @@ partial class Account
         {
             // Auto-accepted from approved state - update and reply back
 
-            ContactUpdate(updated, contacts, tasks);
+            await ContactUpdate(updated, contacts, tasks);
 
             OnSubscribed(new(identifier), tasks);
             return;

@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Unicord.Primitives;
+using Unicord.Primitives.Xml.Handlers;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
@@ -118,11 +120,39 @@ internal static class CommandExtensions
         return GetSession(handler).InfoQuery(request);
     }
 
-    public static T SetOnce<T>(this ICommandHandler handler, ref T? storage, T value)
+    const string propertySetError = "Property set multiple times.";
+
+    public static T SetOnce<T, TContext>(this IPayloadHandler<TContext> handler, ref T? storage, T value) where TContext : IPayloadHandlerContext
     {
         if(storage != null)
         {
-            throw XmppStanzaException.BadRequest("Property set multiple times.");
+            throw XmppStanzaException.BadRequest(propertySetError);
+        }
+        return storage = value;
+    }
+
+    public static T SetOnceFlag<T, TContext>(this IPayloadHandler<TContext> handler, ref T storage, T value) where T : unmanaged, Enum where TContext : IPayloadHandlerContext
+    {
+        if(Unsafe.SizeOf<T>() != sizeof(int))
+        {
+            throw new ArgumentException("Argument must be 32-bit.", nameof(storage));
+        }
+        ref int rawStorage = ref Unsafe.As<T, int>(ref storage);
+        int rawValue = Unsafe.BitCast<T, int>(value);
+        int newValue = rawStorage | rawValue;
+        if(newValue == rawStorage)
+        {
+            throw XmppStanzaException.BadRequest(propertySetError);
+        }
+        rawStorage = newValue;
+        return Unsafe.BitCast<int, T>(newValue);
+    }
+
+    public static bool SetOnce<TContext>(this IPayloadHandler<TContext> handler, ref bool storage, bool value) where TContext : IPayloadHandlerContext
+    {
+        if(storage == value)
+        {
+            throw XmppStanzaException.BadRequest(propertySetError);
         }
         return storage = value;
     }

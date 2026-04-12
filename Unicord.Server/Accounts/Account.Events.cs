@@ -166,9 +166,47 @@ partial class Account : IEventHandler
                 RouteToSessions(evnt, targetTo, tasks);
                 return tasks.Combine();
             default:
-                // Can't process arbitrary event
-                return new(ErrorCode.Unrecognized);
+                return OnQuery(evnt);
         }
+    }
+
+    private async ValueTask<ErrorCode> OnQuery(Event evnt)
+    {
+        switch(evnt)
+        {
+            case RetrieveEvent { Data: VCardQueryData }:
+                // Retrieving a VCard
+                var vcard = VCard;
+                if(vcard == null)
+                {
+                    return ErrorCode.NotAvailable;
+                }
+                if(vcard.PrivacyClassification is VCards.VCardPrivacyClassification.Private or VCards.VCardPrivacyClassification.Confidential)
+                {
+                    // TODO Figure out what "confidential" means
+                    return ErrorCode.NotAuthorized;
+                }
+                return await Post(new ResponseEvent {
+                    Origin = evnt.Origin with {
+                        From = new Identifier(Name, null),
+                        To = new(evnt.From)
+                    },
+                    Processing = EventProcessing.NewInternal(),
+                    Data = new VCardQueryData {
+                        VCard = vcard
+                    }
+                });;
+            case UpdateEvent { Data: VCardQueryData vcardData }:
+                if(evnt.From.Account != Name)
+                {
+                    // The owner can modify
+                    return ErrorCode.NotAuthorized;
+                }
+                VCard = vcardData.VCard;
+                return ErrorCode.Success;
+        }
+        // Can't process arbitrary event
+        return ErrorCode.Unrecognized;
     }
 
     private void RouteToSessions(Event evnt, IdentifierSet sessions, List<ValueTask<ErrorCode>> tasks)
