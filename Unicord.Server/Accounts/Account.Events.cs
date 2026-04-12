@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Unicord.Server.Events;
 
@@ -9,77 +8,12 @@ namespace Unicord.Server.Accounts;
 
 partial class Account : IEventHandler
 {
-    readonly Func<Identifier, EnumWrapper<TargetType>> router;
-    readonly Func<EnumWrapper<TargetType>, IdentifierSet, MessageEvent, ValueTask<ErrorCode>> messageTarget;
-    readonly Func<EnumWrapper<TargetType>, IdentifierSet, PresenceEvent, ValueTask<ErrorCode>> presenceTarget;
-    readonly Func<EnumWrapper<TargetType>, IdentifierSet, Event, ValueTask<ErrorCode>> generalTarget;
+    readonly Func<Identifier, TargetType> router;
+    readonly Func<TargetType, Identifiers, MessageEvent, ValueTask<ErrorCode>> messageTarget;
+    readonly Func<TargetType, Identifiers, PresenceEvent, ValueTask<ErrorCode>> presenceTarget;
+    readonly Func<TargetType, Identifiers, Event, ValueTask<ErrorCode>> generalTarget;
 
-    public ValueTask<ErrorCode> Post(Event evnt)
-    {
-        switch(evnt)
-        {
-            case MessageEvent msgEvent:
-                return PostMessage(msgEvent);
-            case PresenceEvent presEvent:
-                return PostPresence(presEvent);
-            default:
-                if(evnt.To.IsEmpty)
-                {
-                    // No recipient
-                    return new(ErrorCode.InvalidRequest);
-                }
-                return evnt.To.Route(router, generalTarget, evnt);
-        }
-    }
-
-    private ValueTask<ErrorCode> PostMessage(MessageEvent msgEvent)
-    {
-        // TODO Message duplicating logic (carbons)
-
-        if(msgEvent.To.IsEmpty)
-        {
-            // Target the account
-            return RouteMessage(TargetType.Account, default, msgEvent);
-        }
-
-        return msgEvent.To.Route(router, messageTarget, msgEvent);
-    }
-
-    private ValueTask<ErrorCode> PostPresence(PresenceEvent presEvent)
-    {
-        if(presEvent.To.IsEmpty)
-        {
-            if(presEvent is not StatusEvent)
-            {
-                // Broadcasting is not permitted
-                return new(ErrorCode.InvalidRequest);
-            }
-
-            // Select all contacts and other connected resources
-            var to = new IdentifierSet(
-                GetSessions(false).Select(session => new Identifier(Name, session.Resource))
-                .Concat(Contacts.Select(contact => new Identifier(contact.Account, null)))
-            ).Remove(presEvent.From);
-
-            if(to.IsEmpty)
-            {
-                // Nobody to send to
-                return new(ErrorCode.Success);
-            }
-
-            presEvent = presEvent.WithTo(to);
-        }
-
-        if(presEvent is SubscriptionEvent subscriptionEvent)
-        {
-            // Custom routing
-            return OnSubscriptionEvent(subscriptionEvent);
-        }
-
-        return presEvent.To.Route(router, presenceTarget, presEvent);
-    }
-
-    private void InitEvents(out Func<Identifier, EnumWrapper<TargetType>> router, out Func<EnumWrapper<TargetType>, IdentifierSet, MessageEvent, ValueTask<ErrorCode>> messageTarget, out Func<EnumWrapper<TargetType>, IdentifierSet, PresenceEvent, ValueTask<ErrorCode>> presenceTarget, out Func<EnumWrapper<TargetType>, IdentifierSet, Event, ValueTask<ErrorCode>> generalTarget)
+    private void InitEvents(out Func<Identifier, TargetType> router, out Func<TargetType, Identifiers, MessageEvent, ValueTask<ErrorCode>> messageTarget, out Func<TargetType, Identifiers, PresenceEvent, ValueTask<ErrorCode>> presenceTarget, out Func<TargetType, Identifiers, Event, ValueTask<ErrorCode>> generalTarget)
     {
         messageTarget = RouteMessage;
         presenceTarget = RoutePresence;
@@ -93,9 +27,23 @@ partial class Account : IEventHandler
                 : TargetType.Server;
     }
 
-    private ValueTask<ErrorCode> RouteMessage(EnumWrapper<TargetType> targetType, IdentifierSet targetTo, MessageEvent msgEvent)
+    public ValueTask<ErrorCode> Post(Event evnt)
     {
-        if(targetType.Value == TargetType.Server)
+        switch(evnt)
+        {
+            case MessageEvent msgEvent:
+                // TODO Message duplicating logic (carbons)
+                return msgEvent.To.Route(router, messageTarget, msgEvent);
+            case PresenceEvent presEvent:
+                return presEvent.To.Route(router, presenceTarget, presEvent);
+            default:
+                return evnt.To.Route(router, generalTarget, evnt);
+        }
+    }
+
+    private ValueTask<ErrorCode> RouteMessage(TargetType targetType, Identifiers targetTo, MessageEvent msgEvent)
+    {
+        if(targetType == TargetType.Server)
         {
             // Not intended for this account
             return Server.Post(msgEvent.WithTo(targetTo));
@@ -103,7 +51,7 @@ partial class Account : IEventHandler
 
         var tasks = new List<ValueTask<ErrorCode>>();
 
-        switch(targetType.Value)
+        switch(targetType)
         {
             case TargetType.Sessions:
                 RouteToSessions(msgEvent, targetTo, tasks);
@@ -128,36 +76,64 @@ partial class Account : IEventHandler
         return tasks.Combine();
     }
 
-    private ValueTask<ErrorCode> RoutePresence(EnumWrapper<TargetType> targetType, IdentifierSet targetTo, PresenceEvent presEvent)
+    internal bool CanSharePresenceWith(Identifier identifier)
     {
-        if(targetType.Value == TargetType.Server)
+        if(identifier.Account is not { } account)
         {
-            // Not intended for this account
-            return Server.Post(presEvent);
+            return false;
         }
+        return account == Name || GetContact(account)?.SubscriptionState.From == SubscriptionLevel.Accepted;
+    }
 
-        var tasks = new List<ValueTask<ErrorCode>>();
-        
-        switch(targetType.Value)
+    private ValueTask<ErrorCode> RoutePresence(TargetType targetType, Identifiers targetTo, PresenceEvent presEvent)
+    {
+        List<ValueTask<ErrorCode>> tasks;
+        switch(targetType)
         {
+            case TargetType.Server:
+                // Presence routed to the server must come from within the account
+                Debug.Assert(Name == presEvent.From.Account);
+                switch(presEvent)
+                {
+                    case SubscriptionEvent subEvent:
+                        return OnOutgoingSubscriptionEvent(subEvent);
+                    case StatusRequestEvent:
+                    // TODO: Cache contact's presence to avoid sending this
+                    default:
+                        // Route normally
+                        return Server.Post(presEvent);
+                }
             case TargetType.Sessions:
+                switch(presEvent)
+                {
+                    case SubscriptionEvent subEvent:
+                        // Must not target individiual sessions
+                        return new(ErrorCode.InvalidRequest);
+                }
+
+                tasks = new();
                 RouteToSessions(presEvent, targetTo, tasks);
-                break;
-            case TargetType.Account:
+                return tasks.Combine();
+            default:
+                switch(presEvent)
+                {
+                    case SubscriptionEvent subEvent:
+                        return OnIncomingSubscriptionEvent(subEvent);
+                }
+
                 // Deliver to all sessions
+                tasks = new();
                 foreach(var session in GetSessions(false))
                 {
                     tasks.Add(session.Outbound(presEvent));
                 }
-                break;
+                return tasks.Combine();
         }
-
-        return tasks.Combine();
     }
 
-    private ValueTask<ErrorCode> RouteEvent(EnumWrapper<TargetType> targetType, IdentifierSet targetTo, Event evnt)
+    private ValueTask<ErrorCode> RouteEvent(TargetType targetType, Identifiers targetTo, Event evnt)
     {
-        switch(targetType.Value)
+        switch(targetType)
         {
             case TargetType.Server:
                 return Server.Post(evnt);
@@ -189,7 +165,7 @@ partial class Account : IEventHandler
                 return await Post(new ResponseEvent {
                     Origin = evnt.Origin with {
                         From = new Identifier(Name, null),
-                        To = new(evnt.From)
+                        To = evnt.From
                     },
                     Processing = EventProcessing.NewInternal(),
                     Data = new VCardQueryData {
@@ -209,7 +185,7 @@ partial class Account : IEventHandler
         return ErrorCode.Unrecognized;
     }
 
-    private void RouteToSessions(Event evnt, IdentifierSet sessions, List<ValueTask<ErrorCode>> tasks)
+    private void RouteToSessions(Event evnt, Identifiers sessions, List<ValueTask<ErrorCode>> tasks)
     {
         foreach(var identifier in sessions)
         {
@@ -224,52 +200,53 @@ partial class Account : IEventHandler
                 tasks.Add(new(ErrorCode.NotFound));
                 continue;
             }
-            tasks.Add(session.Outbound(evnt.WithTo(new(identifier))));
+            tasks.Add(session.Outbound(evnt.WithTo(identifier)));
         }
     }
 
-    private async ValueTask<ErrorCode> OnSubscriptionEvent(PresenceEvent presEvent)
+    private async ValueTask<ErrorCode> OnOutgoingSubscriptionEvent(SubscriptionEvent presEvent)
     {
         var tasks = new List<ValueTask<ErrorCode>>();
 
         var from = presEvent.From;
-        if(from.Account == Name)
+        switch(presEvent)
         {
-            // Outgoing request
-            switch(presEvent)
-            {
-                case SubscriptionRequestedEvent:
-                    await HandleOutgoingSubscriptionRequest(from, presEvent.To, presEvent, tasks);
-                    break;
-                case SubscriptionAcceptedEvent:
-                    await HandleOutgoingSubscriptionAcceptation(from, presEvent.To, presEvent, tasks);
-                    break;
-                case SubscriptionRejectedEvent:
-                    await HandleOutgoingSubscriptionRejection(from, presEvent.To, presEvent, tasks);
-                    break;
-                case SubscriptionCancelledEvent:
-                    await HandleOutgoingSubscriptionCancellation(from, presEvent.To, presEvent, tasks);
-                    break;
-            }
+            case SubscriptionRequestedEvent:
+                await HandleOutgoingSubscriptionRequest(from, presEvent.To, presEvent, tasks);
+                break;
+            case SubscriptionAcceptedEvent:
+                await HandleOutgoingSubscriptionAcceptation(from, presEvent.To, presEvent, tasks);
+                break;
+            case SubscriptionRejectedEvent:
+                await HandleOutgoingSubscriptionRejection(from, presEvent.To, presEvent, tasks);
+                break;
+            case SubscriptionCancelledEvent:
+                await HandleOutgoingSubscriptionCancellation(from, presEvent.To, presEvent, tasks);
+                break;
         }
-        else
+
+        return await tasks.Combine();
+    }
+
+    private async ValueTask<ErrorCode> OnIncomingSubscriptionEvent(SubscriptionEvent presEvent)
+    {
+        var tasks = new List<ValueTask<ErrorCode>>();
+
+        var from = presEvent.From;
+        switch(presEvent)
         {
-            // Incoming request
-            switch(presEvent)
-            {
-                case SubscriptionRequestedEvent:
-                    await HandleIncomingSubscriptionRequest(from, presEvent, tasks);
-                    break;
-                case SubscriptionAcceptedEvent:
-                    await HandleIncomingSubscriptionAcceptation(from, presEvent, tasks);
-                    break;
-                case SubscriptionRejectedEvent:
-                    await HandleIncomingSubscriptionRejection(from, presEvent, tasks);
-                    break;
-                case SubscriptionCancelledEvent:
-                    await HandleIncomingSubscriptionCancellation(from, presEvent, tasks);
-                    break;
-            }
+            case SubscriptionRequestedEvent:
+                await HandleIncomingSubscriptionRequest(from, presEvent, tasks);
+                break;
+            case SubscriptionAcceptedEvent:
+                await HandleIncomingSubscriptionAcceptation(from, presEvent, tasks);
+                break;
+            case SubscriptionRejectedEvent:
+                await HandleIncomingSubscriptionRejection(from, presEvent, tasks);
+                break;
+            case SubscriptionCancelledEvent:
+                await HandleIncomingSubscriptionCancellation(from, presEvent, tasks);
+                break;
         }
 
         return await tasks.Combine();
@@ -280,12 +257,5 @@ partial class Account : IEventHandler
         Server,
         Account,
         Sessions
-    }
-
-    [StructLayout(LayoutKind.Auto)]
-    readonly record struct EnumWrapper<TEnum>(TEnum Value) where TEnum : struct, Enum
-    {
-        public static implicit operator EnumWrapper<TEnum>(TEnum value) => new(value);
-        public static implicit operator TEnum(EnumWrapper<TEnum> wrapper) => wrapper.Value;
     }
 }

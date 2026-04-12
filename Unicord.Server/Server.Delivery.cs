@@ -8,19 +8,14 @@ namespace Unicord.Server;
 partial class Server
 {
     static readonly Func<Identifier, AccountName> accountRouter = id => id.Account ?? default;
-    readonly Func<AccountName, IdentifierSet, Event, ValueTask<ErrorCode>> accountTarget;
+    readonly Func<AccountName, Identifiers, Event, ValueTask<ErrorCode>> accountTarget;
 
     public ValueTask<ErrorCode> Post(Event evnt)
     {
-        if(evnt.To.IsEmpty)
-        {
-            return new(ErrorCode.InvalidRequest);
-        }
-
         return evnt.To.Route(accountRouter, accountTarget, evnt);
     }
 
-    private void InitDelivery(out Func<AccountName, IdentifierSet, Event, ValueTask<ErrorCode>> accountTarget)
+    private void InitDelivery(out Func<AccountName, Identifiers, Event, ValueTask<ErrorCode>> accountTarget)
     {
         accountTarget = (accountName, accountTo, evnt) => {
             if(!accountName.IsValid)

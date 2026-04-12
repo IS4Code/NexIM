@@ -23,7 +23,7 @@ public abstract record Event
     public Identifier From => Origin.From;
 
     /// <inheritdoc cref="EventOrigin.To"/>
-    public IdentifierSet To => Origin.To;
+    public Identifiers To => Origin.To;
 
     /// <inheritdoc cref="EventOrigin.TransactionIdentifier"/>
     public Identifier? TransactionIdentifier => Origin.TransactionIdentifier;
@@ -69,7 +69,7 @@ public record struct EventOrigin
     /// <summary>
     /// The identifiers of the parties this event is being delivered to.
     /// </summary>
-    public required IdentifierSet To { get; set; }
+    public required Identifiers To { get; set; }
 
     /// <summary>
     /// The identifier of the event within the scope of the session between the two parties.

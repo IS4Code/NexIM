@@ -1,11 +1,25 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Unicord.Server;
 
-public readonly record struct AccountName(string? User, string Host)
+public readonly record struct AccountName(string? User, string Host) : IComparable<AccountName>
 {
+    static readonly StringComparer comparer = StringComparer.OrdinalIgnoreCase;
+
     [MemberNotNullWhen(true, nameof(User))]
     public bool IsValid => User != null;
+
+    public int CompareTo(AccountName other)
+    {
+        // Host first (top-level hierarchy unit)
+        int cmp = comparer.Compare(Host, other.Host);
+        if(cmp != 0)
+        {
+            return cmp;
+        }
+        return comparer.Compare(User, other.User);
+    }
 
     public override string? ToString()
     {

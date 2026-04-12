@@ -12,6 +12,8 @@ using Unicord.Xmpp.Server.Communication;
 
 namespace Unicord.Xmpp;
 
+using Identifiers = Unicord.Server.Tools.NonEmptySet<Identifier>;
+
 #pragma warning disable 8509, 8524
 
 internal static class AdapterExtensions
@@ -36,7 +38,7 @@ internal static class AdapterExtensions
         return ToResource(account, resource);
     }
 
-    public static XmppResource? ToResource(this IdentifierSet identifiers)
+    public static XmppResource? ToResource(this Identifiers identifiers)
     {
         return
             identifiers.TryGetSingle(out var identifier)

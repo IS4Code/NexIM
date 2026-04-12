@@ -2,186 +2,230 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace Unicord.Server.Accounts;
+namespace Unicord.Server.Tools;
 
+/// <summary>
+/// Stores an ordered set of <typeparamref name="T"/> that has at least 1 element.
+/// </summary>
+/// <typeparam name="T">The type of the elements in the set.</typeparam>
 [StructLayout(LayoutKind.Auto)]
-public readonly struct IdentifierSet : IReadOnlyCollection<Identifier>, IEquatable<IdentifierSet>
+public readonly struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
 {
-    static IComparer<Identifier> comparer => Comparer.Instance;
+    static readonly Comparer<T> comparer = Comparer<T>.Default;
 
-    static readonly ImmutableSortedSet<Identifier> emptySet = ImmutableSortedSet.Create(comparer);
+    static readonly ImmutableSortedSet<T> emptySet = ImmutableSortedSet.Create<T>(comparer);
 
-    public static readonly IdentifierSet Empty = default;
-
-    readonly ImmutableSortedSet<Identifier>? _data;
-    ImmutableSortedSet<Identifier> data => _data ?? emptySet;
-
-    public int Count => data.Count;
-    public bool IsEmpty => Count == 0;
-
-    private IdentifierSet(ImmutableSortedSet<Identifier> data)
-    {
-        _data = data;
+    readonly T first;
+    readonly ImmutableSortedSet<T>? _rest;
+    ImmutableSortedSet<T> rest {
+        get => _rest ?? emptySet;
+        init => _rest = value;
     }
 
-    public IdentifierSet(Identifier identifier)
+    public int Count => rest.Count + 1;
+
+    private NonEmptySet(T first, ImmutableSortedSet<T> rest)
     {
-        _data = ImmutableSortedSet.Create(comparer, identifier);
+        this.first = first;
+        this.rest = rest;
     }
 
-    public IdentifierSet(Identifier? identifier)
+    private NonEmptySet(T first, ImmutableSortedSet<T>.Builder builder)
     {
-        if(identifier is { } value)
+        if(builder.Count == 0)
         {
-            _data = ImmutableSortedSet.Create(comparer, value);
+            this.first = first;
+            return;
         }
-    }
-
-    public IdentifierSet(IEnumerable<Identifier> identifiers)
-    {
-        _data = ImmutableSortedSet.CreateRange(comparer, identifiers);
-    }
-
-    public bool Contains(Identifier value)
-    {
-        return data.Contains(value);
-    }
-
-    public bool TryGetSingle(out Identifier value)
-    {
-        if(Count == 1)
+        var testFirst = builder[0];
+        switch(comparer.Compare(first, testFirst))
         {
-            value = data[0];
+            case 0: // Same as first
+                builder.Remove(testFirst);
+                break;
+            case < 0: // After first
+                break;
+            default: // Replaces first
+                builder.Add(first);
+                first = testFirst;
+                break;
+        }
+        this.first = first;
+        rest = builder.ToImmutable();
+    }
+
+    public NonEmptySet(T element)
+    {
+        first = element;
+    }
+
+    public bool Contains(T value)
+    {
+        return comparer.Compare(first, value) == 0 || rest.Contains(value);
+    }
+
+    public bool TryGetSingle(out T value)
+    {
+        value = first;
+        return rest.IsEmpty;
+    }
+
+    public NonEmptySet<T> Add(T value)
+    {
+        return comparer.Compare(first, value) switch
+        {
+            0 => this, // Same first
+            < 0 => new(first, rest.Add(value)), // Added into rest
+            _ => new(value, rest.Add(first)), // Replaces first
+        };
+    }
+
+    public NonEmptySet<T> Add(NonEmptySet<T> values)
+    {
+        return comparer.Compare(first, values.first) switch
+        {
+            0 => new(first, rest.Union(values.rest)), // Same first
+            < 0 => new(first, rest.Union(values.rest).Add(values.first)), // Added into rest
+            _ => new(values.first, rest.Union(values.rest).Add(first)) // Replaces first
+        };
+    }
+
+    public NonEmptySet<T> AddRange(IEnumerable<T> values)
+    {
+        var builder = rest.ToBuilder();
+        builder.UnionWith(values);
+        if(builder.Count <= rest.Count)
+        {
+            // No difference
+            return this;
+        }
+        return new(first, builder);
+    }
+
+    public bool TryRemove(T value, out NonEmptySet<T> result)
+    {
+        if(comparer.Compare(first, value) != 0)
+        {
+            // Not removing first
+            result = rest.IsEmpty ? this : new(first, rest.Remove(value));
             return true;
         }
-        else
+        return TryCreateFrom(rest, out result);
+    }
+
+    public bool TryRemove(NonEmptySet<T> values, out NonEmptySet<T> result)
+    {
+        if(!values.Contains(first))
         {
-            value = default;
+            // Not removing first
+            result = rest.IsEmpty ? this : new(first, rest.Except(values));
+            return true;
+        }
+        var builder = rest.ToBuilder();
+        builder.ExceptWith(values.rest);
+        builder.Remove(values.first);
+        return TryCreateFrom(builder, out result);
+    }
+
+    public bool TryRemoveRange(IEnumerable<T> values, out NonEmptySet<T> result)
+    {
+        var builder = rest.ToBuilder();
+        builder.Add(first);
+        builder.ExceptWith(values);
+        return TryCreateFrom(builder, out result);
+    }
+
+    private bool TryCreateFrom(ImmutableSortedSet<T> set, out NonEmptySet<T> result)
+    {
+        if(set.IsEmpty)
+        {
+            // Must not be empty
+            result = this;
             return false;
         }
+        var newFirst = set[0];
+        result = new(newFirst, set.Remove(newFirst));
+        return true;
     }
 
-    public IdentifierSet Add(Identifier value)
+    private bool TryCreateFrom(ImmutableSortedSet<T>.Builder builder, out NonEmptySet<T> result)
     {
-        return new(data.Add(value));
-    }
-
-    public IdentifierSet Add(IdentifierSet values)
-    {
-        return AddRange(values.data);
-    }
-
-    public IdentifierSet AddRange(IEnumerable<Identifier> values)
-    {
-        return new(data.Union(values));
-    }
-
-    public IdentifierSet Remove(Identifier value)
-    {
-        return new(data.Remove(value));
-    }
-
-    public IdentifierSet Remove(IdentifierSet values)
-    {
-        return RemoveRange(values.data);
-    }
-
-    public IdentifierSet RemoveRange(IEnumerable<Identifier> values)
-    {
-        return new(data.Except(values));
-    }
-
-    public IEnumerable<KeyValuePair<TKey, IdentifierSet>> OrderedPartitionBy<TKey>(Func<Identifier, TKey> keyFactory) where TKey : notnull, IEquatable<TKey>
-    {
-        switch(Count)
+        if(builder.Count == 0)
         {
-            case 0:
-                yield break;
-            case 1:
-                // Single element has single partition
-                yield return new KeyValuePair<TKey, IdentifierSet>(keyFactory(data[0]), this);
-                yield break;
+            // Must not be empty
+            result = this;
+            return false;
         }
-
-        ImmutableSortedSet<Identifier>.Builder? builder = null;
-        TKey? previousKey = default;
-
-        foreach(var identifier in data)
-        {
-            if(builder == null)
-            {
-                // First pass
-                builder = ImmutableSortedSet.CreateBuilder(comparer);
-                previousKey = keyFactory(identifier);
-            }
-            else
-            {
-                var key = keyFactory(identifier);
-                if(!key.Equals(previousKey))
-                {
-                    // A new partition - output the previous one
-                    yield return new(previousKey!, new(builder.ToImmutable()));
-                    builder.Clear();
-                    previousKey = key;
-                }
-            }
-
-            // Add current identifier
-            builder.Add(identifier);
-        }
-
-        if(builder != null)
-        {
-            // Final partition
-            yield return new(previousKey!, new(builder.ToImmutable()));
-        }
+        var newFirst = builder[0];
+        builder.Remove(newFirst);
+        result = new(newFirst, builder.ToImmutable());
+        return true;
     }
 
-    public bool Equals(IdentifierSet other)
+    public static bool TryCreateRange(IEnumerable<T> range, out NonEmptySet<T> result)
     {
-        return data.SetEquals(other.data);
+        var builder = emptySet.ToBuilder();
+        builder.UnionWith(range);
+        return default(NonEmptySet<T>).TryCreateFrom(builder, out result);
+    }
+
+    public Partitioner<TKey> OrderedPartitionBy<TKey>(Func<T, TKey> keyFactory)
+    {
+        return new(this, keyFactory);
+    }
+
+    public static implicit operator NonEmptySet<T>(T element)
+    {
+        return new(element);
+    }
+
+    public bool Equals(NonEmptySet<T> other)
+    {
+        return comparer.Compare(first, other.first) == 0 && rest.SetEquals(other.rest);
     }
 
     public override bool Equals(object? obj)
     {
-        return obj is IdentifierSet other && Equals(other);
+        return obj is NonEmptySet<T> other && Equals(other);
     }
 
     public override int GetHashCode()
     {
         var hashCode = new HashCode();
-        foreach(var value in data)
+        hashCode.Add(first);
+        foreach(var value in rest)
         {
             hashCode.Add(value);
         }
         return hashCode.ToHashCode();
     }
 
-    public static bool operator ==(IdentifierSet a, IdentifierSet b)
+    public static bool operator ==(NonEmptySet<T> a, NonEmptySet<T> b)
     {
         return a.Equals(b);
     }
 
-    public static bool operator !=(IdentifierSet a, IdentifierSet b)
+    public static bool operator !=(NonEmptySet<T> a, NonEmptySet<T> b)
     {
         return !a.Equals(b);
     }
 
     public override string ToString()
     {
-        return String.Join(", ", data);
+        return String.Join(", ", rest.Prepend(first));
     }
 
     public Enumerator GetEnumerator()
     {
-        return new(data.GetEnumerator());
+        return new(first, rest.GetEnumerator());
     }
 
-    IEnumerator<Identifier> IEnumerable<Identifier>.GetEnumerator()
+    IEnumerator<T> IEnumerable<T>.GetEnumerator()
     {
-        return ((IEnumerable<Identifier>)data).GetEnumerator();
+        return GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -190,48 +234,172 @@ public readonly struct IdentifierSet : IReadOnlyCollection<Identifier>, IEquatab
     }
 
     [StructLayout(LayoutKind.Auto)]
-    public struct Enumerator : IEnumerator<Identifier>
+    public struct Enumerator : IEnumerator<T>
     {
-        ImmutableSortedSet<Identifier>.Enumerator inner;
+        readonly T first;
+        State state;
+        ImmutableSortedSet<T>.Enumerator inner;
 
-        internal Enumerator(ImmutableSortedSet<Identifier>.Enumerator inner)
+        internal Enumerator(T first, ImmutableSortedSet<T>.Enumerator inner)
         {
+            this.first = first;
             this.inner = inner;
         }
 
-        public Identifier Current => inner.Current;
+        public readonly T Current => state == State.OnFirst ? first : inner.Current;
 
-        object IEnumerator.Current => Current;
+        readonly object IEnumerator.Current => Current;
 
         public bool MoveNext()
         {
+            switch(state)
+            {
+                case State.Initial:
+                    state = State.OnFirst;
+                    return true;
+                case State.OnFirst:
+                    state = State.OnRest;
+                    break;
+            }
             return inner.MoveNext();
         }
 
         public void Reset()
         {
             inner.Reset();
+            state = State.Initial;
         }
 
         public void Dispose()
         {
             inner.Dispose();
+            state = State.OnRest;
+        }
+
+        enum State
+        {
+            Initial,
+            OnFirst,
+            OnRest
         }
     }
 
-    sealed class Comparer : IComparer<Identifier>
+    [StructLayout(LayoutKind.Auto)]
+    public readonly struct Partitioner<TKey> : IEnumerable<KeyValuePair<TKey, NonEmptySet<T>>>
     {
-        public static Comparer Instance = new();
+        static readonly EqualityComparer<TKey> keyComparer = EqualityComparer<TKey>.Default;
 
-        private Comparer()
+        readonly NonEmptySet<T> source;
+        readonly Func<T, TKey> keyFactory;
+
+        internal Partitioner(NonEmptySet<T> source, Func<T, TKey> keyFactory)
         {
-
+            this.source = source;
+            this.keyFactory = keyFactory;
         }
 
-        public int Compare(Identifier x, Identifier y)
+        public Enumerator GetEnumerator()
         {
-            // TODO Order by server, account, resource
-            return StringComparer.Ordinal.Compare(x.ToString(), y.ToString());
+            return new(source.GetEnumerator(), keyFactory);
+        }
+
+        IEnumerator<KeyValuePair<TKey, NonEmptySet<T>>> IEnumerable<KeyValuePair<TKey, NonEmptySet<T>>>.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public struct Enumerator : IEnumerator<KeyValuePair<TKey, NonEmptySet<T>>>
+        {
+            NonEmptySet<T>.Enumerator enumerator;
+            readonly Func<T, TKey> keyFactory;
+
+            State state;
+            T? first;
+            readonly ImmutableSortedSet<T>.Builder builder;
+            TKey? key, nextKey;
+
+            public readonly KeyValuePair<TKey, NonEmptySet<T>> Current => state != State.Initial ? new(key!, new(first!, builder.ToImmutable())) : throw new InvalidOperationException();
+
+            readonly object IEnumerator.Current => Current;
+
+            internal Enumerator(NonEmptySet<T>.Enumerator enumerator, Func<T, TKey> keyFactory)
+            {
+                this.enumerator = enumerator;
+                this.keyFactory = keyFactory;
+                builder = emptySet.ToBuilder();
+            }
+
+            public bool MoveNext()
+            {
+                switch(state)
+                {
+                    case State.Initial:
+                    {
+                        if(!enumerator.MoveNext())
+                        {
+                            // Already ended for some reason
+                            return false;
+                        }
+                        // First element
+                        state = State.Result;
+                        first = enumerator.Current;
+                        key = keyFactory(first);
+                        break;
+                    }
+                    case State.Result:
+                        // Invoked after previous result
+                        key = nextKey;
+                        first = enumerator.Current;
+                        builder.Clear();
+                        break;
+                    case State.Finished:
+                        return false;
+                }
+
+                while(enumerator.MoveNext())
+                {
+                    var next = enumerator.Current;
+
+                    var newKey = keyFactory(next);
+                    if(!keyComparer.Equals(key, newKey))
+                    {
+                        // A new partition - stop
+                        nextKey = newKey;
+                        return true;
+                    }
+
+                    // Add current element
+                    builder.Add(next);
+                }
+
+                // All partition variables are stored
+                state = State.Finished;
+                return true;
+            }
+
+            public void Reset()
+            {
+                enumerator.Reset();
+                builder.Clear();
+                state = State.Initial;
+            }
+
+            public void Dispose()
+            {
+                enumerator.Dispose();
+            }
+
+            enum State
+            {
+                Initial,
+                Result,
+                Finished
+            }
         }
     }
 }

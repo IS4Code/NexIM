@@ -21,12 +21,10 @@ partial class Account
         if(contact.SubscriptionState.AcceptedTo)
         {
             // No longer subscribing to
-            await Post(new SubscriptionCancelledEvent
-            {
-                Origin = new()
-                {
+            await Post(new SubscriptionCancelledEvent {
+                Origin = new() {
                     From = new(Name, null),
-                    To = new(new Identifier(target, null)),
+                    To = new Identifier(target, null),
                     TransactionIdentifier = null,
                     TransactionLanguage = null
                 },
@@ -37,12 +35,10 @@ partial class Account
         if(contact.SubscriptionState.AcceptedFrom)
         {
             // No longer allowing subscription from
-            await Post(new SubscriptionRejectedEvent
-            {
-                Origin = new()
-                {
+            await Post(new SubscriptionRejectedEvent {
+                Origin = new() {
                     From = new(Name, null),
-                    To = new(new Identifier(target, null)),
+                    To = new Identifier(target, null),
                     TransactionIdentifier = null,
                     TransactionLanguage = null
                 },

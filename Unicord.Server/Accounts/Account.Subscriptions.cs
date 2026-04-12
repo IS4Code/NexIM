@@ -8,7 +8,7 @@ partial class Account
 {
     private void ResendEvent(Event evnt, List<Identifier>? targetsList, List<ValueTask<ErrorCode>> tasks)
     {
-        if(targetsList == null)
+        if(targetsList == null || !Identifiers.TryCreateRange(targetsList, out var to))
         {
             // No need to send to anyone
             tasks.Add(new(ErrorCode.Success));
@@ -17,16 +17,15 @@ partial class Account
 
         // Update the event
         evnt = evnt.WithOrigin(
-            evnt.Origin with
-            {
+            evnt.Origin with {
                 From = new(Name, null),
-                To = new(targetsList)
+                To = to
             }
         );
         tasks.Add(Server.Post(evnt));
     }
 
-    private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, Identifiers targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -51,18 +50,16 @@ partial class Account
             if(updated.SubscriptionState.AcceptedTo)
             {
                 // Already subscribed - confirm
-                RouteToSessions(new SubscriptionAcceptedEvent
-                {
-                    Origin = new()
-                    {
+                RouteToSessions(new SubscriptionAcceptedEvent {
+                    Origin = new() {
                         From = targetAccountIdentifier,
-                        To = new(new Identifier(Name, null)),
+                        To = new Identifier(Name, null),
                         TransactionIdentifier = null,
                         TransactionLanguage = evnt.TransactionLanguage
                     },
                     Processing = EventProcessing.NewInternal(),
                     Data = null
-                }, new(source), tasks);
+                }, source, tasks);
                 continue;
             }
 
@@ -105,7 +102,7 @@ partial class Account
 
             await ContactUpdate(updated, contacts, tasks);
 
-            OnSubscribed(new(identifier), tasks);
+            OnSubscribed(identifier, tasks);
             return;
         }
 
@@ -125,7 +122,7 @@ partial class Account
         // TODO Send unavailable? (Privacy)
     }
 
-    private async ValueTask HandleOutgoingSubscriptionAcceptation(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionAcceptation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -171,10 +168,7 @@ partial class Account
         }
 
         ResendEvent(evnt, targetsList, tasks);
-        if(targetsList != null)
-        {
-            OnSubscribed(new(targetsList), tasks);
-        }
+        OnSubscribed(targetsList, tasks);
     }
 
     private async ValueTask HandleIncomingSubscriptionAcceptation(Identifier identifier, Event evnt, List<ValueTask<ErrorCode>> tasks)
@@ -203,7 +197,7 @@ partial class Account
         }
     }
 
-    private async ValueTask HandleOutgoingSubscriptionRejection(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionRejection(Identifier source, Identifiers targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
         List<Identifier>? unavailableList = null;
         List<Identifier>? targetsList = null;
@@ -248,10 +242,7 @@ partial class Account
             (targetsList ??= new()).Add(targetAccountIdentifier);
         }
 
-        if(unavailableList != null)
-        {
-            OnUnsubscribed(new(unavailableList), tasks);
-        }
+        OnUnsubscribed(unavailableList, tasks);
         ResendEvent(evnt, targetsList, tasks);
     }
 
@@ -281,7 +272,7 @@ partial class Account
         await ContactUpdate(updated, contacts, tasks);
     }
 
-    private async ValueTask HandleOutgoingSubscriptionCancellation(Identifier source, IdentifierSet targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionCancellation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<ErrorCode>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -346,11 +337,10 @@ partial class Account
         OnUnsubscribed(new(identifier), tasks);
     }
 
-    private void OnSubscribed(IdentifierSet targets, List<ValueTask<ErrorCode>> tasks)
+    private void OnSubscribed(Identifiers targets, List<ValueTask<ErrorCode>> tasks)
     {
         // Prepare status event fields
-        var origin = new EventOrigin()
-        {
+        var origin = new EventOrigin() {
             From = default, // Filled later
             To = targets,
             TransactionIdentifier = null,
@@ -367,10 +357,8 @@ partial class Account
             }
 
             // Send current presence
-            tasks.Add(Server.Post(new StatusUpdateEvent
-            {
-                Origin = origin with
-                {
+            tasks.Add(Server.Post(new StatusUpdateEvent {
+                Origin = origin with {
                     From = session.Identifier
                 },
                 Processing = processing,
@@ -379,19 +367,17 @@ partial class Account
         }
     }
 
-    private void OnUnsubscribed(IdentifierSet targets, List<ValueTask<ErrorCode>> tasks)
+    private void OnUnsubscribed(Identifiers targets, List<ValueTask<ErrorCode>> tasks)
     {
         // Prepare unavailable event fields
-        var origin = new EventOrigin()
-        {
+        var origin = new EventOrigin() {
             From = default, // Filled later
             To = targets,
             TransactionIdentifier = null,
             TransactionLanguage = null
         };
         var processing = EventProcessing.NewInternal();
-        var data = new PresenceData
-        {
+        var data = new PresenceData {
             Presentation = default,
             Priority = null,
             Status = new Status(Availability.Unavailable),
@@ -406,8 +392,7 @@ partial class Account
             }
 
             // Send as unavailable
-            tasks.Add(Server.Post(new StatusUpdateEvent
-            {
+            tasks.Add(Server.Post(new StatusUpdateEvent {
                 Origin = origin with {
                     From = session.Identifier
                 },
@@ -415,5 +400,23 @@ partial class Account
                 Data = data
             }));
         }
+    }
+
+    private void OnSubscribed(IEnumerable<Identifier>? targetSequence, List<ValueTask<ErrorCode>> tasks)
+    {
+        if(targetSequence == null || !Identifiers.TryCreateRange(targetSequence, out var targets))
+        {
+            return;
+        }
+        OnSubscribed(targets, tasks);
+    }
+
+    private void OnUnsubscribed(IEnumerable<Identifier>? targetSequence, List<ValueTask<ErrorCode>> tasks)
+    {
+        if(targetSequence == null || !Identifiers.TryCreateRange(targetSequence, out var targets))
+        {
+            return;
+        }
+        OnUnsubscribed(targets, tasks);
     }
 }

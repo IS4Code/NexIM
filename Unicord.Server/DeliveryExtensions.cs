@@ -8,7 +8,7 @@ namespace Unicord.Server;
 
 internal static class DeliveryExtensions
 {
-    public static TEvent WithTo<TEvent>(this TEvent evnt, IdentifierSet to) where TEvent : Event
+    public static TEvent WithTo<TEvent>(this TEvent evnt, Identifiers to) where TEvent : Event
     {
         var origin = evnt.Origin;
         if(origin.To == to)
@@ -39,25 +39,17 @@ internal static class DeliveryExtensions
         return evnt with { Origin = origin };
     }
 
-    public static ValueTask<ErrorCode> Route<TKey, TArgs>(this IdentifierSet identifierSet, Func<Identifier, TKey> router, Func<TKey, IdentifierSet, TArgs, ValueTask<ErrorCode>> target, TArgs args) where TKey : notnull, IEquatable<TKey>
+    public static ValueTask<ErrorCode> Route<TKey, TArgs>(this Identifiers to, Func<Identifier, TKey> router, Func<TKey, Identifiers, TArgs, ValueTask<ErrorCode>> target, TArgs args)
     {
-        switch(identifierSet.Count)
+        if(to.TryGetSingle(out var single))
         {
-            case 0:
-                // No target
-                return new(ErrorCode.Success);
-            case 1:
-                // Single element
-                foreach(var identifier in identifierSet)
-                {
-                    return target(router(identifier), identifierSet, args);
-                }
-                break;
+            // Single element
+            return target(router(single), to, args);
         }
 
         // Store result tasks
         var results = new List<ValueTask<ErrorCode>>();
-        foreach(var partition in identifierSet.OrderedPartitionBy(router))
+        foreach(var partition in to.OrderedPartitionBy(router))
         {
             try
             {
@@ -72,17 +64,17 @@ internal static class DeliveryExtensions
         return Combine(results);
     }
 
-    public static ValueTask<ErrorCode> Route<TKey, TArgs>(this IdentifierSet identifierSet, Func<Identifier, TKey> router, Func<TKey, IdentifierSet, TArgs, IEnumerable<ValueTask<ErrorCode>>> target, TArgs args) where TKey : notnull, IEquatable<TKey>
+    public static ValueTask<ErrorCode> Route<TKey, TArgs>(this Identifiers to, Func<Identifier, TKey> router, Func<TKey, Identifiers, TArgs, IEnumerable<ValueTask<ErrorCode>>> target, TArgs args)
     {
-        if(identifierSet.IsEmpty)
+        if(to.TryGetSingle(out var single))
         {
-            // No target
-            return new(ErrorCode.Success);
+            // Single element
+            return target(router(single), to, args).Combine();
         }
 
         // Store result tasks
         var results = new List<ValueTask<ErrorCode>>();
-        foreach(var partition in identifierSet.OrderedPartitionBy(router))
+        foreach(var partition in to.OrderedPartitionBy(router))
         {
             try
             {

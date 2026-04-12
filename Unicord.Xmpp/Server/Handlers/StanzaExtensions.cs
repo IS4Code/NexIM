@@ -41,10 +41,9 @@ internal static class StanzaExtensions
 
     public static EventOrigin GetOrigin(this ICommandHandler handler)
     {
-        return new()
-        {
+        return new() {
             From = handler.GetSender().ToIdentifier(),
-            To = new(handler.GetRecipient()?.ToIdentifier()),
+            To = (handler.GetRecipient() ?? handler.GetLocalResource()).ToIdentifier(),
             TransactionIdentifier = handler.GetIdentifier()?.ToIdentifier(),
             TransactionLanguage = handler.GetStanza().Language
         };
