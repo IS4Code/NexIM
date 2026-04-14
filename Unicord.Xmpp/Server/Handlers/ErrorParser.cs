@@ -59,7 +59,7 @@ internal class ErrorParser : BaseDelegatingStanzaErrorHandler<XmppStanzaExceptio
             Description = description,
             RecommendedAction = type?.ToRecommendedAction() ?? RecommendedErrorAction.Proceed,
             Reporter = by?.ToIdentifier(),
-            StatusCode = (HttpStatusCode?)code,
+            HttpStatusCode = (HttpStatusCode?)code,
             OriginalData = originalData,
             Extensions = extensionsHandler.ToExtensions()
         };

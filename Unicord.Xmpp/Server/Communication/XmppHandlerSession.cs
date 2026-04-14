@@ -290,7 +290,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 foreach(var evnt in eventsToSend)
                 {
                     var result = await session.Inbound(evnt);
-                    if(result != ErrorCode.Success)
+                    if(result != StatusCode.Success)
                     {
                         throw result.ToStanzaException();
                     }

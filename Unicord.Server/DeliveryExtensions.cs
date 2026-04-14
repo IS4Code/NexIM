@@ -39,7 +39,7 @@ internal static class DeliveryExtensions
         return evnt with { Origin = origin };
     }
 
-    public static ValueTask<ErrorCode> Route<TKey, TArgs>(this Identifiers to, Func<Identifier, TKey> router, Func<TKey, Identifiers, TArgs, ValueTask<ErrorCode>> target, TArgs args)
+    public static ValueTask<StatusCode> Route<TKey, TArgs>(this Identifiers to, Func<Identifier, TKey> router, Func<TKey, Identifiers, TArgs, ValueTask<StatusCode>> target, TArgs args)
     {
         if(to.TryGetSingle(out var single))
         {
@@ -48,7 +48,7 @@ internal static class DeliveryExtensions
         }
 
         // Store result tasks
-        var results = new List<ValueTask<ErrorCode>>();
+        var results = new List<ValueTask<StatusCode>>();
         foreach(var partition in to.OrderedPartitionBy(router))
         {
             try
@@ -57,14 +57,14 @@ internal static class DeliveryExtensions
             }
             catch(Exception e)
             {
-                results.Add(ValueTask.FromException<ErrorCode>(e));
+                results.Add(ValueTask.FromException<StatusCode>(e));
             }
         }
 
         return Combine(results);
     }
 
-    public static ValueTask<ErrorCode> Route<TKey, TArgs>(this Identifiers to, Func<Identifier, TKey> router, Func<TKey, Identifiers, TArgs, IEnumerable<ValueTask<ErrorCode>>> target, TArgs args)
+    public static ValueTask<StatusCode> Route<TKey, TArgs>(this Identifiers to, Func<Identifier, TKey> router, Func<TKey, Identifiers, TArgs, IEnumerable<ValueTask<StatusCode>>> target, TArgs args)
     {
         if(to.TryGetSingle(out var single))
         {
@@ -73,7 +73,7 @@ internal static class DeliveryExtensions
         }
 
         // Store result tasks
-        var results = new List<ValueTask<ErrorCode>>();
+        var results = new List<ValueTask<StatusCode>>();
         foreach(var partition in to.OrderedPartitionBy(router))
         {
             try
@@ -82,24 +82,24 @@ internal static class DeliveryExtensions
             }
             catch(Exception e)
             {
-                results.Add(ValueTask.FromException<ErrorCode>(e));
+                results.Add(ValueTask.FromException<StatusCode>(e));
             }
         }
 
         return Combine(results);
     }
 
-    public static async ValueTask<ErrorCode> Combine(this IEnumerable<ValueTask<ErrorCode>> results)
+    public static async ValueTask<StatusCode> Combine(this IEnumerable<ValueTask<StatusCode>> results)
     {
         bool anySuccess = false;
-        ErrorCode errorCode = ErrorCode.Success;
+        StatusCode errorCode = StatusCode.Success;
         List<Exception>? exceptions = null;
         foreach(var task in results)
         {
             try
             {
                 var result = await task;
-                if(result == ErrorCode.Success)
+                if(result == StatusCode.Success)
                 {
                     anySuccess = true;
                 }
@@ -117,10 +117,10 @@ internal static class DeliveryExtensions
         if(exceptions != null)
         {
             // Expose all exceptions
-            await ValueTask.FromException<ErrorCode>(new AggregateException(exceptions));
+            await ValueTask.FromException<StatusCode>(new AggregateException(exceptions));
         }
 
         // Suppress errors if anything was successful
-        return anySuccess ? ErrorCode.Success : errorCode;
+        return anySuccess ? StatusCode.Success : errorCode;
     }
 }

@@ -85,12 +85,12 @@ public abstract class ClientSession : IAsyncDisposable
     static readonly Func<Identifier, PresenceStore, PresenceStore> addFactory = (_, value) => value;
     static readonly Func<Identifier, PresenceStore, PresenceStore, PresenceStore> keepOriginalIfSameUpdateFactory = (_, previous, updated) => previous == updated ? previous : updated;
 
-    public async ValueTask<ErrorCode> Inbound(Event evnt)
+    public async ValueTask<StatusCode> Inbound(Event evnt)
     {
         if(evnt.From != Identifier)
         {
             // Events originating from a session must be correctly identified
-            return ErrorCode.InvalidRequest;
+            return StatusCode.InvalidRequest;
         }
 
         switch(evnt)
@@ -123,7 +123,7 @@ public abstract class ClientSession : IAsyncDisposable
                 if(!OnDirectedPresence(ref to, presence, presenceLanguage))
                 {
                     // Removed redundant directed presence targets are all recipients
-                    return ErrorCode.Success;
+                    return StatusCode.Success;
                 }
 
                 evnt = evnt.WithTo(to);
@@ -191,7 +191,7 @@ public abstract class ClientSession : IAsyncDisposable
         return true;
     }
 
-    public ValueTask<ErrorCode> Outbound(Event evnt)
+    public ValueTask<StatusCode> Outbound(Event evnt)
     {
         if(evnt is StatusRequestEvent)
         {
@@ -201,14 +201,14 @@ public abstract class ClientSession : IAsyncDisposable
                 if(!Account.CanSharePresenceWith(evnt.From))
                 {
                     // Only share undirected presence with contacts
-                    return new(ErrorCode.NotAuthorized);
+                    return new(StatusCode.NotAuthorized);
                 }
                 presenceStore = currentPresence;
             }
             if(!ReportUnavailableStatus && presenceStore.Data.Status.Availability == Availability.Unavailable)
             {
                 // Not needed to report unavailable
-                return new(ErrorCode.Success);
+                return new(StatusCode.Success);
             }
             return Inbound(new StatusUpdateEvent {
                 Origin = EventOrigin.FromTo(Identifier, evnt.From, presenceStore.Language),
@@ -221,16 +221,16 @@ public abstract class ClientSession : IAsyncDisposable
         {
             // Not available for undirected presence
             // TODO Invisible?
-            return new(ErrorCode.NotAvailable);
+            return new(StatusCode.NotAvailable);
         }
 
         return Write(evnt);
     }
 
-    protected abstract ValueTask<ErrorCode> Write(Event evnt);
+    protected abstract ValueTask<StatusCode> Write(Event evnt);
 
-    protected internal abstract ValueTask<ErrorCode> ContactUpdated(Contact contact, ICollection<Contact> current);
-    protected internal abstract ValueTask<ErrorCode> ContactRemoved(Contact contact, ICollection<Contact> current);
+    protected internal abstract ValueTask<StatusCode> ContactUpdated(Contact contact, ICollection<Contact> current);
+    protected internal abstract ValueTask<StatusCode> ContactRemoved(Contact contact, ICollection<Contact> current);
 
     private async ValueTask ProbeContacts(PresenceData data, LanguageCode? dataLanguage)
     {

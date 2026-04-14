@@ -37,7 +37,7 @@ public class XmppClientSession : ClientSession
         receivesRosterUpdates = true;
     }
 
-    protected async override ValueTask<ErrorCode> Write(Event evnt)
+    protected async override ValueTask<StatusCode> Write(Event evnt)
     {
         switch(evnt)
         {
@@ -45,13 +45,13 @@ public class XmppClientSession : ClientSession
             {
                 await using var output = await xmpp.Message(msgEvent.ToStanza(xmpp));
                 await WriteMessage(output, msgEvent.Data);
-                return ErrorCode.Success;
+                return StatusCode.Success;
             }
             case PresenceEvent presEvent:
             {
                 await using var output = await xmpp.Presence(presEvent.ToStanza(xmpp));
                 await WritePresence(output, presEvent.Data);
-                return ErrorCode.Success;
+                return StatusCode.Success;
             }
             case QueryEvent queryEvent:
             {
@@ -63,7 +63,7 @@ public class XmppClientSession : ClientSession
                 return await WriteError(errorEvent.ToStanza(xmpp), errorEvent.Data);
             }
         }
-        return ErrorCode.Unrecognized;
+        return StatusCode.Unrecognized;
     }
 
     private async ValueTask WriteMessage(IMessageHandler output, MessageData? data)
@@ -157,13 +157,13 @@ public class XmppClientSession : ClientSession
         await WriteExtensions(output, data.Extensions);
     }
 
-    private async ValueTask<ErrorCode> WriteInfoQuery(IInfoQueryHandler output, QueryData? data)
+    private async ValueTask<StatusCode> WriteInfoQuery(IInfoQueryHandler output, QueryData? data)
     {
         switch(data)
         {
             case GeneralQueryData:
                 await WriteExtensions(output, data.Extensions);
-                return ErrorCode.Success;
+                return StatusCode.Success;
             case VCardQueryData vcardData:
                 await using(var vcardHandler = await output.VCard())
                 {
@@ -173,9 +173,9 @@ public class XmppClientSession : ClientSession
                     }
                     await WriteExtensions(vcardHandler, data.Extensions);
                 }
-                return ErrorCode.Success;
+                return StatusCode.Success;
         }
-        return ErrorCode.Unrecognized;
+        return StatusCode.Unrecognized;
     }
 
     private async ValueTask WriteExtensions<THandler>(THandler handler, EventExtensions extensions) where THandler : IPayloadHandler
@@ -189,7 +189,7 @@ public class XmppClientSession : ClientSession
         }
     }
 
-    private async ValueTask<ErrorCode> WriteError(Stanza stanza, ErrorData? data)
+    private async ValueTask<StatusCode> WriteError(Stanza stanza, ErrorData? data)
     {
         switch(data?.OriginalData)
         {
@@ -198,14 +198,14 @@ public class XmppClientSession : ClientSession
                 await using var output = await xmpp.Message(stanza);
                 await WriteMessage(output, msgData);
                 await WriteErrorData(output);
-                return ErrorCode.Success;
+                return StatusCode.Success;
             }
             case PresenceData presData:
             {
                 await using var output = await xmpp.Presence(stanza);
                 await WritePresence(output, presData);
                 await WriteErrorData(output);
-                return ErrorCode.Success;
+                return StatusCode.Success;
             }
             case QueryData queryData:
             {
@@ -220,12 +220,12 @@ public class XmppClientSession : ClientSession
                 }
             }
             default:
-                return ErrorCode.Unrecognized;
+                return StatusCode.Unrecognized;
         }
 
         async ValueTask WriteErrorData(IStanzaHandler output)
         {
-            await using var error = await output.Error(data.RecommendedAction.ToErrorType().ToToken(), (int?)data.StatusCode, data.Reporter?.ToResource());
+            await using var error = await output.Error(data.RecommendedAction.ToErrorType().ToToken(), (int?)data.HttpStatusCode, data.Reporter?.ToResource());
 
             // Basic elements
 
@@ -360,32 +360,32 @@ public class XmppClientSession : ClientSession
         return true;
     }
 
-    protected async override ValueTask<ErrorCode> ContactUpdated(Contact contact, ICollection<Contact> current)
+    protected async override ValueTask<StatusCode> ContactUpdated(Contact contact, ICollection<Contact> current)
     {
         if(!CheckContactUpdate(contact, current))
         {
-            return ErrorCode.Success;
+            return StatusCode.Success;
         }
 
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: StanzaType.Set.ToToken()));
 
         await using var roster = await iq.RosterQuery(GetContactsVersion(current));
         await SendContact(roster, contact);
-        return ErrorCode.Success;
+        return StatusCode.Success;
     }
 
-    protected async override ValueTask<ErrorCode> ContactRemoved(Contact contact, ICollection<Contact> current)
+    protected async override ValueTask<StatusCode> ContactRemoved(Contact contact, ICollection<Contact> current)
     {
         if(!CheckContactUpdate(contact, current))
         {
-            return ErrorCode.Success;
+            return StatusCode.Success;
         }
 
         await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: StanzaType.Set.ToToken()));
 
         await using var roster = await iq.RosterQuery(GetContactsVersion(current));
         await using var item = await roster.Item(contact.Account.ToResource(null), contact.Name, RosterSubscriptionDirection.Remove.ToToken(), null, null);
-        return ErrorCode.Success;
+        return StatusCode.Success;
     }
 
     public static async ValueTask SendContact(IRosterQueryHandler roster, Contact contact)

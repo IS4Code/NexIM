@@ -177,18 +177,18 @@ internal static class AdapterExtensions
         };
     }
 
-    public static XmppStanzaException ToStanzaException(this ErrorCode code)
+    public static XmppStanzaException ToStanzaException(this StatusCode code)
     {
         return code switch {
-            ErrorCode.NotFound => XmppStanzaException.ItemNotFound(),
-            ErrorCode.InvalidRequest => XmppStanzaException.BadRequest(),
-            ErrorCode.NotAvailable => XmppStanzaException.ServiceUnavailable(),
-            ErrorCode.NotAuthorized => XmppStanzaException.NotAuthorized(),
-            ErrorCode.Unrecognized => XmppStanzaException.FeatureNotImplemented()
+            StatusCode.NotFound => XmppStanzaException.ItemNotFound(),
+            StatusCode.InvalidRequest => XmppStanzaException.BadRequest(),
+            StatusCode.NotAvailable => XmppStanzaException.ServiceUnavailable(),
+            StatusCode.NotAuthorized => XmppStanzaException.NotAuthorized(),
+            StatusCode.Unrecognized => XmppStanzaException.FeatureNotImplemented()
         };
     }
 
-    public static ErrorCode ToErrorCode(this XmppStanzaException exception)
+    public static StatusCode ToErrorCode(this XmppStanzaException exception)
     {
         var handler = new ErrorHandler();
         var task = exception.Output(handler);
@@ -197,7 +197,7 @@ internal static class AdapterExtensions
             // Should not happen since handler calls are synchronous
             task.AsTask().GetAwaiter().GetResult();
         }
-        return handler.Code ?? ErrorCode.Unrecognized;
+        return handler.Code ?? StatusCode.Unrecognized;
     }
 
     public static RecommendedErrorAction ToRecommendedAction(this ErrorType errorType)
@@ -229,35 +229,35 @@ internal static class AdapterExtensions
 
     sealed class ErrorHandler : StanzaErrorHandler<EmptyPayloadHandlerContext>
     {
-        public ErrorCode? Code { get; private set; }
+        public StatusCode? Code { get; private set; }
 
         protected override ValueTask OnItemNotFound()
         {
-            Code = ErrorCode.NotFound;
+            Code = StatusCode.NotFound;
             return default;
         }
 
         protected override ValueTask OnBadRequest()
         {
-            Code = ErrorCode.InvalidRequest;
+            Code = StatusCode.InvalidRequest;
             return default;
         }
 
         protected override ValueTask OnServiceUnavailable()
         {
-            Code = ErrorCode.NotAvailable;
+            Code = StatusCode.NotAvailable;
             return default;
         }
 
         protected override ValueTask OnNotAuthorized()
         {
-            Code = ErrorCode.NotAuthorized;
+            Code = StatusCode.NotAuthorized;
             return default;
         }
 
         protected override ValueTask OnFeatureNotImplemented()
         {
-            Code = ErrorCode.Unrecognized;
+            Code = StatusCode.Unrecognized;
             return default;
         }
 

@@ -1,6 +1,6 @@
 ﻿namespace Unicord.Server.Events;
 
-public enum ErrorCode
+public enum StatusCode
 {
     NotAvailable,
     Success,
