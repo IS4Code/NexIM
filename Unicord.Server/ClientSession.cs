@@ -74,7 +74,7 @@ public abstract class ClientSession : IAsyncDisposable
         Resource = resource ?? Guid.NewGuid().ToString("N");
     }
 
-    protected StatusReport Report(StatusCode code)
+    private StatusReport Report(StatusCode code)
     {
         return new(Identifier, code);
     }
@@ -193,7 +193,7 @@ public abstract class ClientSession : IAsyncDisposable
         return true;
     }
 
-    public ValueTask<StatusReports> Outbound(Event evnt)
+    public async ValueTask<StatusReports> Outbound(Event evnt)
     {
         if(evnt is StatusRequestEvent)
         {
@@ -203,16 +203,16 @@ public abstract class ClientSession : IAsyncDisposable
                 if(!Account.CanSharePresenceWith(evnt.From))
                 {
                     // Only share undirected presence with contacts
-                    return new(Report(StatusCode.SubscriptionRequired));
+                    return Report(StatusCode.SubscriptionRequired);
                 }
                 presenceStore = currentPresence;
             }
             if(!ReportUnavailableStatus && presenceStore.Data.Status.Availability == Availability.Unavailable)
             {
                 // Not needed to report unavailable
-                return new(Report(StatusCode.Success));
+                return Report(StatusCode.Success);
             }
-            return Inbound(new StatusUpdateEvent {
+            return await Inbound(new StatusUpdateEvent {
                 Origin = EventOrigin.FromTo(Identifier, evnt.From, presenceStore.Language),
                 Processing = EventProcessing.NewInternal(),
                 Data = presenceStore.Data
@@ -223,16 +223,16 @@ public abstract class ClientSession : IAsyncDisposable
         {
             // Not available for undirected presence
             // TODO Invisible?
-            return new(Report(StatusCode.Unavailable));
+            return Report(StatusCode.Unavailable);
         }
 
-        return Write(evnt);
+        return new StatusReport(Identifier, await Write(evnt));
     }
 
-    protected abstract ValueTask<StatusReports> Write(Event evnt);
+    protected abstract ValueTask<StatusCode> Write(Event evnt);
 
-    protected internal abstract ValueTask<StatusReports> ContactUpdated(Contact contact, ICollection<Contact> current);
-    protected internal abstract ValueTask<StatusReports> ContactRemoved(Contact contact, ICollection<Contact> current);
+    protected internal abstract ValueTask<StatusCode> ContactUpdated(Contact contact, ICollection<Contact> current);
+    protected internal abstract ValueTask<StatusCode> ContactRemoved(Contact contact, ICollection<Contact> current);
 
     private async ValueTask ProbeContacts(PresenceData data, LanguageCode? dataLanguage)
     {

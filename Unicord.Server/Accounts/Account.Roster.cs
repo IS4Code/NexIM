@@ -68,20 +68,30 @@ partial class Account
     {
         foreach(var session in GetSessions(false))
         {
-            tasks.Add(session.ContactUpdated(contact, contacts));
+            tasks.Add(Inner(session));
         }
 
         await Server.SaveDatabase();
+
+        async ValueTask<StatusReports> Inner(ClientSession session)
+        {
+            return new StatusReport(session.Identifier, await session.ContactUpdated(contact, contacts));
+        }
     }
 
     private async ValueTask ContactRemove(Contact contact, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
         foreach(var session in GetSessions(false))
         {
-            tasks.Add(session.ContactRemoved(contact, contacts));
+            tasks.Add(Inner(session));
         }
 
         await Server.SaveDatabase();
+
+        async ValueTask<StatusReports> Inner(ClientSession session)
+        {
+            return new StatusReport(session.Identifier, await session.ContactRemoved(contact, contacts));
+        }
     }
 
     private ValueTask ContactUpdateOrRemove(Contact previous, Contact? updated, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
