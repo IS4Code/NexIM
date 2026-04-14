@@ -1,0 +1,186 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Runtime.InteropServices;
+
+namespace Unicord.Server.Tools;
+
+partial struct NonEmptySet<T>
+{
+    public Builder ToBuilder()
+    {
+        return new(first, _rest?.ToBuilder());
+    }
+
+    [StructLayout(LayoutKind.Auto)]
+    public struct Builder : IReadOnlyCollection<T>, ICollection<T>
+    {
+        public static readonly Builder Empty = default;
+
+        bool firstTaken;
+        T first;
+        ImmutableSortedSet<T>.Builder? rest;
+
+        public readonly int Count => (firstTaken ? 1 : 0) + (rest?.Count ?? 0);
+
+        readonly bool ICollection<T>.IsReadOnly => false;
+
+        internal Builder(T first, ImmutableSortedSet<T>.Builder? rest)
+        {
+            this.first = first;
+            this.rest = rest;
+            firstTaken = true;
+        }
+
+        public readonly NonEmptySet<T>? TryToSet()
+        {
+            if(!firstTaken)
+            {
+                return null;
+            }
+            return new(first, rest?.ToImmutable() ?? emptySet);
+        }
+
+        public void Add(T item)
+        {
+            if(!firstTaken)
+            {
+                first = item;
+                firstTaken = true;
+                return;
+            }
+
+            switch(comparer.Compare(first, item))
+            {
+                case 0:
+                    // Same as first
+                    break;
+                case < 0:
+                    // After first
+                    (rest ??= emptySet.ToBuilder()).Add(item);
+                    break;
+                default:
+                    // Replace first
+                    (rest ??= emptySet.ToBuilder()).Add(first);
+                    break;
+            }
+        }
+
+        public void Add(NonEmptySet<T> values)
+        {
+            if(!firstTaken)
+            {
+                first = values.first;
+                firstTaken = true;
+                rest = values.rest.ToBuilder();
+                return;
+            }
+
+            switch(comparer.Compare(first, values.first))
+            {
+                case 0:
+                    // Same first
+                    if(rest != null)
+                    {
+                        rest.UnionWith(values.rest);
+                    }
+                    else
+                    {
+                        rest = values.rest.ToBuilder();
+                    }
+                    break;
+                case < 0:
+                    // Added into rest
+                    (rest ??= emptySet.ToBuilder()).Add(values.first);
+                    rest.UnionWith(values.rest);
+                    break;
+                default:
+                    // Replaces first
+                    (rest ??= emptySet.ToBuilder()).Add(first);
+                    first = values.first;
+                    rest.UnionWith(values.rest);
+                    break;
+            };
+        }
+
+        public void AddRange(IEnumerable<T> values)
+        {
+            foreach(var item in values)
+            {
+                Add(item);
+            }
+        }
+
+        public bool Remove(T item)
+        {
+            if(!firstTaken)
+            {
+                return false;
+            }
+
+            switch(comparer.Compare(first, item))
+            {
+                case 0:
+                    // Same as first
+                    if(rest?.Count > 0)
+                    {
+                        // Select a new first
+                        first = rest[0];
+                        rest.Remove(first);
+                    }
+                    else
+                    {
+                        firstTaken = false;
+                    }
+                    return true;
+                case < 0:
+                    // Remove in rest
+                    return (rest?.Remove(first)).GetValueOrDefault();
+                default:
+                    // Not present
+                    return false;
+            }
+        }
+
+        public void Clear()
+        {
+            firstTaken = false;
+            rest?.Clear();
+        }
+
+        public readonly bool Contains(T item)
+        {
+            return
+                (firstTaken && comparer.Compare(first, item) == 0) ||
+                (rest != null && rest.Contains(item));
+        }
+
+        public readonly void CopyTo(T[] array, int arrayIndex)
+        {
+            foreach(var item in this)
+            {
+                array[arrayIndex++] = item;
+            }
+        }
+
+        public readonly IEnumerator<T> GetEnumerator()
+        {
+            if(!firstTaken)
+            {
+                yield break;
+            }
+
+            yield return first;
+
+            if(rest != null)
+            {
+                foreach(var item in rest)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+}

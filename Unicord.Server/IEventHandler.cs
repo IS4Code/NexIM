@@ -14,5 +14,5 @@ public interface IEventHandler
     /// </summary>
     /// <param name="evnt">The event representing the command.</param>
     /// <returns>A task representing the operation of handling <paramref name="evnt"/>.</returns>
-    ValueTask<StatusCode> Post(Event evnt);
+    ValueTask<StatusReports> Post(Event evnt);
 }

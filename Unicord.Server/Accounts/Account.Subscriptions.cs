@@ -6,12 +6,12 @@ namespace Unicord.Server.Accounts;
 
 partial class Account
 {
-    private void ResendEventFromAccount(Event evnt, List<Identifier>? targetsList, List<ValueTask<StatusCode>> tasks)
+    private void ResendEventFromAccount(Event evnt, List<Identifier>? targetsList, List<ValueTask<StatusReports>> tasks)
     {
         if(targetsList == null || !Identifiers.TryCreateRange(targetsList, out var to))
         {
             // No need to send to anyone
-            tasks.Add(new(StatusCode.Success));
+            tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
 
@@ -25,7 +25,7 @@ partial class Account
         tasks.Add(Server.Post(evnt));
     }
 
-    private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -34,14 +34,14 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(StatusCode.NotFound));
+                tasks.Add(new(Report(StatusCode.NotFound)));
                 continue;
             }
 
             if(!TrySetPendingSubscriptionTo(targetAccount, out _, out var updated, out var contacts))
             {
                 // No change
-                tasks.Add(new(StatusCode.Success));
+                tasks.Add(new(Report(StatusCode.Success)));
                 continue;
             }
 
@@ -61,7 +61,7 @@ partial class Account
             if(!updated.SubscriptionState.PendingTo)
             {
                 // Blocked for some reason
-                tasks.Add(new(StatusCode.NotAuthorized));
+                tasks.Add(new(Report(StatusCode.NotAuthorized)));
                 continue;
             }
 
@@ -75,19 +75,19 @@ partial class Account
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionRequest(Identifier identifier, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleIncomingSubscriptionRequest(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(StatusCode.InvalidRequest));
+            tasks.Add(new(Report(StatusCode.InvalidRequest)));
             return;
         }
 
         if(!TrySetPendingSubscriptionFrom(senderAccount, out _, out var updated, out var contacts))
         {
             // No change
-            tasks.Add(new(StatusCode.Success));
+            tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
 
@@ -104,7 +104,7 @@ partial class Account
         if(!updated.SubscriptionState.PendingFrom)
         {
             // Blocked for some reason
-            tasks.Add(new(StatusCode.NotAuthorized));
+            tasks.Add(new(Report(StatusCode.NotAuthorized)));
             return;
         }
 
@@ -117,7 +117,7 @@ partial class Account
         // TODO Send unavailable? (Privacy)
     }
 
-    private async ValueTask HandleOutgoingSubscriptionAcceptation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionAcceptation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -126,7 +126,7 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(StatusCode.NotFound));
+                tasks.Add(new(Report(StatusCode.NotFound)));
                 continue;
             }
 
@@ -134,7 +134,7 @@ partial class Account
             if(!TrySetAcceptedSubscriptionFrom(targetAccount, out _, out var updated, out var contacts))
             {
                 // No change
-                tasks.Add(new(StatusCode.Success));
+                tasks.Add(new(Report(StatusCode.Success)));
                 continue;
             }
 
@@ -145,7 +145,7 @@ partial class Account
                 if(!updated.SubscriptionState.ApprovedFrom)
                 {
                     // Blocked for some reason
-                    tasks.Add(new(StatusCode.NotAuthorized));
+                    tasks.Add(new(Report(StatusCode.NotAuthorized)));
                     continue;
                 }
 
@@ -165,19 +165,19 @@ partial class Account
         OnSubscribed(targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionAcceptation(Identifier identifier, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleIncomingSubscriptionAcceptation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(StatusCode.InvalidRequest));
+            tasks.Add(new(Report(StatusCode.InvalidRequest)));
             return;
         }
 
         if(!TrySetAcceptedSubscriptionTo(senderAccount, out _, out var updated, out var contacts) || !updated.SubscriptionState.AcceptedTo)
         {
             // No change
-            tasks.Add(new(StatusCode.Success));
+            tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
 
@@ -191,7 +191,7 @@ partial class Account
         }
     }
 
-    private async ValueTask HandleOutgoingSubscriptionRejection(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionRejection(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? unavailableList = null;
         List<Identifier>? targetsList = null;
@@ -201,14 +201,14 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(StatusCode.NotFound));
+                tasks.Add(new(Report(StatusCode.NotFound)));
                 continue;
             }
 
             if(!TrySetCancelledSubscriptionFrom(targetAccount, out var previous, out var updated, out var contacts))
             {
                 // No change
-                tasks.Add(new(StatusCode.Success));
+                tasks.Add(new(Report(StatusCode.Success)));
                 continue;
             }
 
@@ -228,7 +228,7 @@ partial class Account
                     break;
                 default:
                     // Just unapproved
-                    tasks.Add(new(StatusCode.Success));
+                    tasks.Add(new(Report(StatusCode.Success)));
                     continue;
             }
 
@@ -240,19 +240,19 @@ partial class Account
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionRejection(Identifier identifier, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleIncomingSubscriptionRejection(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(StatusCode.InvalidRequest));
+            tasks.Add(new(Report(StatusCode.InvalidRequest)));
             return;
         }
 
         if(!TrySetCancelledSubscriptionTo(senderAccount, out _, out var updated, out var contacts))
         {
             // No change
-            tasks.Add(new(StatusCode.Success));
+            tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
 
@@ -266,7 +266,7 @@ partial class Account
         await ContactUpdate(updated, contacts, tasks);
     }
 
-    private async ValueTask HandleOutgoingSubscriptionCancellation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleOutgoingSubscriptionCancellation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -275,14 +275,14 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(StatusCode.NotFound));
+                tasks.Add(new(Report(StatusCode.NotFound)));
                 continue;
             }
 
             if(!TrySetCancelledSubscriptionTo(targetAccount, out _, out var updated, out var contacts))
             {
                 // No change
-                tasks.Add(new(StatusCode.Success));
+                tasks.Add(new(Report(StatusCode.Success)));
                 continue;
             }
 
@@ -296,19 +296,19 @@ partial class Account
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionCancellation(Identifier identifier, Event evnt, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask HandleIncomingSubscriptionCancellation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(StatusCode.InvalidRequest));
+            tasks.Add(new(Report(StatusCode.InvalidRequest)));
             return;
         }
 
         if(!TrySetCancelledSubscriptionFrom(senderAccount, out var previous, out var updated, out var contacts))
         {
             // No change
-            tasks.Add(new(StatusCode.Success));
+            tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
 
@@ -330,7 +330,7 @@ partial class Account
         OnUnsubscribed(new(identifier), tasks);
     }
 
-    private void OnSubscribed(Identifiers targets, List<ValueTask<StatusCode>> tasks)
+    private void OnSubscribed(Identifiers targets, List<ValueTask<StatusReports>> tasks)
     {
         // Prepare status event fields
         var origin = new EventOrigin() {
@@ -360,7 +360,7 @@ partial class Account
         }
     }
 
-    private void OnUnsubscribed(Identifiers targets, List<ValueTask<StatusCode>> tasks)
+    private void OnUnsubscribed(Identifiers targets, List<ValueTask<StatusReports>> tasks)
     {
         // Prepare unavailable event fields
         var origin = new EventOrigin() {
@@ -395,7 +395,7 @@ partial class Account
         }
     }
 
-    private void OnSubscribed(IEnumerable<Identifier>? targetSequence, List<ValueTask<StatusCode>> tasks)
+    private void OnSubscribed(IEnumerable<Identifier>? targetSequence, List<ValueTask<StatusReports>> tasks)
     {
         if(targetSequence == null || !Identifiers.TryCreateRange(targetSequence, out var targets))
         {
@@ -404,7 +404,7 @@ partial class Account
         OnSubscribed(targets, tasks);
     }
 
-    private void OnUnsubscribed(IEnumerable<Identifier>? targetSequence, List<ValueTask<StatusCode>> tasks)
+    private void OnUnsubscribed(IEnumerable<Identifier>? targetSequence, List<ValueTask<StatusReports>> tasks)
     {
         if(targetSequence == null || !Identifiers.TryCreateRange(targetSequence, out var targets))
         {

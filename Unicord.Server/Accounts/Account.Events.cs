@@ -9,11 +9,11 @@ namespace Unicord.Server.Accounts;
 partial class Account : IEventHandler
 {
     readonly Func<Identifier, TargetType> router;
-    readonly Func<TargetType, Identifiers, MessageEvent, ValueTask<StatusCode>> messageTarget;
-    readonly Func<TargetType, Identifiers, PresenceEvent, ValueTask<StatusCode>> presenceTarget;
-    readonly Func<TargetType, Identifiers, Event, ValueTask<StatusCode>> generalTarget;
+    readonly Func<TargetType, Identifiers, MessageEvent, ValueTask<StatusReports>> messageTarget;
+    readonly Func<TargetType, Identifiers, PresenceEvent, ValueTask<StatusReports>> presenceTarget;
+    readonly Func<TargetType, Identifiers, Event, ValueTask<StatusReports>> generalTarget;
 
-    private void InitEvents(out Func<Identifier, TargetType> router, out Func<TargetType, Identifiers, MessageEvent, ValueTask<StatusCode>> messageTarget, out Func<TargetType, Identifiers, PresenceEvent, ValueTask<StatusCode>> presenceTarget, out Func<TargetType, Identifiers, Event, ValueTask<StatusCode>> generalTarget)
+    private void InitEvents(out Func<Identifier, TargetType> router, out Func<TargetType, Identifiers, MessageEvent, ValueTask<StatusReports>> messageTarget, out Func<TargetType, Identifiers, PresenceEvent, ValueTask<StatusReports>> presenceTarget, out Func<TargetType, Identifiers, Event, ValueTask<StatusReports>> generalTarget)
     {
         messageTarget = RouteMessage;
         presenceTarget = RoutePresence;
@@ -27,7 +27,7 @@ partial class Account : IEventHandler
                 : TargetType.Server;
     }
 
-    public ValueTask<StatusCode> Post(Event evnt)
+    public ValueTask<StatusReports> Post(Event evnt)
     {
         switch(evnt)
         {
@@ -41,7 +41,12 @@ partial class Account : IEventHandler
         }
     }
 
-    private ValueTask<StatusCode> RouteMessage(TargetType targetType, Identifiers targetTo, MessageEvent msgEvent)
+    private StatusReport Report(StatusCode code)
+    {
+        return new(Name.ToIdentifier(), code);
+    }
+
+    private ValueTask<StatusReports> RouteMessage(TargetType targetType, Identifiers targetTo, MessageEvent msgEvent)
     {
         if(targetType == TargetType.Server)
         {
@@ -49,7 +54,7 @@ partial class Account : IEventHandler
             return Server.Post(msgEvent.WithTo(targetTo));
         }
 
-        var tasks = new List<ValueTask<StatusCode>>();
+        var tasks = new List<ValueTask<StatusReports>>();
 
         switch(targetType)
         {
@@ -85,9 +90,9 @@ partial class Account : IEventHandler
         return account == Name || GetContact(account)?.SubscriptionState.From == SubscriptionLevel.Accepted;
     }
 
-    private ValueTask<StatusCode> RoutePresence(TargetType targetType, Identifiers targetTo, PresenceEvent presEvent)
+    private ValueTask<StatusReports> RoutePresence(TargetType targetType, Identifiers targetTo, PresenceEvent presEvent)
     {
-        List<ValueTask<StatusCode>> tasks;
+        List<ValueTask<StatusReports>> tasks;
         switch(targetType)
         {
             case TargetType.Server:
@@ -108,7 +113,7 @@ partial class Account : IEventHandler
                 {
                     case SubscriptionEvent subEvent:
                         // Must not target individiual sessions
-                        return new(StatusCode.InvalidRequest);
+                        return new(Report(StatusCode.InvalidRequest));
                 }
 
                 tasks = new();
@@ -131,14 +136,14 @@ partial class Account : IEventHandler
         }
     }
 
-    private ValueTask<StatusCode> RouteEvent(TargetType targetType, Identifiers targetTo, Event evnt)
+    private ValueTask<StatusReports> RouteEvent(TargetType targetType, Identifiers targetTo, Event evnt)
     {
         switch(targetType)
         {
             case TargetType.Server:
                 return Server.Post(evnt);
             case TargetType.Sessions:
-                var tasks = new List<ValueTask<StatusCode>>();
+                var tasks = new List<ValueTask<StatusReports>>();
                 RouteToSessions(evnt, targetTo, tasks);
                 return tasks.Combine();
             default:
@@ -146,7 +151,7 @@ partial class Account : IEventHandler
         }
     }
 
-    private async ValueTask<StatusCode> OnQuery(Event evnt)
+    private async ValueTask<StatusReports> OnQuery(Event evnt)
     {
         switch(evnt)
         {
@@ -155,12 +160,12 @@ partial class Account : IEventHandler
                 var vcard = VCard;
                 if(vcard == null)
                 {
-                    return StatusCode.NotAvailable;
+                    return Report(StatusCode.NotAvailable);
                 }
                 if(vcard.PrivacyClassification is VCards.VCardPrivacyClassification.Private or VCards.VCardPrivacyClassification.Confidential)
                 {
                     // TODO Figure out what "confidential" means
-                    return StatusCode.NotAuthorized;
+                    return Report(StatusCode.NotAuthorized);
                 }
                 return await Post(new ResponseEvent {
                     Origin = evnt.Origin with {
@@ -176,37 +181,37 @@ partial class Account : IEventHandler
                 if(evnt.From.Account != Name)
                 {
                     // The owner can modify
-                    return StatusCode.NotAuthorized;
+                    return Report(StatusCode.NotAuthorized);
                 }
                 VCard = vcardData.VCard;
-                return StatusCode.Success;
+                return Report(StatusCode.Success);
         }
         // Can't process arbitrary event
-        return StatusCode.Unrecognized;
+        return Report(StatusCode.Unrecognized);
     }
 
-    private void RouteToSessions(Event evnt, Identifiers sessions, List<ValueTask<StatusCode>> tasks)
+    private void RouteToSessions(Event evnt, Identifiers sessions, List<ValueTask<StatusReports>> tasks)
     {
         foreach(var identifier in sessions)
         {
             if(identifier.Resource is not { } resource)
             {
-                tasks.Add(new(StatusCode.NotFound));
+                tasks.Add(new(Report(StatusCode.NotFound)));
                 continue;
             }
             // Local delivery - pick individual session
             if(GetSession(resource) is not { } session)
             {
-                tasks.Add(new(StatusCode.NotFound));
+                tasks.Add(new(Report(StatusCode.NotFound)));
                 continue;
             }
             tasks.Add(session.Outbound(evnt.WithTo(identifier)));
         }
     }
 
-    private async ValueTask<StatusCode> OnOutgoingSubscriptionEvent(SubscriptionEvent presEvent)
+    private async ValueTask<StatusReports> OnOutgoingSubscriptionEvent(SubscriptionEvent presEvent)
     {
-        var tasks = new List<ValueTask<StatusCode>>();
+        var tasks = new List<ValueTask<StatusReports>>();
 
         var from = presEvent.From;
         switch(presEvent)
@@ -228,9 +233,9 @@ partial class Account : IEventHandler
         return await tasks.Combine();
     }
 
-    private async ValueTask<StatusCode> OnIncomingSubscriptionEvent(SubscriptionEvent presEvent)
+    private async ValueTask<StatusReports> OnIncomingSubscriptionEvent(SubscriptionEvent presEvent)
     {
-        var tasks = new List<ValueTask<StatusCode>>();
+        var tasks = new List<ValueTask<StatusReports>>();
 
         var from = presEvent.From;
         switch(presEvent)

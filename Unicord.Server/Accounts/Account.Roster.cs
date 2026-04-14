@@ -57,14 +57,14 @@ partial class Account
             return true;
         }
 
-        var tasks = new List<ValueTask<StatusCode>>();
+        var tasks = new List<ValueTask<StatusReports>>();
         await ContactUpdate(updated, contacts, tasks);
         await tasks.Combine();
 
         return true;
     }
 
-    private async ValueTask ContactUpdate(Contact contact, ICollection<Contact> contacts, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask ContactUpdate(Contact contact, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
         foreach(var session in GetSessions(false))
         {
@@ -74,7 +74,7 @@ partial class Account
         await Server.SaveDatabase();
     }
 
-    private async ValueTask ContactRemove(Contact contact, ICollection<Contact> contacts, List<ValueTask<StatusCode>> tasks)
+    private async ValueTask ContactRemove(Contact contact, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
         foreach(var session in GetSessions(false))
         {
@@ -84,7 +84,7 @@ partial class Account
         await Server.SaveDatabase();
     }
 
-    private ValueTask ContactUpdateOrRemove(Contact previous, Contact? updated, ICollection<Contact> contacts, List<ValueTask<StatusCode>> tasks)
+    private ValueTask ContactUpdateOrRemove(Contact previous, Contact? updated, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
         if(updated is not null)
         {

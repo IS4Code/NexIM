@@ -8,25 +8,30 @@ namespace Unicord.Server;
 partial class Server
 {
     static readonly Func<Identifier, AccountName> accountRouter = id => id.Account ?? default;
-    readonly Func<AccountName, Identifiers, Event, ValueTask<StatusCode>> accountTarget;
+    readonly Func<AccountName, Identifiers, Event, ValueTask<StatusReports>> accountTarget;
 
-    public ValueTask<StatusCode> Post(Event evnt)
+    public ValueTask<StatusReports> Post(Event evnt)
     {
         return evnt.To.Route(accountRouter, accountTarget, evnt);
     }
 
-    private void InitDelivery(out Func<AccountName, Identifiers, Event, ValueTask<StatusCode>> accountTarget)
+    private StatusReport Report(StatusCode code)
+    {
+        return new(default, code);
+    }
+
+    private void InitDelivery(out Func<AccountName, Identifiers, Event, ValueTask<StatusReports>> accountTarget)
     {
         accountTarget = (accountName, accountTo, evnt) => {
             if(!accountName.IsValid)
             {
                 // TODO Recognize other entities
-                return new(StatusCode.NotFound);
+                return new(Report(StatusCode.NotFound));
             }
 
             if(GetAccount(accountName) is not { } account)
             {
-                return new(StatusCode.NotFound);
+                return new(Report(StatusCode.NotFound));
             }
 
             // Deliver to the relevant account

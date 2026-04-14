@@ -12,7 +12,7 @@ namespace Unicord.Server.Tools;
 /// </summary>
 /// <typeparam name="T">The type of the elements in the set.</typeparam>
 [StructLayout(LayoutKind.Auto)]
-public readonly struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
+public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
 {
     static readonly Comparer<T> comparer = Comparer<T>.Default;
 
@@ -22,7 +22,7 @@ public readonly struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatable<NonEm
     readonly ImmutableSortedSet<T>? _rest;
     ImmutableSortedSet<T> rest {
         get => _rest ?? emptySet;
-        init => _rest = value;
+        init => _rest = value == emptySet ? null : value;
     }
 
     public int Count => rest.Count + 1;
