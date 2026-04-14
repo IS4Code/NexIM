@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
-using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml.Handlers;
 using Unicord.Server;
@@ -16,7 +14,7 @@ using Identifiers = Unicord.Server.Tools.NonEmptySet<Identifier>;
 
 #pragma warning disable 8509, 8524
 
-internal static class AdapterExtensions
+internal static partial class AdapterExtensions
 {
     public static Identifier ToIdentifier(this XmppResource resource)
     {
@@ -177,98 +175,8 @@ internal static class AdapterExtensions
         };
     }
 
-    public static XmppStanzaException ToStanzaException(this StatusCode code)
-    {
-        return code switch {
-            StatusCode.NotFound => XmppStanzaException.ItemNotFound(),
-            StatusCode.InvalidRequest => XmppStanzaException.BadRequest(),
-            StatusCode.NotAvailable => XmppStanzaException.ServiceUnavailable(),
-            StatusCode.NotAuthorized => XmppStanzaException.NotAuthorized(),
-            StatusCode.Unrecognized => XmppStanzaException.FeatureNotImplemented()
-        };
-    }
-
-    public static StatusCode ToErrorCode(this XmppStanzaException exception)
-    {
-        var handler = new ErrorHandler();
-        var task = exception.Output(handler);
-        if(!task.IsCompletedSuccessfully)
-        {
-            // Should not happen since handler calls are synchronous
-            task.AsTask().GetAwaiter().GetResult();
-        }
-        return handler.Code ?? StatusCode.Unrecognized;
-    }
-
-    public static RecommendedErrorAction ToRecommendedAction(this ErrorType errorType)
-    {
-        return errorType switch {
-            ErrorType.Auth => RecommendedErrorAction.Authenticate,
-            ErrorType.Cancel => RecommendedErrorAction.Abandon,
-            ErrorType.Continue => RecommendedErrorAction.Proceed,
-            ErrorType.Modify => RecommendedErrorAction.Modify,
-            ErrorType.Wait => RecommendedErrorAction.TryAgain
-        };
-    }
-
-    public static ErrorType ToErrorType(this RecommendedErrorAction action)
-    {
-        return action switch {
-            RecommendedErrorAction.Abandon => ErrorType.Cancel,
-            RecommendedErrorAction.Authenticate => ErrorType.Auth,
-            RecommendedErrorAction.Modify => ErrorType.Modify,
-            RecommendedErrorAction.Proceed => ErrorType.Continue,
-            RecommendedErrorAction.TryAgain => ErrorType.Wait
-        };
-    }
-
     public static EventExtensions ToExtensions<THandler>(this CapturingHandler<THandler>? handler) where THandler : IPayloadHandler
     {
         return new(handler?.Calls.Count > 0 ? handler : null);
-    }
-
-    sealed class ErrorHandler : StanzaErrorHandler<EmptyPayloadHandlerContext>
-    {
-        public StatusCode? Code { get; private set; }
-
-        protected override ValueTask OnItemNotFound()
-        {
-            Code = StatusCode.NotFound;
-            return default;
-        }
-
-        protected override ValueTask OnBadRequest()
-        {
-            Code = StatusCode.InvalidRequest;
-            return default;
-        }
-
-        protected override ValueTask OnServiceUnavailable()
-        {
-            Code = StatusCode.NotAvailable;
-            return default;
-        }
-
-        protected override ValueTask OnNotAuthorized()
-        {
-            Code = StatusCode.NotAuthorized;
-            return default;
-        }
-
-        protected override ValueTask OnFeatureNotImplemented()
-        {
-            Code = StatusCode.Unrecognized;
-            return default;
-        }
-
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader)
-        {
-            return default;
-        }
-
-        public override ValueTask DisposeAsync()
-        {
-            return default;
-        }
     }
 }

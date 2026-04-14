@@ -142,7 +142,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
     static async ValueTask<TResult> NotImplemented<TResult>()
     {
         Debugger.Break();
-        throw new NotImplementedException(null, XmppStanzaException.FeatureNotImplemented());
+        throw new NotImplementedException(null, XmppStanzaException.FeatureNotImplemented(ErrorType.Cancel));
     }
 
     protected async override ValueTask OnSaslResponse(TemporaryUtf8String? data)

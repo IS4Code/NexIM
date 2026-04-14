@@ -112,8 +112,8 @@ partial class Account : IEventHandler
                 switch(presEvent)
                 {
                     case SubscriptionEvent subEvent:
-                        // Must not target individiual sessions
-                        return new(Report(StatusCode.InvalidRequest));
+                        // Handle on behalf of the account anyway
+                        return OnIncomingSubscriptionEvent(subEvent.WithTo(Name.ToIdentifier()));
                 }
 
                 tasks = new();
@@ -160,12 +160,12 @@ partial class Account : IEventHandler
                 var vcard = VCard;
                 if(vcard == null)
                 {
-                    return Report(StatusCode.NotAvailable);
+                    return Report(StatusCode.NotFound);
                 }
                 if(vcard.PrivacyClassification is VCards.VCardPrivacyClassification.Private or VCards.VCardPrivacyClassification.Confidential)
                 {
                     // TODO Figure out what "confidential" means
-                    return Report(StatusCode.NotAuthorized);
+                    return Report(StatusCode.Unauthorized);
                 }
                 return await Post(new ResponseEvent {
                     Origin = evnt.Origin with {
@@ -180,24 +180,24 @@ partial class Account : IEventHandler
             case UpdateEvent { Data: VCardQueryData vcardData }:
                 if(evnt.From.Account != Name)
                 {
-                    // The owner can modify
-                    return Report(StatusCode.NotAuthorized);
+                    // Only the owner can modify
+                    return Report(StatusCode.Unauthorized);
                 }
                 VCard = vcardData.VCard;
                 return Report(StatusCode.Success);
+            default:
+                // Can't process arbitrary event
+                return Report(StatusCode.UnrecognizedRequest);
         }
-        // Can't process arbitrary event
-        return Report(StatusCode.Unrecognized);
     }
 
     private void RouteToSessions(Event evnt, Identifiers sessions, List<ValueTask<StatusReports>> tasks)
     {
         foreach(var identifier in sessions)
         {
-            if(identifier.Resource is not { } resource)
+            if(identifier.Resource is not { } resource || identifier.Account != Name)
             {
-                tasks.Add(new(Report(StatusCode.NotFound)));
-                continue;
+                throw new ArgumentException("Argument must identify the account's sessions.", nameof(sessions));
             }
             // Local delivery - pick individual session
             if(GetSession(resource) is not { } session)

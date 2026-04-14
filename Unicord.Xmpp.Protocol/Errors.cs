@@ -72,6 +72,7 @@ public interface IStanzaErrorHandler : IStanzaErrorTextHandler
     [Name("not-acceptable")] ValueTask NotAcceptable();
     [Name("not-allowed")] ValueTask NotAllowed();
     [Name("not-authorized")] ValueTask NotAuthorized();
+    [Name("policy-violation")] ValueTask PolicyViolation();
     [Name("payment-required")] ValueTask PaymentRequired();
     [Name("recipient-unavailable")] ValueTask RecipientUnavailable();
     [Name("redirect")] ValueTask Redirect(string? alternateAddress);

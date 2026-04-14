@@ -116,7 +116,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
                 Processing = processing,
                 Data = data
             },
-            _ => throw XmppStanzaException.FeatureNotImplemented()
+            _ => throw XmppStanzaException.BadRequest()
         };
     }
 

@@ -92,11 +92,8 @@ public abstract class ClientSession : IAsyncDisposable
 
     public async ValueTask<StatusReports> Inbound(Event evnt)
     {
-        if(evnt.From != Identifier)
-        {
-            // Events originating from a session must be correctly identified
-            return Report(StatusCode.InvalidRequest);
-        }
+        // Ensure the event correctly identifies the session
+        evnt = evnt.WithFrom(Identifier);
 
         switch(evnt)
         {
@@ -206,7 +203,7 @@ public abstract class ClientSession : IAsyncDisposable
                 if(!Account.CanSharePresenceWith(evnt.From))
                 {
                     // Only share undirected presence with contacts
-                    return new(Report(StatusCode.NotAuthorized));
+                    return new(Report(StatusCode.SubscriptionRequired));
                 }
                 presenceStore = currentPresence;
             }
@@ -226,7 +223,7 @@ public abstract class ClientSession : IAsyncDisposable
         {
             // Not available for undirected presence
             // TODO Invisible?
-            return new(Report(StatusCode.NotAvailable));
+            return new(Report(StatusCode.Unavailable));
         }
 
         return Write(evnt);

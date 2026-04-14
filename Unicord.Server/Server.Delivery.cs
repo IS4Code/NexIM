@@ -26,12 +26,12 @@ partial class Server
             if(!accountName.IsValid)
             {
                 // TODO Recognize other entities
-                return new(Report(StatusCode.NotFound));
+                return new(Report(StatusCode.Unavailable));
             }
 
             if(GetAccount(accountName) is not { } account)
             {
-                return new(Report(StatusCode.NotFound));
+                return new(Report(StatusCode.Unavailable));
             }
 
             // Deliver to the relevant account

@@ -292,9 +292,9 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                     foreach(var result in await session.Inbound(evnt))
                     {
                         // TODO Report multiple errors
-                        if(result.Code != StatusCode.Success)
+                        if(result.Code.ToStanzaException() is { } exception)
                         {
-                            throw result.Code.ToStanzaException();
+                            throw exception;
                         }
                     }
                 }
@@ -423,7 +423,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         return stanza;
     }
 
-    static readonly XmppStanzaException featureNotImplemented = XmppStanzaException.FeatureNotImplemented();
+    static readonly XmppStanzaException featureNotImplemented = XmppStanzaException.FeatureNotImplemented(ErrorType.Cancel);
     bool GetXmppException<TException>(Exception e, [MaybeNullWhen(false)] out TException xmppException) where TException : XmppException
     {
         switch(e)

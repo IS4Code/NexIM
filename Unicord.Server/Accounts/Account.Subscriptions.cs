@@ -34,7 +34,7 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.NotFound)));
+                tasks.Add(new(Report(StatusCode.Unavailable)));
                 continue;
             }
 
@@ -61,7 +61,7 @@ partial class Account
             if(!updated.SubscriptionState.PendingTo)
             {
                 // Blocked for some reason
-                tasks.Add(new(Report(StatusCode.NotAuthorized)));
+                tasks.Add(new(Report(StatusCode.Blocked)));
                 continue;
             }
 
@@ -80,7 +80,7 @@ partial class Account
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.InvalidRequest)));
+            tasks.Add(new(Report(StatusCode.Unavailable)));
             return;
         }
 
@@ -104,7 +104,7 @@ partial class Account
         if(!updated.SubscriptionState.PendingFrom)
         {
             // Blocked for some reason
-            tasks.Add(new(Report(StatusCode.NotAuthorized)));
+            tasks.Add(new(Report(StatusCode.Blocked)));
             return;
         }
 
@@ -126,7 +126,7 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.NotFound)));
+                tasks.Add(new(Report(StatusCode.Unavailable)));
                 continue;
             }
 
@@ -145,7 +145,7 @@ partial class Account
                 if(!updated.SubscriptionState.ApprovedFrom)
                 {
                     // Blocked for some reason
-                    tasks.Add(new(Report(StatusCode.NotAuthorized)));
+                    tasks.Add(new(Report(StatusCode.Blocked)));
                     continue;
                 }
 
@@ -170,7 +170,7 @@ partial class Account
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.InvalidRequest)));
+            tasks.Add(new(Report(StatusCode.Unavailable)));
             return;
         }
 
@@ -201,7 +201,7 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.NotFound)));
+                tasks.Add(new(Report(StatusCode.Unavailable)));
                 continue;
             }
 
@@ -245,7 +245,7 @@ partial class Account
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.InvalidRequest)));
+            tasks.Add(new(Report(StatusCode.Unavailable)));
             return;
         }
 
@@ -275,7 +275,7 @@ partial class Account
             if(identifier.Account is not { } targetAccount)
             {
                 // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.NotFound)));
+                tasks.Add(new(Report(StatusCode.Unavailable)));
                 continue;
             }
 
@@ -301,7 +301,7 @@ partial class Account
         if(identifier.Account is not { } senderAccount)
         {
             // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.InvalidRequest)));
+            tasks.Add(new(Report(StatusCode.Unavailable)));
             return;
         }
 

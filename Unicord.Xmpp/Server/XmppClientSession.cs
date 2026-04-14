@@ -63,8 +63,9 @@ public class XmppClientSession : ClientSession
             {
                 return await WriteError(errorEvent.ToStanza(xmpp), errorEvent.Data);
             }
+            default:
+                return Report(StatusCode.UnrecognizedRequest);
         }
-        return Report(StatusCode.Unrecognized);
     }
 
     private async ValueTask WriteMessage(IMessageHandler output, MessageData? data)
@@ -175,8 +176,9 @@ public class XmppClientSession : ClientSession
                     await WriteExtensions(vcardHandler, data.Extensions);
                 }
                 return Report(StatusCode.Success);
+            default:
+                return Report(StatusCode.UnrecognizedRequest);
         }
-        return Report(StatusCode.Unrecognized);
     }
 
     private async ValueTask WriteExtensions<THandler>(THandler handler, EventExtensions extensions) where THandler : IPayloadHandler
@@ -192,6 +194,11 @@ public class XmppClientSession : ClientSession
 
     private async ValueTask<StatusReports> WriteError(Stanza stanza, ErrorData? data)
     {
+        if(data?.ErrorCode.ToStanzaException() is not { } exception)
+        {
+            return Report(StatusCode.InvalidParameter);
+        }
+
         switch(data?.OriginalData)
         {
             case MessageData msgData:
@@ -221,7 +228,7 @@ public class XmppClientSession : ClientSession
                 }
             }
             default:
-                return Report(StatusCode.Unrecognized);
+                return Report(StatusCode.UnrecognizedRequest);
         }
 
         async ValueTask WriteErrorData(IStanzaHandler output)
@@ -230,7 +237,7 @@ public class XmppClientSession : ClientSession
 
             // Basic elements
 
-            await data.ErrorCode.ToStanzaException().Output(error);
+            await exception.Output(error);
 
             foreach(var text in data.Description)
             {
