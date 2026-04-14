@@ -272,7 +272,7 @@ public abstract class XmlDecoder : IValueXmlDecoder<TemporaryString>, IValueXmlD
     async ValueTask<TimeZoneOffset> IValueXmlDecoder<TimeZoneOffset>.Decode(XmlReader reader)
     {
         var offset = await reader.ReadContentAsStringAsync();
-        if(offset == "Z") return default;
+        if(offset == "Z") return TimeZoneOffset.Zero;
         return new(XmlConvert.ToDateTimeOffset(offset, "zzzzzzz").Offset);
     }
 
