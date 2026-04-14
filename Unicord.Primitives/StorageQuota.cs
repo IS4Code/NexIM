@@ -14,19 +14,19 @@ public abstract class StorageQuota
 
     public static readonly StorageQuota Empty = new EmptyQuota();
 
-    public abstract void RequestBytes(int count);
-    public abstract void ReleaseBytes(int count);
+    public abstract void RequestBytes(long count);
+    public abstract void ReleaseBytes(long count);
     public abstract void RequestFiles(int count);
     public abstract void ReleaseFiles(int count);
 
     sealed class EmptyQuota : StorageQuota
     {
-        public override void ReleaseBytes(int count)
+        public override void ReleaseBytes(long count)
         {
 
         }
 
-        public override void RequestBytes(int count)
+        public override void RequestBytes(long count)
         {
 
         }
