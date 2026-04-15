@@ -238,17 +238,17 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
     {
         protected async override ValueTask OnIsHome()
         {
-            this.SetOnce(ref address.IdentifierFlags, VCardIdentifierFlags.IsHome);
+            this.SetOnceFlag(ref address.IdentifierFlags, VCardIdentifierFlags.IsHome);
         }
 
         protected async override ValueTask OnIsWork()
         {
-            this.SetOnce(ref address.IdentifierFlags, VCardIdentifierFlags.IsWork);
+            this.SetOnceFlag(ref address.IdentifierFlags, VCardIdentifierFlags.IsWork);
         }
 
         protected async override ValueTask OnIsPreferred()
         {
-            this.SetOnce(ref address.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
+            this.SetOnceFlag(ref address.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
         }
 
         protected async override ValueTask OnIsDomestic()
@@ -314,17 +314,17 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
     {
         protected async override ValueTask OnIsHome()
         {
-            this.SetOnce(ref address.IdentifierFlags, VCardIdentifierFlags.IsHome);
+            this.SetOnceFlag(ref address.IdentifierFlags, VCardIdentifierFlags.IsHome);
         }
 
         protected async override ValueTask OnIsWork()
         {
-            this.SetOnce(ref address.IdentifierFlags, VCardIdentifierFlags.IsWork);
+            this.SetOnceFlag(ref address.IdentifierFlags, VCardIdentifierFlags.IsWork);
         }
 
         protected async override ValueTask OnIsPreferred()
         {
-            this.SetOnce(ref address.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
+            this.SetOnceFlag(ref address.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
         }
 
         protected async override ValueTask OnIsDomestic()
@@ -363,17 +363,17 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
     {
         protected async override ValueTask OnIsHome()
         {
-            this.SetOnce(ref telephone.IdentifierFlags, VCardIdentifierFlags.IsHome);
+            this.SetOnceFlag(ref telephone.IdentifierFlags, VCardIdentifierFlags.IsHome);
         }
 
         protected async override ValueTask OnIsWork()
         {
-            this.SetOnce(ref telephone.IdentifierFlags, VCardIdentifierFlags.IsWork);
+            this.SetOnceFlag(ref telephone.IdentifierFlags, VCardIdentifierFlags.IsWork);
         }
 
         protected async override ValueTask OnIsPreferred()
         {
-            this.SetOnce(ref telephone.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
+            this.SetOnceFlag(ref telephone.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
         }
 
         protected async override ValueTask OnIsBbs()
@@ -439,27 +439,27 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
     {
         protected async override ValueTask OnIsHome()
         {
-            this.SetOnce(ref email.IdentifierFlags, VCardIdentifierFlags.IsHome);
+            this.SetOnceFlag(ref email.IdentifierFlags, VCardIdentifierFlags.IsHome);
         }
 
         protected async override ValueTask OnIsWork()
         {
-            this.SetOnce(ref email.IdentifierFlags, VCardIdentifierFlags.IsWork);
+            this.SetOnceFlag(ref email.IdentifierFlags, VCardIdentifierFlags.IsWork);
         }
 
         protected async override ValueTask OnIsPreferred()
         {
-            this.SetOnce(ref email.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
+            this.SetOnceFlag(ref email.IdentifierFlags, VCardIdentifierFlags.IsPreferred);
         }
 
         protected async override ValueTask OnIsInternet()
         {
-            this.SetOnce(ref email.EmailFlags, VCardEmailFlags.IsInternet);
+            this.SetOnceFlag(ref email.EmailFlags, VCardEmailFlags.IsInternet);
         }
 
         protected async override ValueTask OnIsX400()
         {
-            this.SetOnce(ref email.EmailFlags, VCardEmailFlags.IsX400);
+            this.SetOnceFlag(ref email.EmailFlags, VCardEmailFlags.IsX400);
         }
 
         protected async override ValueTask OnIdentifier(string? value)

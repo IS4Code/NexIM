@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -122,13 +123,35 @@ internal static class CommandExtensions
 
     const string propertySetError = "Property set multiple times.";
 
-    public static T SetOnce<T, TContext>(this IPayloadHandler<TContext> handler, ref T? storage, T value) where TContext : IPayloadHandlerContext
+    public static T SetOnce<T, TContext>(this IPayloadHandler<TContext> handler, ref T? storage, T value) where T : struct where TContext : IPayloadHandlerContext
     {
         if(storage != null)
         {
             throw XmppStanzaException.BadRequest(propertySetError);
         }
-        return storage = value;
+        storage = value;
+        return value;
+    }
+
+    public static T? SetOnce<T, TContext>(this IPayloadHandler<TContext> handler, ref T? storage, T? value) where T : struct where TContext : IPayloadHandlerContext
+    {
+        if(storage != null)
+        {
+            throw XmppStanzaException.BadRequest(propertySetError);
+        }
+        storage = value;
+        return value;
+    }
+
+    [return: NotNullIfNotNull(nameof(value))]
+    public static T? SetOnce<T, TContext>(this IPayloadHandler<TContext> handler, ref T? storage, T? value) where T : class where TContext : IPayloadHandlerContext
+    {
+        if(storage != null)
+        {
+            throw XmppStanzaException.BadRequest(propertySetError);
+        }
+        storage = value;
+        return value;
     }
 
     public static T SetOnceFlag<T, TContext>(this IPayloadHandler<TContext> handler, ref T storage, T value) where T : unmanaged, Enum where TContext : IPayloadHandlerContext
