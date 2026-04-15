@@ -13,8 +13,6 @@ internal sealed class GetVCardTemp : BaseDelegatingVCardHandler<CapturingHandler
     protected sealed override CapturingHandler<IVCardHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    private DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
-
     private VCardQueryData GetData()
     {
         return new VCardQueryData {
@@ -27,7 +25,7 @@ internal sealed class GetVCardTemp : BaseDelegatingVCardHandler<CapturingHandler
     {
         return new RetrieveEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetData()
         };
     }

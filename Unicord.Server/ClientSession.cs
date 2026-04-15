@@ -228,7 +228,7 @@ public abstract class ClientSession : IAsyncDisposable
                 }
                 return await Inbound(new StatusUpdateEvent {
                     Origin = EventOrigin.FromTo(Identifier, evnt.From, presenceStore.Language),
-                    Processing = EventProcessing.NewInternal(),
+                    Processing = EventProcessing.Create(),
                     Data = presenceStore.Data
                 });
 
@@ -260,7 +260,7 @@ public abstract class ClientSession : IAsyncDisposable
         // Broadcast status information request of all contacts
         var evnt = new StatusRequestEvent {
             Origin = EventOrigin.FromTo(Identifier, Identifier.Bare, dataLanguage),
-            Processing = EventProcessing.NewInternal(),
+            Processing = EventProcessing.Create(),
             Data = data
         };
 
@@ -289,7 +289,7 @@ public abstract class ClientSession : IAsyncDisposable
                 TransactionIdentifier = null,
                 TransactionLanguage = null
             },
-            Processing = EventProcessing.NewInternal(),
+            Processing = EventProcessing.Create(),
             Data = DefaultPresence.Data
         };
 

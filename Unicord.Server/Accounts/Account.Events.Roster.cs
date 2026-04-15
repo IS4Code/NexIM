@@ -23,7 +23,7 @@ partial class Account
             // No longer subscribing to
             tasks.Add(Post(new SubscriptionCancelledEvent {
                 Origin = EventOrigin.FromTo(Name.ToIdentifier(), target.ToIdentifier()),
-                Processing = EventProcessing.NewInternal(),
+                Processing = EventProcessing.Create(),
                 Data = null
             }));
         }
@@ -32,7 +32,7 @@ partial class Account
             // No longer allowing subscription from
             tasks.Add(Post(new SubscriptionRejectedEvent {
                 Origin = EventOrigin.FromTo(Name.ToIdentifier(), target.ToIdentifier()),
-                Processing = EventProcessing.NewInternal(),
+                Processing = EventProcessing.Create(),
                 Data = null
             }));
         }
@@ -67,7 +67,7 @@ partial class Account
         RouteToAllSessions(new UpdateEvent {
             // Filled later
             Origin = EventOrigin.FromTo(Name.ToIdentifier(), default),
-            Processing = EventProcessing.NewInternal(),
+            Processing = EventProcessing.Create(),
             Data = new RosterRemoveData {
                 Contact = contact,
                 Tag = GetRosterVersionString(contacts),
@@ -83,7 +83,7 @@ partial class Account
         RouteToAllSessions(new UpdateEvent {
             // Filled later
             Origin = EventOrigin.FromTo(Name.ToIdentifier(), default),
-            Processing = EventProcessing.NewInternal(),
+            Processing = EventProcessing.Create(),
             Data = new RosterUpdateData {
                 Contact = contact,
                 Tag = GetRosterVersionString(contacts),

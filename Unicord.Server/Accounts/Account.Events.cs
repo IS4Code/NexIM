@@ -170,13 +170,13 @@ partial class Account : IEventHandler
                     // TODO Incremental changes
                     return Post(new ResponseEvent {
                         Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
-                        Processing = EventProcessing.NewInternal(),
+                        Processing = EventProcessing.Create(),
                         Data = null
                     });
                 }
                 return Post(new ResponseEvent {
                     Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
-                    Processing = EventProcessing.NewInternal(),
+                    Processing = EventProcessing.Create(),
                     Data = new RosterQueryData {
                         Tag = GetRosterVersionString(roster),
                         Roster = roster
@@ -209,7 +209,7 @@ partial class Account : IEventHandler
                 }
                 return Post(new ResponseEvent {
                     Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
-                    Processing = EventProcessing.NewInternal(),
+                    Processing = EventProcessing.Create(),
                     Data = new VCardQueryData {
                         VCard = vcard
                     }

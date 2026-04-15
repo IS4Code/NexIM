@@ -20,12 +20,8 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
-    protected DateTimeOffset? WrittenTime { get; private set; }
-
     protected async sealed override ValueTask OnBody(LanguageTaggedString? text)
     {
-        WrittenTime = DateTimeOffset.UtcNow;
         body = body.Add(text);
     }
 
@@ -100,7 +96,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         {
             Origin = this.GetOrigin(),
             Type = (this.GetStanza().Type?.ToEnum()).ToMessageType(),
-            Processing = EventProcessing.Finish(ConstructedTime, WrittenTime),
+            Processing = this.GetProcessing(),
             Data = GetMessage()
         };
     }
@@ -136,7 +132,7 @@ internal class ErrorMessage : Message
         return new ErrorEvent
         {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = errorParser.GetError(GetMessage())
         };
     }

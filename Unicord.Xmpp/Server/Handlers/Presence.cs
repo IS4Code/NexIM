@@ -23,19 +23,14 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
-    protected DateTimeOffset? WrittenTime { get; private set; }
-
     protected async override ValueTask OnShow(Token<StatusType>? text)
     {
         this.SetOnce(ref show, text?.ToEnum());
-        WrittenTime = DateTimeOffset.UtcNow;
     }
 
     protected async override ValueTask OnStatus(LanguageTaggedString? text)
     {
         statusText = statusText.Add(text);
-        WrittenTime = DateTimeOffset.UtcNow;
     }
 
     protected async override ValueTask OnNickname(string? text)
@@ -83,7 +78,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     protected virtual Event GetEvent()
     {
         var origin = this.GetOrigin();
-        var processing = EventProcessing.Finish(ConstructedTime, WrittenTime);
+        var processing = this.GetProcessing();
         var data = GetPresence();
         return this.GetStanza().Type?.ToEnum() switch {
             null or StanzaType.Unavailable => new StatusUpdateEvent {
@@ -151,7 +146,7 @@ internal class ErrorPresence : Presence
         return new ErrorEvent
         {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = errorParser.GetError(GetPresence())
         };
     }

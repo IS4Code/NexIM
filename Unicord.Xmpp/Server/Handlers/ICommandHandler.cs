@@ -1,4 +1,5 @@
 ﻿global using ICommandHandler = Unicord.Primitives.Xml.Handlers.IPayloadHandler<Unicord.Xmpp.Server.Handlers.ICommandContext>;
+using System;
 using System.Collections.Generic;
 using Unicord.Primitives.Xml.Handlers;
 using Unicord.Server.Events;
@@ -12,6 +13,7 @@ internal interface ICommandContext : IPayloadHandlerContext
     XmppServer Server { get; }
     IXmppSession Session { get; }
     ref readonly Stanza LastStanza { get; }
+    DateTimeOffset LastStanzaReceived { get; }
     ICollection<Event> EventsToSend { get; }
 
     string IPayloadHandlerContext.DefaultNamespace => Session.DefaultNamespace;

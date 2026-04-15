@@ -15,8 +15,6 @@ internal class GetRosterQuery : BaseDelegatingRosterQueryHandler<CapturingHandle
     protected sealed override CapturingHandler<IRosterQueryHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    private DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
-
     internal string? Version { get; set; }
 
     private RosterQueryData GetData()
@@ -32,7 +30,7 @@ internal class GetRosterQuery : BaseDelegatingRosterQueryHandler<CapturingHandle
     {
         return new RetrieveEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetData()
         };
     }
@@ -54,8 +52,6 @@ internal abstract class DataRosterQuery : BaseDelegatingRosterQueryHandler<Roste
 {
     protected sealed override RosterParser<ICommandContext> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
-
-    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
 
     internal string? Version { get; set; }
 
@@ -120,7 +116,7 @@ internal sealed class SetRosterQuery : DataRosterQuery
     {
         return new UpdateEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetData()
         };
     }
@@ -141,7 +137,7 @@ internal sealed class ResultRosterQuery : DataRosterQuery
     {
         return new ResponseEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetData()
         };
     }

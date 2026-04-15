@@ -48,4 +48,9 @@ internal static class StanzaExtensions
             TransactionLanguage = handler.GetStanza().Language
         };
     }
+
+    public static EventProcessing GetProcessing(this ICommandHandler handler)
+    {
+        return EventProcessing.Finish(handler.GetContext().LastStanzaReceived);
+    }
 }

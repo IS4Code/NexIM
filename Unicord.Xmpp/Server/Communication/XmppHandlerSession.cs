@@ -38,9 +38,11 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
 
     StanzaKind? lastStanzaKind;
     Stanza lastStanza;
+    DateTimeOffset lastStanzaReceived;
 
     ICollection<Event> ICommandContext.EventsToSend => eventsToSend;
     ref readonly Stanza ICommandContext.LastStanza => ref lastStanza;
+    DateTimeOffset ICommandContext.LastStanzaReceived => lastStanzaReceived;
 
     protected abstract ValueTask Read(CancellationToken cancellationToken);
 
@@ -338,18 +340,21 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 case 2 when elementName == InfoQuery:
                 {
                     lastStanzaKind = StanzaKind.InfoQuery;
+                    lastStanzaReceived = DateTimeOffset.UtcNow;
                     lastStanza = ParseStanza(reader);
                     return Success(mainHandler.InfoQuery(lastStanza));
                 }
                 case 7 when elementName == Message:
                 {
                     lastStanzaKind = StanzaKind.Message;
+                    lastStanzaReceived = DateTimeOffset.UtcNow;
                     lastStanza = ParseStanza(reader);
                     return Success(mainHandler.Message(lastStanza));
                 }
                 case 8 when elementName == Presence:
                 {
                     lastStanzaKind = StanzaKind.Presence;
+                    lastStanzaReceived = DateTimeOffset.UtcNow;
                     lastStanza = ParseStanza(reader);
                     return Success(mainHandler.Presence(lastStanza));
                 }

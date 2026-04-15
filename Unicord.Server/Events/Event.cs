@@ -34,9 +34,6 @@ public abstract record Event
     /// <inheritdoc cref="EventProcessing.Received"/>
     public DateTimeOffset Received => Processing.Received;
 
-    /// <inheritdoc cref="EventProcessing.Accepted"/>
-    public DateTimeOffset? Accepted => Processing.Accepted;
-
     /// <inheritdoc cref="EventProcessing.Published"/>
     public DateTimeOffset? Published => Processing.Published;
 
@@ -118,14 +115,6 @@ public record struct EventProcessing
     public required DateTimeOffset Received { get; set; }
 
     /// <summary>
-    /// The date and time this event's main content was received by the server.
-    /// </summary>
-    /// <remarks>
-    /// Must not be greater than <see cref="Published"/> or less than <see cref="Received"/>.
-    /// </remarks>
-    public required DateTimeOffset? Accepted { get; set; }
-
-    /// <summary>
     /// The date and time this event was fully processed by the server.
     /// </summary>
     /// <remarks>
@@ -140,18 +129,17 @@ public record struct EventProcessing
     /// This is the first value in the sequence <see cref="Accepted"/>,
     /// <see cref="Published"/>, <see cref="Received"/> that is set.
     /// </remarks>
-    public DateTimeOffset Created => Accepted ?? Published ?? Received;
+    public DateTimeOffset Created => Published ?? Received;
 
     /// <summary>
     /// Creates an <see cref="EventProcessing"/> instance for
     /// a newly produced event.
     /// </summary>
-    public static EventProcessing NewInternal()
+    public static EventProcessing Create()
     {
         var date = DateTimeOffset.UtcNow;
         return new() {
             Received = date,
-            Accepted = date,
             Published = date
         };
     }
@@ -165,21 +153,7 @@ public record struct EventProcessing
         var date = DateTimeOffset.UtcNow;
         return new() {
             Received = received,
-            Accepted = date,
             Published = date
-        };
-    }
-
-    /// <summary>
-    /// Creates an <see cref="EventProcessing"/> instance for
-    /// a finished event.
-    /// </summary>
-    public static EventProcessing Finish(DateTimeOffset received, DateTimeOffset? accepted)
-    {
-        return new() {
-            Received = received,
-            Accepted = accepted,
-            Published = DateTimeOffset.UtcNow
         };
     }
 }

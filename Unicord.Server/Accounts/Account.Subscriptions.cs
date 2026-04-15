@@ -52,7 +52,7 @@ partial class Account
                 // Already subscribed - confirm
                 RouteToSessions(new SubscriptionAcceptedEvent {
                     Origin = EventOrigin.FromTo(targetAccountIdentifier, Name.ToIdentifier(), evnt.TransactionLanguage),
-                    Processing = EventProcessing.NewInternal(),
+                    Processing = EventProcessing.Create(),
                     Data = null
                 }, source, tasks);
                 continue;
@@ -339,7 +339,7 @@ partial class Account
             TransactionIdentifier = null,
             TransactionLanguage = null
         };
-        var processing = EventProcessing.NewInternal();
+        var processing = EventProcessing.Create();
         foreach(var session in GetSessions(false))
         {
             var presence = session.Presence;
@@ -369,7 +369,7 @@ partial class Account
             TransactionIdentifier = null,
             TransactionLanguage = null
         };
-        var processing = EventProcessing.NewInternal();
+        var processing = EventProcessing.Create();
         var data = new PresenceData {
             Presentation = default,
             Priority = null,
