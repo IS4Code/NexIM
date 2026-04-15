@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Threading.Tasks;
 using Unicord.Server.Events;
 
@@ -151,43 +152,81 @@ partial class Account : IEventHandler
         }
     }
 
-    private async ValueTask<StatusReports> OnQuery(Event evnt)
+    private ValueTask<StatusReports> OnQuery(Event evnt)
     {
         switch(evnt)
         {
+            case RetrieveEvent { Data: RosterQueryData data }:
+                // Retrieving the roster
+                if(evnt.From.Account != Name)
+                {
+                    // Only the owner can view
+                    return new(Report(StatusCode.Unauthorized));
+                }
+                var roster = contacts.Snapshot.Values;
+                if(data.Roster == roster || UInt32.TryParse(data.Tag, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var tag) && tag == GetRosterVersion(roster))
+                {
+                    // Same version
+                    // TODO Incremental changes
+                    return Post(new ResponseEvent {
+                        Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
+                        Processing = EventProcessing.NewInternal(),
+                        Data = null
+                    });
+                }
+                return Post(new ResponseEvent {
+                    Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
+                    Processing = EventProcessing.NewInternal(),
+                    Data = new RosterQueryData {
+                        Tag = GetRosterVersionString(roster),
+                        Roster = roster
+                    }
+                });
+
+            case UpdateEvent { Data: RosterUpdateData data }:
+                // Updating a contact
+                return UpdateContact(data.Contact);
+
+            case UpdateEvent { Data: RosterRemoveData data }:
+                // Removing a contact
+                return RemoveContact(data.Contact.Account);
+
             case RetrieveEvent { Data: VCardQueryData }:
                 // Retrieving a VCard
                 var vcard = VCard;
                 if(vcard == null)
                 {
-                    return Report(StatusCode.NotFound);
+                    return new(Report(StatusCode.NotFound));
                 }
                 if(vcard.PrivacyClassification is VCards.VCardPrivacyClassification.Private or VCards.VCardPrivacyClassification.Confidential)
                 {
                     // TODO Figure out what "confidential" means
-                    return Report(StatusCode.Unauthorized);
+                    if(evnt.From.Account != Name)
+                    {
+                        // Only the owner can view
+                        return new(Report(StatusCode.Unauthorized));
+                    }
                 }
-                return await Post(new ResponseEvent {
-                    Origin = evnt.Origin with {
-                        From = Name.ToIdentifier(),
-                        To = evnt.From
-                    },
+                return Post(new ResponseEvent {
+                    Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
                     Processing = EventProcessing.NewInternal(),
                     Data = new VCardQueryData {
                         VCard = vcard
                     }
                 });;
+            
             case UpdateEvent { Data: VCardQueryData vcardData }:
                 if(evnt.From.Account != Name)
                 {
                     // Only the owner can modify
-                    return Report(StatusCode.Unauthorized);
+                    return new(Report(StatusCode.Unauthorized));
                 }
                 VCard = vcardData.VCard;
-                return Report(StatusCode.Success);
+                return new(Report(StatusCode.Success));
+
             default:
                 // Can't process arbitrary event
-                return Report(StatusCode.UnrecognizedRequest);
+                return new(Report(StatusCode.UnrecognizedRequest));
         }
     }
 
@@ -209,31 +248,15 @@ partial class Account : IEventHandler
         }
     }
 
-    private async ValueTask<StatusReports> OnOutgoingSubscriptionEvent(SubscriptionEvent presEvent)
+    private void RouteToAllSessions(Event evnt, List<ValueTask<StatusReports>> tasks)
     {
-        var tasks = new List<ValueTask<StatusReports>>();
-
-        var from = presEvent.From;
-        switch(presEvent)
+        foreach(var session in GetSessions(false))
         {
-            case SubscriptionRequestedEvent:
-                await HandleOutgoingSubscriptionRequest(from, presEvent.To, presEvent, tasks);
-                break;
-            case SubscriptionAcceptedEvent:
-                await HandleOutgoingSubscriptionAcceptation(from, presEvent.To, presEvent, tasks);
-                break;
-            case SubscriptionRejectedEvent:
-                await HandleOutgoingSubscriptionRejection(from, presEvent.To, presEvent, tasks);
-                break;
-            case SubscriptionCancelledEvent:
-                await HandleOutgoingSubscriptionCancellation(from, presEvent.To, presEvent, tasks);
-                break;
+            tasks.Add(session.Outbound(evnt.WithTo(session.Identifier)));
         }
-
-        return await tasks.Combine();
     }
 
-    private async ValueTask<StatusReports> OnIncomingSubscriptionEvent(SubscriptionEvent presEvent)
+    private ValueTask<StatusReports> OnOutgoingSubscriptionEvent(SubscriptionEvent presEvent)
     {
         var tasks = new List<ValueTask<StatusReports>>();
 
@@ -241,20 +264,44 @@ partial class Account : IEventHandler
         switch(presEvent)
         {
             case SubscriptionRequestedEvent:
-                await HandleIncomingSubscriptionRequest(from, presEvent, tasks);
+                HandleOutgoingSubscriptionRequest(from, presEvent.To, presEvent, tasks);
                 break;
             case SubscriptionAcceptedEvent:
-                await HandleIncomingSubscriptionAcceptation(from, presEvent, tasks);
+                HandleOutgoingSubscriptionAcceptation(from, presEvent.To, presEvent, tasks);
                 break;
             case SubscriptionRejectedEvent:
-                await HandleIncomingSubscriptionRejection(from, presEvent, tasks);
+                HandleOutgoingSubscriptionRejection(from, presEvent.To, presEvent, tasks);
                 break;
             case SubscriptionCancelledEvent:
-                await HandleIncomingSubscriptionCancellation(from, presEvent, tasks);
+                HandleOutgoingSubscriptionCancellation(from, presEvent.To, presEvent, tasks);
                 break;
         }
 
-        return await tasks.Combine();
+        return tasks.Combine();
+    }
+
+    private ValueTask<StatusReports> OnIncomingSubscriptionEvent(SubscriptionEvent presEvent)
+    {
+        var tasks = new List<ValueTask<StatusReports>>();
+
+        var from = presEvent.From;
+        switch(presEvent)
+        {
+            case SubscriptionRequestedEvent:
+                HandleIncomingSubscriptionRequest(from, presEvent, tasks);
+                break;
+            case SubscriptionAcceptedEvent:
+                HandleIncomingSubscriptionAcceptation(from, presEvent, tasks);
+                break;
+            case SubscriptionRejectedEvent:
+                HandleIncomingSubscriptionRejection(from, presEvent, tasks);
+                break;
+            case SubscriptionCancelledEvent:
+                HandleIncomingSubscriptionCancellation(from, presEvent, tasks);
+                break;
+        }
+
+        return tasks.Combine();
     }
 
     enum TargetType

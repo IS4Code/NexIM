@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml.Handlers;
@@ -22,19 +21,11 @@ public class XmppClientSession : ClientSession
 {
     readonly IXmppSession xmpp;
 
-    bool receivesRosterUpdates;
-    ICollection<Contact>? lastUpdatedRoster;
-
     readonly CapabilitiesCache capabilitiesCache = new();
 
     public XmppClientSession(Account account, string? resource, IXmppSession xmpp) : base(account, resource)
     {
         this.xmpp = xmpp;
-    }
-
-    public void SubscribeToRosterUpdates()
-    {
-        receivesRosterUpdates = true;
     }
 
     protected async override ValueTask<StatusCode> Write(Event evnt)
@@ -165,6 +156,23 @@ public class XmppClientSession : ClientSession
             case GeneralQueryData:
                 await WriteExtensions(output, data.Extensions);
                 return StatusCode.Received;
+            
+            case RosterQueryData rosterData:
+                await using(var rosterHandler = await output.RosterQuery(version: rosterData.Tag))
+                {
+                    switch(rosterData)
+                    {
+                        case RosterUpdateData updateData:
+                            await RosterFormatter.WriteTo(updateData.Contact, rosterHandler, false);
+                            break;
+                        case RosterRemoveData removeData:
+                            await RosterFormatter.WriteTo(removeData.Contact, rosterHandler, true);
+                            break;
+                    }
+                    await WriteExtensions(rosterHandler, rosterData.Extensions);
+                }
+                return StatusCode.Received;
+            
             case VCardQueryData vcardData:
                 await using(var vcardHandler = await output.VCard())
                 {
@@ -175,6 +183,7 @@ public class XmppClientSession : ClientSession
                     await WriteExtensions(vcardHandler, data.Extensions);
                 }
                 return StatusCode.Received;
+            
             default:
                 return StatusCode.UnrecognizedRequest;
         }
@@ -333,87 +342,6 @@ public class XmppClientSession : ClientSession
 
             // Store result
             tcs.TrySetResult(handler.GetCapabilities(hashAlgorithm, expectedHash));
-        }
-    }
-
-    public static string GetContactsVersion(ICollection<Contact> contacts)
-    {
-        // New immutable instance each time
-        return unchecked((uint)contacts.GetHashCode()).ToString("x08");
-    }
-
-    bool CheckContactUpdate(Contact contact, ICollection<Contact> current)
-    {
-        if(!receivesRosterUpdates)
-        {
-            // Not interested
-            return false;
-        }
-
-        if(current == lastUpdatedRoster)
-        {
-            // No update
-            return false;
-        }
-
-        lastUpdatedRoster = current;
-
-        if(!contact.SubscriptionState.ApprovedTo)
-        {
-            // Not explicitly added
-            return false;
-        }
-
-        return true;
-    }
-
-    protected async override ValueTask<StatusCode> ContactUpdated(Contact contact, ICollection<Contact> current)
-    {
-        if(!CheckContactUpdate(contact, current))
-        {
-            return StatusCode.Success;
-        }
-
-        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: StanzaType.Set.ToToken()));
-
-        await using var roster = await iq.RosterQuery(GetContactsVersion(current));
-        await SendContact(roster, contact);
-        return StatusCode.Received;
-    }
-
-    protected async override ValueTask<StatusCode> ContactRemoved(Contact contact, ICollection<Contact> current)
-    {
-        if(!CheckContactUpdate(contact, current))
-        {
-            return StatusCode.Success;
-        }
-
-        await using var iq = await xmpp.InfoQuery(new Stanza(From: xmpp.RemoteResource?.Bare, To: xmpp.RemoteResource, Type: StanzaType.Set.ToToken()));
-
-        await using var roster = await iq.RosterQuery(GetContactsVersion(current));
-        await using var item = await roster.Item(contact.Account.ToResource(null), contact.Name, RosterSubscriptionDirection.Remove.ToToken(), null, null);
-        return StatusCode.Received;
-    }
-
-    public static async ValueTask SendContact(IRosterQueryHandler roster, Contact contact)
-    {
-        if(!contact.SubscriptionState.ApprovedTo)
-        {
-            // Invisible
-            return;
-        }
-
-        await using var item = await roster.Item(contact.Account.ToResource(null), contact.Name, contact.SubscriptionState.Direction switch
-        {
-            SubscriptionDirection.To => RosterSubscriptionDirection.To.ToToken(),
-            SubscriptionDirection.From => RosterSubscriptionDirection.From.ToToken(),
-            SubscriptionDirection.Both => RosterSubscriptionDirection.Both.ToToken(),
-            _ => RosterSubscriptionDirection.None.ToToken()
-        }, contact.SubscriptionState.PendingTo ? RosterPendingAction.Subscription.ToToken() : null, contact.SubscriptionState.ApprovedFrom);
-
-        if(contact.Group is { } group)
-        {
-            await item.Group(group);
         }
     }
 }

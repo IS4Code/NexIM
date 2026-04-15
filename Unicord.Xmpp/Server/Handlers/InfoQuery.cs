@@ -35,8 +35,7 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
 
     protected GeneralQueryData GetQuery()
     {
-        return new GeneralQueryData
-        {
+        return new GeneralQueryData {
             Extensions = InnerHandler.ToExtensions()
         };
     }
@@ -48,6 +47,14 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
 
 internal class ResultInfoQuery : InfoQuery
 {
+    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
+    {
+        SetHandled();
+        var handler = this.GetHandler<ResultRosterQuery>();
+        handler.Version = version;
+        return handler;
+    }
+
     protected async override ValueTask<IVCardHandler> OnVCard()
     {
         SetHandled();
@@ -56,8 +63,7 @@ internal class ResultInfoQuery : InfoQuery
 
     protected override Event GetEvent()
     {
-        return new ResponseEvent
-        {
+        return new ResponseEvent {
             Origin = this.GetOrigin(),
             Processing = EventProcessing.Finish(ConstructedTime),
             Data = GetQuery()
@@ -84,6 +90,14 @@ internal abstract class GetSetInfoQuery : InfoQuery
 
 internal class GetInfoQuery : GetSetInfoQuery
 {
+    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
+    {
+        SetHandled();
+        var handler = this.GetHandler<GetRosterQuery>();
+        handler.Version = version;
+        return handler;
+    }
+
     protected async override ValueTask<IVCardHandler> OnVCard()
     {
         SetHandled();
@@ -110,6 +124,14 @@ internal class GetInfoQuery : GetSetInfoQuery
 
 internal class SetInfoQuery : GetSetInfoQuery
 {
+    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
+    {
+        SetHandled();
+        var handler = this.GetHandler<SetRosterQuery>();
+        handler.Version = version;
+        return handler;
+    }
+
     protected async override ValueTask<IVCardHandler> OnVCard()
     {
         SetHandled();
@@ -253,23 +275,11 @@ internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
             throw XmppStanzaException.ServiceUnavailable();
         }
     }
-
-    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
-    {
-        SetHandled();
-        this.EnsureReceiverIsUserAccount();
-        return new GetRosterQuery(version) { Context = Context };
-    }
 }
 
 internal class SetAccountInfoQuery : SetInfoQuery, IInfoQueryHandler
 {
-    protected async override ValueTask<IRosterQueryHandler> OnRosterQuery(string? version)
-    {
-        SetHandled();
-        this.EnsureReceiverIsUserAccount();
-        return this.GetHandler<SetRosterQuery>();
-    }
+
 }
 
 internal class ErrorInfoQuery : InfoQuery

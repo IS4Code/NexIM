@@ -172,7 +172,7 @@ internal static class CommandExtensions
 
     const LoadOptions elementLoadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
 
-    public static async ValueTask Unrecognized(this ICommandHandler handler, XmlReader payloadReader)
+    public static async ValueTask Unrecognized<TContext>(this IPayloadHandler<TContext> handler, XmlReader payloadReader) where TContext : IPayloadHandlerContext
     {
         var element = await XElement.LoadAsync(payloadReader, elementLoadOptions, CancellationToken.None);
         lock(typeof(Console))

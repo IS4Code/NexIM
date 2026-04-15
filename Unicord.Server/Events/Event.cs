@@ -82,6 +82,14 @@ public record struct EventOrigin
     public required LanguageCode? TransactionLanguage { get; set; }
 
     /// <summary>
+    /// Retrieves a new <see cref="EventOrigin"/> instance responding to the event.
+    /// </summary>
+    public EventOrigin RespondFrom(Identifier from)
+    {
+        return this with { From = from, To = From };
+    }
+
+    /// <summary>
     /// Creates an <see cref="EventOrigin"/> instance
     /// between two parties.
     /// </summary>

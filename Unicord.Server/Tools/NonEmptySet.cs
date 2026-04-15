@@ -12,7 +12,7 @@ namespace Unicord.Server.Tools;
 /// </summary>
 /// <typeparam name="T">The type of the elements in the set.</typeparam>
 [StructLayout(LayoutKind.Auto)]
-public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
+public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
 {
     static readonly Comparer<T> comparer = Comparer<T>.Default;
 
@@ -26,6 +26,8 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatab
     }
 
     public int Count => rest.Count + 1;
+
+    bool ICollection<T>.IsReadOnly => true;
 
     private NonEmptySet(T first, ImmutableSortedSet<T> rest)
     {
@@ -218,6 +220,14 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatab
         return String.Join(", ", rest.Prepend(first));
     }
 
+    public void CopyTo(T[] array, int arrayIndex)
+    {
+        foreach(var item in this)
+        {
+            array[arrayIndex++] = item;
+        }
+    }
+
     public Enumerator GetEnumerator()
     {
         return new(first, rest.GetEnumerator());
@@ -231,6 +241,21 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, IEquatab
     IEnumerator IEnumerable.GetEnumerator()
     {
         return GetEnumerator();
+    }
+
+    void ICollection<T>.Add(T item)
+    {
+        throw new NotSupportedException();
+    }
+
+    void ICollection<T>.Clear()
+    {
+        throw new NotSupportedException();
+    }
+
+    bool ICollection<T>.Remove(T item)
+    {
+        throw new NotSupportedException();
     }
 
     [StructLayout(LayoutKind.Auto)]

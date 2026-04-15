@@ -2,8 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Unicord.Server.Accounts.VCards;
 using Unicord.Server.Database;
+using Unicord.Server.Events;
 using Unicord.Server.Tools;
 
 namespace Unicord.Server.Accounts;
@@ -39,6 +41,12 @@ public partial class Account
     internal Account(AccountsContext context, string user, string host, byte[] passwordHash) : this(context.Server, user, host, passwordHash)
     {
 
+    }
+
+    private async ValueTask<StatusReports> Save()
+    {
+        await Server.SaveDatabase();
+        return Report(StatusCode.Success);
     }
 
     public Contact? GetContact(AccountName name)

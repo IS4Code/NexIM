@@ -179,7 +179,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         return handler.Other(payloadReader);
     }
 
-    protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+    protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
     public override ValueTask DisposeAsync() => default;
 
     sealed class NameParser(VCard vcard) : BaseVCardNameHandler<TContext>
@@ -209,7 +209,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref vcard.Suffix, suffix);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -230,7 +230,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref media.BinaryValue, data);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -306,7 +306,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref address.StreetAddress, text);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -355,7 +355,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             }
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -431,7 +431,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref telephone.Number, number);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -467,7 +467,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref email.Identifier, value);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -483,7 +483,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref vcard.Longitude, value);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -500,7 +500,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             return new VCardParser<TContext>(vcard) { Context = Context };
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -519,7 +519,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             }
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -533,7 +533,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             }
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -554,7 +554,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref pronunciation.PhoneticTranscription, text);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -575,7 +575,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref vcard.PrivacyClassification, VCardPrivacyClassification.Confidential);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 
@@ -591,7 +591,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref vcard.CredentialValue, value);
         }
 
-        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
         public override ValueTask DisposeAsync() => default;
     }
 }

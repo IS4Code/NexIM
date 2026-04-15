@@ -25,7 +25,7 @@ partial class Account
         tasks.Add(Server.Post(evnt));
     }
 
-    private async ValueTask HandleOutgoingSubscriptionRequest(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionRequest(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -66,7 +66,7 @@ partial class Account
             }
 
             // Inform of subscribing to contact
-            await ContactUpdate(updated, contacts, tasks);
+            OnContactUpdated(updated, contacts, tasks);
 
             // Pass the event through
             (targetsList ??= new()).Add(targetAccountIdentifier);
@@ -75,7 +75,7 @@ partial class Account
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionRequest(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionRequest(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
@@ -95,7 +95,7 @@ partial class Account
         {
             // Auto-accepted from approved state - update and reply back
 
-            await ContactUpdate(updated, contacts, tasks);
+            OnContactUpdated(updated, contacts, tasks);
 
             OnSubscribed(identifier, tasks);
             return;
@@ -117,7 +117,7 @@ partial class Account
         // TODO Send unavailable? (Privacy)
     }
 
-    private async ValueTask HandleOutgoingSubscriptionAcceptation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionAcceptation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -150,12 +150,12 @@ partial class Account
                 }
 
                 // Only approved - update contact
-                await ContactUpdate(updated, contacts, tasks);
+                OnContactUpdated(updated, contacts, tasks);
                 continue;
             }
 
             // Inform of updated contact
-            await ContactUpdate(updated, contacts, tasks);
+            OnContactUpdated(updated, contacts, tasks);
 
             // Pass the event through
             (targetsList ??= new()).Add(targetAccount.ToIdentifier());
@@ -165,7 +165,7 @@ partial class Account
         OnSubscribed(targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionAcceptation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionAcceptation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
@@ -182,7 +182,7 @@ partial class Account
         }
 
         // Inform of updated contact
-        await ContactUpdate(updated, contacts, tasks);
+        OnContactUpdated(updated, contacts, tasks);
 
         // Route to sessions
         foreach(var session in GetSessions(false))
@@ -191,7 +191,7 @@ partial class Account
         }
     }
 
-    private async ValueTask HandleOutgoingSubscriptionRejection(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionRejection(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? unavailableList = null;
         List<Identifier>? targetsList = null;
@@ -213,7 +213,7 @@ partial class Account
             }
 
             // Inform of updated contact
-            await ContactUpdateOrRemove(previous, updated, contacts, tasks);
+            OnContactUpdateOrRemoved(previous, updated, contacts, tasks);
 
             var targetAccountIdentifier = targetAccount.ToIdentifier();
 
@@ -240,7 +240,7 @@ partial class Account
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionRejection(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionRejection(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
@@ -263,10 +263,10 @@ partial class Account
         }
 
         // Inform of updated contact (must be after)
-        await ContactUpdate(updated, contacts, tasks);
+        OnContactUpdated(updated, contacts, tasks);
     }
 
-    private async ValueTask HandleOutgoingSubscriptionCancellation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionCancellation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
@@ -287,7 +287,7 @@ partial class Account
             }
 
             // Inform of unsubscribing from contact
-            await ContactUpdate(updated, contacts, tasks);
+            OnContactUpdated(updated, contacts, tasks);
 
             // Pass the event through
             (targetsList ??= new()).Add(targetAccount.ToIdentifier());
@@ -296,7 +296,7 @@ partial class Account
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private async ValueTask HandleIncomingSubscriptionCancellation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionCancellation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         if(identifier.Account is not { } senderAccount)
         {
@@ -324,7 +324,7 @@ partial class Account
             tasks.Add(session.Outbound(evnt));
         }
 
-        await ContactUpdateOrRemove(previous, updated, contacts, tasks);
+        OnContactUpdateOrRemoved(previous, updated, contacts, tasks);
 
         // Send as unavailable
         OnUnsubscribed(new(identifier), tasks);

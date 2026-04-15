@@ -15,22 +15,20 @@ internal sealed class GetVCardTemp : BaseDelegatingVCardHandler<CapturingHandler
 
     private DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
 
-    private VCardQueryData GetVCardQuery()
+    private VCardQueryData GetData()
     {
-        return new VCardQueryData
-        {
+        return new VCardQueryData {
             VCard = null,
             Extensions = InnerHandler.ToExtensions()
         };
     }
 
-    private Event GetEvent()
+    private RetrieveEvent GetEvent()
     {
-        return new RetrieveEvent
-        {
+        return new RetrieveEvent {
             Origin = this.GetOrigin(),
             Processing = EventProcessing.Finish(ConstructedTime),
-            Data = GetVCardQuery()
+            Data = GetData()
         };
     }
 
@@ -54,7 +52,7 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
 
     protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
 
-    protected VCardQueryData GetVCardQuery()
+    protected VCardQueryData GetData()
     {
         return new VCardQueryData
         {
@@ -63,7 +61,7 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
         };
     }
 
-    protected abstract Event GetEvent();
+    protected abstract QueryEvent GetEvent();
 
     public async sealed override ValueTask DisposeAsync()
     {
@@ -80,26 +78,24 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
 
 internal sealed class SetVCardTemp : DataVCardTemp
 {
-    protected override Event GetEvent()
+    protected override QueryEvent GetEvent()
     {
-        return new UpdateEvent
-        {
+        return new UpdateEvent {
             Origin = this.GetOrigin(),
             Processing = EventProcessing.Finish(ConstructedTime),
-            Data = GetVCardQuery()
+            Data = GetData()
         };
     }
 }
 
 internal sealed class ResultVCardTemp : DataVCardTemp
 {
-    protected override Event GetEvent()
+    protected override QueryEvent GetEvent()
     {
-        return new ResponseEvent
-        {
+        return new ResponseEvent {
             Origin = this.GetOrigin(),
             Processing = EventProcessing.Finish(ConstructedTime),
-            Data = GetVCardQuery()
+            Data = GetData()
         };
     }
 }

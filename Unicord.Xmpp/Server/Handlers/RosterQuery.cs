@@ -1,132 +1,148 @@
-﻿using System.Threading.Tasks;
-using System.Xml;
-using Unicord.Primitives;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Unicord.Primitives.Xml.Handlers;
 using Unicord.Server.Accounts;
+using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
+using Unicord.Xmpp.Server.Formats;
 
 namespace Unicord.Xmpp.Server.Handlers;
 
-internal class GetRosterQuery : RosterQueryHandler<ICommandContext>
+internal class GetRosterQuery : BaseDelegatingRosterQueryHandler<CapturingHandler<IRosterQueryHandler>, EmptyDisposable, ICommandContext>
 {
-    readonly string? cachedVersion;
+    protected sealed override CapturingHandler<IRosterQueryHandler> InnerHandler { get; } = new();
+    protected sealed override EmptyDisposable Disposable => default;
 
-    public GetRosterQuery(string? version)
+    private DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
+
+    internal string? Version { get; set; }
+
+    private RosterQueryData GetData()
     {
-        cachedVersion = version;
+        return new RosterQueryData {
+            Roster = null,
+            Tag = Version,
+            Extensions = InnerHandler.ToExtensions()
+        };
     }
 
-    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    private RetrieveEvent GetEvent()
     {
-        await this.Unexpected(payloadReader);
+        return new RetrieveEvent {
+            Origin = this.GetOrigin(),
+            Processing = EventProcessing.Finish(ConstructedTime),
+            Data = GetData()
+        };
     }
 
-    public async override ValueTask DisposeAsync()
+    public async sealed override ValueTask DisposeAsync()
     {
-        this.TryGetClientSession()?.SubscribeToRosterUpdates();
-
-        var contacts = this.GetAccount().Contacts;
-
-        // Compute the version
-        var newVersion = XmppClientSession.GetContactsVersion(contacts);
-
-        await using var iq = await this.CreateResponse();
-
-        if(newVersion == cachedVersion)
+        try
         {
-            // No changes
-            return;
+            await base.DisposeAsync();
         }
-
-        await using var roster = await iq.RosterQuery(version: newVersion);
-
-        foreach(var contact in contacts)
+        finally
         {
-            await XmppClientSession.SendContact(roster, contact);
+            this.Post(GetEvent());
         }
     }
 }
 
-internal class SetRosterQuery : BaseRosterQueryHandler<ICommandContext>
+internal abstract class DataRosterQuery : BaseDelegatingRosterQueryHandler<RosterParser<ICommandContext>, EmptyDisposable, ICommandContext>
 {
-    (XmppResource id, string? name, bool remove)? item;
-    string? group;
+    protected sealed override RosterParser<ICommandContext> InnerHandler { get; } = new();
+    protected sealed override EmptyDisposable Disposable => default;
 
-    protected async override ValueTask<IRosterItemHandler> OnItem(XmppResource? identifier, string? name, Token<RosterSubscriptionDirection>? subscription, Token<RosterPendingAction>? pending, bool? subscriptionApproved)
+    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
+
+    internal string? Version { get; set; }
+
+    protected abstract RosterQueryData GetData();
+
+    protected abstract QueryEvent GetEvent();
+
+    public async sealed override ValueTask DisposeAsync()
     {
-        if(identifier is not { } id)
+        try
         {
-            throw XmppStanzaException.BadRequest("JID is missing.");
+            await base.DisposeAsync();
         }
-
-        // TODO verify?
-        id = id.Bare;
-
-        this.SetOnce(ref item, (id, name, subscription?.ToEnum() == RosterSubscriptionDirection.Remove));
-        return new ItemHandler(this);
-    }
-
-    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
-    {
-        await this.Unrecognized(payloadReader);
-    }
-
-    public async override ValueTask DisposeAsync()
-    {
-        if(item is not var (id, name, remove))
+        finally
         {
-            throw XmppStanzaException.BadRequest("Item is missing.");
+            this.Post(GetEvent());
         }
+    }
+}
 
-        var account = this.GetAccount();
-
-        var target = id.Address.ToAccountName();
-        if(remove)
+internal sealed class SetRosterQuery : DataRosterQuery
+{
+    protected override RosterQueryData GetData()
+    {
+        if(InnerHandler.AddedContacts is { } added)
         {
-            if(!await account.RemoveContact(target))
+            // Contacts are added
+            if(!added.TryGetSingle(out var contact) || InnerHandler.RemovedContacts != null)
             {
-                throw XmppStanzaException.ItemNotFound();
+                // Must be only one
+                throw XmppStanzaException.BadRequest();
             }
-        }
-        else
-        {
-            if(!await account.SetContact(new Contact {
-                Account = target,
-                SubscriptionState = SubscriptionState.InitialApprovedTo,
-                Name = name,
-                Group = group
-            }))
-            {
-                throw XmppStanzaException.ItemNotFound();
-            }
-        }
 
-        await this.SendResponse();
+            return new RosterUpdateData {
+                Contact = contact,
+                Roster = null,
+                Tag = Version,
+                Extensions = InnerHandler.ExtensionsHandler.ToExtensions()
+            };
+        }
+        if(InnerHandler.RemovedContacts is { } removed)
+        {
+            // Contacts are removed
+            if(!removed.TryGetSingle(out var contact) || InnerHandler.AddedContacts != null)
+            {
+                // Must be only one
+                throw XmppStanzaException.BadRequest();
+            }
+
+            return new RosterRemoveData {
+                Contact = contact,
+                Roster = null,
+                Tag = Version,
+                Extensions = InnerHandler.ExtensionsHandler.ToExtensions()
+            };
+        }
+        // Missing contacts
+        throw XmppStanzaException.BadRequest();
     }
 
-    sealed class ItemHandler : BaseRosterItemHandler<ICommandContext>
+    protected override QueryEvent GetEvent()
     {
-        readonly SetRosterQuery parent;
+        return new UpdateEvent {
+            Origin = this.GetOrigin(),
+            Processing = EventProcessing.Finish(ConstructedTime),
+            Data = GetData()
+        };
+    }
+}
 
-        public ItemHandler(SetRosterQuery parent)
-        {
-            this.parent = parent;
-            Context = parent.Context;
-        }
+internal sealed class ResultRosterQuery : DataRosterQuery
+{
+    protected override RosterQueryData GetData()
+    {
+        // Ignore removed contacts
+        return new RosterQueryData {
+            Tag = Version,
+            Roster = InnerHandler.AddedContacts ?? (ICollection<Contact>)Array.Empty<Contact>()
+        };
+    }
 
-        protected async override ValueTask OnGroup(string? name)
-        {
-            this.SetOnce(ref parent.group, name);
-        }
-
-        protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
-        {
-            await this.Unrecognized(payloadReader);
-        }
-
-        public override ValueTask DisposeAsync()
-        {
-            return default;
-        }
+    protected override QueryEvent GetEvent()
+    {
+        return new ResponseEvent {
+            Origin = this.GetOrigin(),
+            Processing = EventProcessing.Finish(ConstructedTime),
+            Data = GetData()
+        };
     }
 }

@@ -68,6 +68,9 @@ public abstract class ClientSession : IAsyncDisposable
     /// </summary>
     public LanguageCode? PresenceLanguage => currentPresence.Language;
 
+    public bool ReceivesRosterUpdates { get; private set; }
+    public bool ReceivesPresenceUpdates => Presence.Status.Availability != Availability.Unavailable;
+
     public ClientSession(Account account, string? resource)
     {
         Account = account;
@@ -85,6 +88,11 @@ public abstract class ClientSession : IAsyncDisposable
 
         // TODO Handle when already exists (conflict)
         Account.AddSession(this);
+    }
+
+    private void SubscribeToRosterUpdates()
+    {
+        ReceivesRosterUpdates = true;
     }
 
     static readonly Func<Identifier, PresenceStore, PresenceStore> addFactory = (_, value) => value;
@@ -129,6 +137,11 @@ public abstract class ClientSession : IAsyncDisposable
                 }
 
                 evnt = evnt.WithTo(to);
+                break;
+            
+            case QueryEvent { Data: RosterQueryData }:
+                // Enables receiving roster events
+                SubscribeToRosterUpdates();
                 break;
         }
         return await Account.Post(evnt);
@@ -195,44 +208,52 @@ public abstract class ClientSession : IAsyncDisposable
 
     public async ValueTask<StatusReports> Outbound(Event evnt)
     {
-        if(evnt is StatusRequestEvent)
+        switch(evnt)
         {
-            // Respond with the last known presence immediately
-            if(!directedPresence.TryGetValue(evnt.From, out var presenceStore))
-            {
-                if(!Account.CanSharePresenceWith(evnt.From))
+            case StatusRequestEvent:
+                // Respond with the last known presence immediately
+                if(!directedPresence.TryGetValue(evnt.From, out var presenceStore))
                 {
-                    // Only share undirected presence with contacts
-                    return Report(StatusCode.SubscriptionRequired);
+                    if(!Account.CanSharePresenceWith(evnt.From))
+                    {
+                        // Only share undirected presence with contacts
+                        return Report(StatusCode.SubscriptionRequired);
+                    }
+                    presenceStore = currentPresence;
                 }
-                presenceStore = currentPresence;
-            }
-            if(!ReportUnavailableStatus && presenceStore.Data.Status.Availability == Availability.Unavailable)
-            {
-                // Not needed to report unavailable
-                return Report(StatusCode.Success);
-            }
-            return await Inbound(new StatusUpdateEvent {
-                Origin = EventOrigin.FromTo(Identifier, evnt.From, presenceStore.Language),
-                Processing = EventProcessing.NewInternal(),
-                Data = presenceStore.Data
-            });
-        }
+                if(!ReportUnavailableStatus && presenceStore.Data.Status.Availability == Availability.Unavailable)
+                {
+                    // Not needed to report unavailable
+                    return Report(StatusCode.Success);
+                }
+                return await Inbound(new StatusUpdateEvent {
+                    Origin = EventOrigin.FromTo(Identifier, evnt.From, presenceStore.Language),
+                    Processing = EventProcessing.NewInternal(),
+                    Data = presenceStore.Data
+                });
 
-        if(evnt is PresenceEvent && !evnt.To.Contains(Identifier) && Presence.Status.Availability == Availability.Unavailable)
-        {
-            // Not available for undirected presence
-            // TODO Invisible?
-            return Report(StatusCode.Unavailable);
+            case PresenceEvent { Data: var data } when directedPresence.ContainsKey(evnt.From):
+                if(data?.Status.Availability == Availability.Unavailable)
+                {
+                    // No longer relevant to receive
+                    directedPresence.TryRemove(evnt.From, out _);
+                }
+                break;
+
+            case PresenceEvent when !ReceivesPresenceUpdates:
+                // Not available for undirected presence
+                // TODO Invisible?
+                return Report(StatusCode.Unavailable);
+
+            case QueryEvent { Data: RosterQueryData } when !ReceivesRosterUpdates:
+                // Not interested in roster updates
+                return Report(StatusCode.Success);
         }
 
         return new StatusReport(Identifier, await Write(evnt));
     }
 
     protected abstract ValueTask<StatusCode> Write(Event evnt);
-
-    protected internal abstract ValueTask<StatusCode> ContactUpdated(Contact contact, ICollection<Contact> current);
-    protected internal abstract ValueTask<StatusCode> ContactRemoved(Contact contact, ICollection<Contact> current);
 
     private async ValueTask ProbeContacts(PresenceData data, LanguageCode? dataLanguage)
     {

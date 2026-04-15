@@ -5,7 +5,7 @@ namespace Unicord.Server.Accounts;
 
 using static SubscriptionLevel;
 
-public record Contact
+public record Contact : IComparable<Contact>
 {
     public required AccountName Account { get; init; }
     public required SubscriptionState SubscriptionState { get; init; }
@@ -31,6 +31,15 @@ public record Contact
         }
         return this with { SubscriptionState = newState };
     }
+
+    int IComparable<Contact>.CompareTo(Contact? other)
+    {
+        if(other is null)
+        {
+            return 1;
+        }
+        return Account.CompareTo(other.Account);
+    }
 }
 
 [StructLayout(LayoutKind.Auto)]
@@ -39,21 +48,52 @@ public readonly record struct SubscriptionState(
     SubscriptionLevel To
 )
 {
-    public bool AcceptedFrom => (Accepted & From) != 0;
-    public bool AcceptedTo => (Accepted & To) != 0;
-    public bool ApprovedFrom => (Approved & From) != 0;
-    public bool ApprovedTo => (Approved & To) != 0;
-    public bool PendingFrom => (Pending & From) != 0;
-    public bool PendingTo => (Pending & To) != 0;
-
-    private SubscriptionDirection GetDirection(SubscriptionLevel level)
-    {
-        return
-            ((From & level) != 0 ? SubscriptionDirection.From : 0) |
-            ((To & level) != 0 ? SubscriptionDirection.To : 0);
+    public bool AcceptedFrom {
+        get => (Accepted & From) != 0;
+        init => From |= value ? Accepted : 0;
+    }
+    public bool AcceptedTo {
+        get => (Accepted & To) != 0;
+        init => To |= value ? Accepted : 0;
+    }
+    public bool ApprovedFrom {
+        get => (Approved & From) != 0;
+        init => From |= value ? Approved : 0;
+    }
+    public bool ApprovedTo {
+        get => (Approved & To) != 0;
+        init => To |= value ? Approved : 0;
+    }
+    public bool PendingFrom {
+        get => (Pending & From) != 0;
+        init => From |= value ? Pending : 0;
+    }
+    public bool PendingTo {
+        get => (Pending & To) != 0;
+        init => To |= value ? Pending : 0;
     }
 
-    public SubscriptionDirection Direction => GetDirection(Accepted);
+    public SubscriptionDirection Direction {
+        get =>
+            ((From & Accepted) != 0 ? SubscriptionDirection.From : 0) |
+            ((To & Accepted) != 0 ? SubscriptionDirection.To : 0);
+
+        init {
+            switch(value)
+            {
+                case SubscriptionDirection.To:
+                    To |= Accepted;
+                    break;
+                case SubscriptionDirection.From:
+                    From |= Accepted;
+                    break;
+                case SubscriptionDirection.Both:
+                    To |= Accepted;
+                    From |= Accepted;
+                    break;
+            }
+        }
+    }
 
     /// <summary>
     /// The initial state of a new contact added by the user.

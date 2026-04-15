@@ -1,4 +1,6 @@
-﻿using Unicord.Server.Accounts.VCards;
+﻿using System.Collections.Generic;
+using Unicord.Server.Accounts;
+using Unicord.Server.Accounts.VCards;
 
 namespace Unicord.Server.Events;
 
@@ -15,4 +17,20 @@ public sealed record GeneralQueryData : QueryData;
 public sealed record VCardQueryData : QueryData
 {
     public required VCard? VCard { get; init; }
+}
+
+public record RosterQueryData : QueryData
+{
+    public required ICollection<Contact>? Roster { get; init; }
+    public required string? Tag { get; init; }
+}
+
+public sealed record RosterUpdateData : RosterQueryData
+{
+    public required Contact Contact { get; init; }
+}
+
+public sealed record RosterRemoveData : RosterQueryData
+{
+    public required Contact Contact { get; init; }
 }
