@@ -159,17 +159,12 @@ partial class Account : IEventHandler
         }
     }
 
-    private ValueTask<StatusReports> OnQuery(Event evnt)
+    private ValueTask<StatusReports>? OnOwnerQuery(Event evnt)
     {
         switch(evnt)
         {
             case RetrieveEvent { Data: RosterQueryData data }:
                 // Retrieving the roster
-                if(evnt.From.Account != Name)
-                {
-                    // Only the owner can send
-                    return new(Report(StatusCode.Unauthorized));
-                }
                 var roster = contacts.Snapshot.Values;
                 if(data.Roster == roster || UInt32.TryParse(data.Tag, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var tag) && tag == GetRosterVersion(roster))
                 {
@@ -192,29 +187,14 @@ partial class Account : IEventHandler
 
             case UpdateEvent { Data: RosterUpdateData data }:
                 // Updating a contact
-                if(evnt.From.Account != Name)
-                {
-                    // Only the owner can send
-                    return new(Report(StatusCode.Unauthorized));
-                }
                 return UpdateContact(data.Contact);
 
             case UpdateEvent { Data: RosterRemoveData data }:
                 // Removing a contact
-                if(evnt.From.Account != Name)
-                {
-                    // Only the owner can send
-                    return new(Report(StatusCode.Unauthorized));
-                }
                 return RemoveContact(data.Contact.Account);
 
             case RetrieveEvent { Data: PrivateStorageData data }:
                 // Retrieving private data
-                if(evnt.From.Account != Name)
-                {
-                    // Only the owner can send
-                    return new(Report(StatusCode.Unauthorized));
-                }
                 if(!privateStorage.TryGetValue(data.Key, out var storedData))
                 {
                     // Not present
@@ -228,14 +208,33 @@ partial class Account : IEventHandler
 
             case UpdateEvent { Data: PrivateStorageData data }:
                 // Updating private data
-                if(evnt.From.Account != Name)
-                {
-                    // Only the owner can send
-                    return new(Report(StatusCode.Unauthorized));
-                }
                 privateStorage.SetItem(data.Key, data);
                 return Save();
+            
+            case UpdateEvent { Data: VCardQueryData vcardData }:
+                // Updating vCard
+                VCard = vcardData.VCard;
+                return Save();
 
+            default:
+                return null;
+        }
+    }
+
+    private ValueTask<StatusReports> OnQuery(Event evnt)
+    {
+        if(evnt.From.Account == Name)
+        {
+            // Event comes from owner
+            if(OnOwnerQuery(evnt) is { } task)
+            {
+                // Recognized
+                return task;
+            }
+        }
+
+        switch(evnt)
+        {
             case RetrieveEvent { Data: VCardQueryData }:
                 // Retrieving a VCard
                 var vcard = VCard;
@@ -259,16 +258,10 @@ partial class Account : IEventHandler
                         VCard = vcard
                     }
                 });
-            
-            case UpdateEvent { Data: VCardQueryData vcardData }:
-                // Updating vCard
-                if(evnt.From.Account != Name)
-                {
-                    // Only the owner can send
-                    return new(Report(StatusCode.Unauthorized));
-                }
-                VCard = vcardData.VCard;
-                return Save();
+
+            case QueryEvent { Data: RosterQueryData or PrivateStorageData or VCardQueryData }:
+                // Supported but must be owner
+                return new(Report(StatusCode.Unauthorized));
 
             default:
                 // Can't process arbitrary event
