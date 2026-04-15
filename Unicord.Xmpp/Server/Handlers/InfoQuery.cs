@@ -11,9 +11,10 @@ namespace Unicord.Xmpp.Server.Handlers;
 
 internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHandler<IInfoQueryHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
-    bool? handled;
+    bool handled;
 
-    protected bool Handled => handled == true || InnerHandler.Calls.Count != 0;
+    protected bool Handled => handled;
+    protected bool Recognized => InnerHandler.Calls.Count == 0;
 
     protected sealed override CapturingHandler<IInfoQueryHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -42,7 +43,13 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
 
     protected abstract Event GetEvent();
 
-    public abstract override ValueTask DisposeAsync();
+    public async override ValueTask DisposeAsync()
+    {
+        if(!Recognized)
+        {
+            this.Post(GetEvent());
+        }
+    }
 }
 
 internal class ResultInfoQuery : InfoQuery
@@ -69,11 +76,6 @@ internal class ResultInfoQuery : InfoQuery
             Data = GetQuery()
         };
     }
-
-    public async override ValueTask DisposeAsync()
-    {
-        this.Post(GetEvent());
-    }
 }
 
 internal abstract class GetSetInfoQuery : InfoQuery
@@ -84,7 +86,7 @@ internal abstract class GetSetInfoQuery : InfoQuery
         {
             throw XmppStanzaException.BadRequest();
         }
-        this.Post(GetEvent());
+        await base.DisposeAsync();
     }
 }
 
@@ -106,8 +108,7 @@ internal class GetInfoQuery : GetSetInfoQuery
 
     protected override Event GetEvent()
     {
-        return new RetrieveEvent
-        {
+        return new RetrieveEvent {
             Origin = this.GetOrigin(),
             Processing = EventProcessing.Finish(ConstructedTime),
             Data = GetQuery()
@@ -140,8 +141,7 @@ internal class SetInfoQuery : GetSetInfoQuery
 
     protected override Event GetEvent()
     {
-        return new UpdateEvent
-        {
+        return new UpdateEvent {
             Origin = this.GetOrigin(),
             Processing = EventProcessing.Finish(ConstructedTime),
             Data = GetQuery()
@@ -297,8 +297,7 @@ internal class ErrorInfoQuery : InfoQuery
         {
             throw XmppStanzaException.BadRequest();
         }
-        return new ErrorEvent
-        {
+        return new ErrorEvent {
             Origin = this.GetOrigin(),
             Processing = EventProcessing.Finish(ConstructedTime),
             Data = errorParser.GetError(GetQuery())
