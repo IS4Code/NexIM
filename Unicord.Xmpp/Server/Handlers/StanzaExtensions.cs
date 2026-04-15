@@ -43,7 +43,7 @@ internal static class StanzaExtensions
     {
         return new() {
             From = handler.GetSender().ToIdentifier(),
-            To = (handler.GetRecipient() ?? handler.GetLocalResource()).ToIdentifier(),
+            To = (handler.GetRecipient() ?? handler.GetRemoteResource().Bare).ToIdentifier(),
             TransactionIdentifier = handler.GetIdentifier()?.ToIdentifier(),
             TransactionLanguage = handler.GetStanza().Language
         };
