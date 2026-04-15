@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Xml.Linq;
 using Unicord.Server.Accounts;
 using Unicord.Server.Accounts.VCards;
 
@@ -33,4 +34,12 @@ public sealed record RosterUpdateData : RosterQueryData
 public sealed record RosterRemoveData : RosterQueryData
 {
     public required Contact Contact { get; init; }
+}
+
+public sealed record PrivateStorageData : QueryData
+{
+    public required string KeyName { get; init; }
+    public required string KeyNamespace { get; init; }
+
+    public XName Key => XName.Get(KeyName, KeyNamespace);
 }

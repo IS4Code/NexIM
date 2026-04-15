@@ -35,6 +35,9 @@ public interface IInfoQueryHandler : IStanzaHandler
 
     [Name("vCard", VCardTemp)]
     ValueTask<IVCardHandler> VCard();
+
+    [Name("query", "jabber:iq:private")]
+    ValueTask<IPrivateStorageHandler> PrivateQuery();
 }
 
 [ComplexType, Namespace(IqRoster)]
@@ -107,4 +110,10 @@ public interface ITimeHandler : IPayloadHandler
 
     [Name("utc")]
     ValueTask UtcTime(DateTime? time);
+}
+
+[ComplexType]
+public interface IPrivateStorageHandler : IPayloadHandler
+{
+
 }

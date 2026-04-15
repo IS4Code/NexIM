@@ -6,6 +6,22 @@ namespace Unicord.Server.Tools;
 
 internal static class SnapshotDictionaryExtensions
 {
+    static class Storage<TKey, TValue> where TKey : notnull where TValue : class
+    {
+        public static readonly Func<TKey, TValue, TValue?> SimpleAddFactory = (key, arg) => arg;
+        public static readonly Func<TKey, TValue, TValue, TValue?> SimpleUpdateFactory = (key, previous, arg) => arg;
+    }
+
+    public static void SetItem<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, TValue value) where TKey : notnull where TValue : class
+    {
+        SetItem(ref dictionary, key, value, out _, out _, out _);
+    }
+
+    public static void SetItem<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, TValue value, out TValue? previous, out TValue? updated, out IDictionary<TKey, TValue> snapshot) where TKey : notnull where TValue : class
+    {
+        AddOrUpdate(ref dictionary, key, Storage<TKey, TValue>.SimpleAddFactory, Storage<TKey, TValue>.SimpleUpdateFactory, out previous, out updated, out snapshot, value);
+    }
+
     public static bool AddOrUpdate<TKey, TValue, TArg>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue?> addFactory, Func<TKey, TValue, TArg, TValue?> updateFactory, out TValue? previous, out TValue? updated, out IDictionary<TKey, TValue> snapshot, TArg arg) where TKey : notnull where TValue : class
     {
         while(true)

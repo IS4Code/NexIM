@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading.Tasks;
 using Unicord.Server.Events;
+using Unicord.Server.Tools;
 
 namespace Unicord.Server.Accounts;
 
@@ -14,18 +16,23 @@ partial class Account : IEventHandler
     readonly Func<TargetType, Identifiers, PresenceEvent, ValueTask<StatusReports>> presenceTarget;
     readonly Func<TargetType, Identifiers, Event, ValueTask<StatusReports>> generalTarget;
 
-    private void InitEvents(out Func<Identifier, TargetType> router, out Func<TargetType, Identifiers, MessageEvent, ValueTask<StatusReports>> messageTarget, out Func<TargetType, Identifiers, PresenceEvent, ValueTask<StatusReports>> presenceTarget, out Func<TargetType, Identifiers, Event, ValueTask<StatusReports>> generalTarget)
-    {
-        messageTarget = RouteMessage;
-        presenceTarget = RoutePresence;
-        generalTarget = RouteEvent;
-        router =
-            identifier =>
-                identifier.Account == Name
-                ? identifier.Resource != null
-                ? TargetType.Sessions
-                : TargetType.Account
-                : TargetType.Server;
+    private ValueTuple Events {
+        [MemberNotNull(nameof(messageTarget))]
+        [MemberNotNull(nameof(presenceTarget))]
+        [MemberNotNull(nameof(generalTarget))]
+        [MemberNotNull(nameof(router))]
+        init {
+            messageTarget = RouteMessage;
+            presenceTarget = RoutePresence;
+            generalTarget = RouteEvent;
+            router =
+                identifier =>
+                    identifier.Account == Name
+                    ? identifier.Resource != null
+                    ? TargetType.Sessions
+                    : TargetType.Account
+                    : TargetType.Server;
+        }
     }
 
     public ValueTask<StatusReports> Post(Event evnt)
@@ -160,7 +167,7 @@ partial class Account : IEventHandler
                 // Retrieving the roster
                 if(evnt.From.Account != Name)
                 {
-                    // Only the owner can view
+                    // Only the owner can send
                     return new(Report(StatusCode.Unauthorized));
                 }
                 var roster = contacts.Snapshot.Values;
@@ -185,11 +192,49 @@ partial class Account : IEventHandler
 
             case UpdateEvent { Data: RosterUpdateData data }:
                 // Updating a contact
+                if(evnt.From.Account != Name)
+                {
+                    // Only the owner can send
+                    return new(Report(StatusCode.Unauthorized));
+                }
                 return UpdateContact(data.Contact);
 
             case UpdateEvent { Data: RosterRemoveData data }:
                 // Removing a contact
+                if(evnt.From.Account != Name)
+                {
+                    // Only the owner can send
+                    return new(Report(StatusCode.Unauthorized));
+                }
                 return RemoveContact(data.Contact.Account);
+
+            case RetrieveEvent { Data: PrivateStorageData data }:
+                // Retrieving private data
+                if(evnt.From.Account != Name)
+                {
+                    // Only the owner can send
+                    return new(Report(StatusCode.Unauthorized));
+                }
+                if(!privateStorage.TryGetValue(data.Key, out var storedData))
+                {
+                    // Not present
+                    return new(Report(StatusCode.NotFound));
+                }
+                return Post(new ResponseEvent {
+                    Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
+                    Processing = EventProcessing.Create(),
+                    Data = storedData
+                });
+
+            case UpdateEvent { Data: PrivateStorageData data }:
+                // Updating private data
+                if(evnt.From.Account != Name)
+                {
+                    // Only the owner can send
+                    return new(Report(StatusCode.Unauthorized));
+                }
+                privateStorage.SetItem(data.Key, data);
+                return Save();
 
             case RetrieveEvent { Data: VCardQueryData }:
                 // Retrieving a VCard
@@ -213,16 +258,17 @@ partial class Account : IEventHandler
                     Data = new VCardQueryData {
                         VCard = vcard
                     }
-                });;
+                });
             
             case UpdateEvent { Data: VCardQueryData vcardData }:
+                // Updating vCard
                 if(evnt.From.Account != Name)
                 {
-                    // Only the owner can modify
+                    // Only the owner can send
                     return new(Report(StatusCode.Unauthorized));
                 }
                 VCard = vcardData.VCard;
-                return new(Report(StatusCode.Success));
+                return Save();
 
             default:
                 // Can't process arbitrary event

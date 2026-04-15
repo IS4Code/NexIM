@@ -9,7 +9,7 @@ using System.Threading;
 namespace Unicord.Server.Tools;
 
 [StructLayout(LayoutKind.Auto)]
-internal struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>, IEquatable<SnapshotDictionary<TKey, TValue>> where TKey : notnull
+internal partial struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>, IEquatable<SnapshotDictionary<TKey, TValue>> where TKey : notnull
 {
     static readonly ImmutableDictionary<TKey, TValue> defaultStorage = ImmutableDictionary<TKey, TValue>.Empty;
 
@@ -27,9 +27,9 @@ internal struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TVa
         };
     }
 
-    public IDictionary<TKey, TValue> CreateBuilder()
+    private SnapshotDictionary(ImmutableDictionary<TKey, TValue>.Builder builder)
     {
-        return storage.ToBuilder();
+        _storage = builder.ToImmutable();
     }
 
     public readonly Enumerator GetEnumerator()

@@ -1,7 +1,9 @@
-﻿using MessagePack;
+﻿using System;
+using MessagePack;
 using Microsoft.EntityFrameworkCore;
 using Unicord.Server.Accounts;
 using Unicord.Server.Accounts.VCards;
+using Unicord.Server.Events;
 
 namespace Unicord.Server.Database;
 
@@ -50,6 +52,16 @@ internal class AccountsContext : DbContext
                     x => new((SubscriptionLevel)(x & 0xFF), (SubscriptionLevel)(x >> 8))
                 );
             });
+
+            e.Ignore(x => x.PrivateStorage);
+            e.OwnsMany(x => x.PrivateStorageBuilder, e => {
+                e.HasKey(x => new { x.KeyNamespace, x.KeyName });
+
+                e.Property(x => x.Extensions).HasConversion(
+                    x => SaveExtensions(x),
+                    x => LoadExtensions(x)
+                );
+            });
         });
     }
 
@@ -71,5 +83,25 @@ internal class AccountsContext : DbContext
             return null;
         }
         return MessagePackSerializer.Deserialize<VCard>(data, vcardSerializerOptions);
+    }
+
+    static readonly MessagePackSerializerOptions extensionsSerializerOptions = MessagePackSerializerOptions.Standard;
+
+    private static byte[] SaveExtensions(EventExtensions extensions)
+    {
+        if(extensions.IsEmpty)
+        {
+            return Array.Empty<byte>();
+        }
+        return MessagePackSerializer.Serialize(extensions, extensionsSerializerOptions);
+    }
+
+    private static EventExtensions LoadExtensions(byte[]? data)
+    {
+        if(data is null or { Length: 0 })
+        {
+            return default;
+        }
+        return MessagePackSerializer.Deserialize<EventExtensions>(data, extensionsSerializerOptions);
     }
 }

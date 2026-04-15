@@ -19,8 +19,6 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
     protected sealed override CapturingHandler<IInfoQueryHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
-
     protected void SetHandled()
     {
         this.SetOnce(ref handled, true);
@@ -62,6 +60,12 @@ internal class ResultInfoQuery : InfoQuery
         return handler;
     }
 
+    protected async override ValueTask<IPrivateStorageHandler> OnPrivateQuery()
+    {
+        SetHandled();
+        return this.GetHandler<ResultPrivateStorage>();
+    }
+
     protected async override ValueTask<IVCardHandler> OnVCard()
     {
         SetHandled();
@@ -72,7 +76,7 @@ internal class ResultInfoQuery : InfoQuery
     {
         return new ResponseEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetQuery()
         };
     }
@@ -100,6 +104,12 @@ internal class GetInfoQuery : GetSetInfoQuery
         return handler;
     }
 
+    protected async override ValueTask<IPrivateStorageHandler> OnPrivateQuery()
+    {
+        SetHandled();
+        return this.GetHandler<GetPrivateStorage>();
+    }
+
     protected async override ValueTask<IVCardHandler> OnVCard()
     {
         SetHandled();
@@ -110,7 +120,7 @@ internal class GetInfoQuery : GetSetInfoQuery
     {
         return new RetrieveEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetQuery()
         };
     }
@@ -133,6 +143,12 @@ internal class SetInfoQuery : GetSetInfoQuery
         return handler;
     }
 
+    protected async override ValueTask<IPrivateStorageHandler> OnPrivateQuery()
+    {
+        SetHandled();
+        return this.GetHandler<SetPrivateStorage>();
+    }
+
     protected async override ValueTask<IVCardHandler> OnVCard()
     {
         SetHandled();
@@ -143,7 +159,7 @@ internal class SetInfoQuery : GetSetInfoQuery
     {
         return new UpdateEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetQuery()
         };
     }
@@ -299,7 +315,7 @@ internal class ErrorInfoQuery : InfoQuery
         }
         return new ErrorEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = errorParser.GetError(GetQuery())
         };
     }

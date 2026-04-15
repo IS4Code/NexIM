@@ -48,8 +48,6 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
     protected sealed override VCardParser<ICommandContext> InnerHandler { get; } = new(new());
     protected sealed override EmptyDisposable Disposable => default;
 
-    protected DateTimeOffset ConstructedTime { get; } = DateTimeOffset.UtcNow;
-
     protected VCardQueryData GetData()
     {
         return new VCardQueryData
@@ -80,7 +78,7 @@ internal sealed class SetVCardTemp : DataVCardTemp
     {
         return new UpdateEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetData()
         };
     }
@@ -92,7 +90,7 @@ internal sealed class ResultVCardTemp : DataVCardTemp
     {
         return new ResponseEvent {
             Origin = this.GetOrigin(),
-            Processing = EventProcessing.Finish(ConstructedTime),
+            Processing = this.GetProcessing(),
             Data = GetData()
         };
     }

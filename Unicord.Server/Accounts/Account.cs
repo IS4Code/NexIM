@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Unicord.Server.Accounts.VCards;
 using Unicord.Server.Database;
 using Unicord.Server.Events;
@@ -23,19 +23,20 @@ public partial class Account
     public VCard? VCard { get; set; }
 
     SnapshotDictionary<AccountName, Contact> contacts = default;
-
     public ICollection<Contact> Contacts => contacts.Snapshot.Values;
 
-    internal ContactsBuilderCollection ContactsBuilder => new(this);
+    SnapshotDictionary<XName, PrivateStorageData> privateStorage = default;
+    public ICollection<PrivateStorageData> PrivateStorage => privateStorage.Snapshot.Values;
 
     public Account(Server server, string user, string host, byte[] passwordHash)
     {
+        Events = default;
+        Collections = default;
+
         Server = server;
         User = user;
         Host = host;
         PasswordHash = passwordHash;
-
-        InitEvents(out router, out messageTarget, out presenceTarget, out generalTarget);
     }
 
     internal Account(AccountsContext context, string user, string host, byte[] passwordHash) : this(context.Server, user, host, passwordHash)
@@ -235,62 +236,5 @@ public partial class Account
     public bool TrySetCancelledSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
     {
         return AddOrUpdateContact(name, addTrySetCancelledSubscriptionTo, updateTrySetCancelledSubscriptionTo, out previous, out updated, out finalContacts);
-    }
-
-    internal sealed class ContactsBuilderCollection(Account account) : ICollection<Contact>
-    {
-        readonly IDictionary<AccountName, Contact> data = account.contacts.CreateBuilder();
-
-        public int Count => data.Count;
-
-        public bool IsReadOnly => false;
-
-        private void Update()
-        {
-            // TODO Avoid replacing every time
-            account.contacts = new(data);
-        }
-
-        public void Add(Contact item)
-        {
-            data.Add(item.Account, item);
-            Update();
-        }
-
-        public void Clear()
-        {
-            data.Clear();
-            Update();
-        }
-
-        public bool Contains(Contact item)
-        {
-            return data.Contains(new(item.Account, item));
-        }
-
-        public void CopyTo(Contact[] array, int arrayIndex)
-        {
-            data.Values.CopyTo(array, arrayIndex);
-        }
-
-        public bool Remove(Contact item)
-        {
-            if(data.Remove(new KeyValuePair<AccountName, Contact>(item.Account, item)))
-            {
-                Update();
-                return true;
-            }
-            return false;
-        }
-
-        public IEnumerator<Contact> GetEnumerator()
-        {
-            return data.Values.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
     }
 }
