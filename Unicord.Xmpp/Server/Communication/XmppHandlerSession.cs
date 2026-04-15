@@ -214,36 +214,37 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             return null;
         }
 
-        return Inner();
-        async ValueTask Inner()
-        {
-            IStreamHandler errorHandler = this;
-            var stanza = new Stanza(Type: StanzaType.Error.ToToken(), Identifier: lastStanza.Identifier ?? default);
+        return WriteException(exception, lastStanza.To, lastStanzaKind);
+    }
 
-            IStanzaHandler command;
-            switch(lastStanzaKind)
-            {
-                case StanzaKind.Message:
-                    command = await errorHandler.Message(stanza);
-                    break;
-                case StanzaKind.Presence:
-                    command = await errorHandler.Presence(stanza);
-                    break;
-                case StanzaKind.InfoQuery:
-                    command = await errorHandler.InfoQuery(stanza);
-                    break;
-                default:
-                    throw new InvalidOperationException("Invalid stanza type.");
-            }
-            try
-            {
-                await using var err = await command.Error(exception.Type?.ToToken(), exception.Code, LocalResource);
-                await exception.Output(err);
-            }
-            finally
-            {
-                await command.DisposeAsync();
-            }
+    async ValueTask WriteException(XmppStanzaException exception, XmppResource? from, StanzaKind lastStanzaKind)
+    {
+        IStreamHandler errorHandler = this;
+        var stanza = new Stanza(Type: StanzaType.Error.ToToken(), From: from, To: lastStanza.From, Identifier: lastStanza.Identifier ?? default);
+
+        IStanzaHandler command;
+        switch(lastStanzaKind)
+        {
+            case StanzaKind.Message:
+                command = await errorHandler.Message(stanza);
+                break;
+            case StanzaKind.Presence:
+                command = await errorHandler.Presence(stanza);
+                break;
+            case StanzaKind.InfoQuery:
+                command = await errorHandler.InfoQuery(stanza);
+                break;
+            default:
+                throw new InvalidOperationException("Invalid stanza type.");
+        }
+        try
+        {
+            await using var err = await command.Error(exception.Type?.ToToken(), exception.Code, LocalResource);
+            await exception.Output(err);
+        }
+        finally
+        {
+            await command.DisposeAsync();
         }
     }
 
@@ -291,13 +292,10 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             {
                 foreach(var evnt in eventsToSend)
                 {
-                    foreach(var result in await session.Inbound(evnt))
+                    var result = await session.Inbound(evnt);
+                    foreach(var report in result)
                     {
-                        // TODO Report multiple errors
-                        if(result.Code.ToStanzaException() is { } exception)
-                        {
-                            throw exception;
-                        }
+                        await HandleReport(evnt, report);
                     }
                 }
             }
@@ -305,6 +303,55 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         finally
         {
             eventsToSend.Clear();
+        }
+    }
+
+    async ValueTask HandleReport(Event sourceEvent, StatusReport report)
+    {
+        if(!sourceEvent.To.Contains(report.Source))
+        {
+            // Not recipient
+            return;
+        }
+
+        if(lastStanzaKind is not { } stanzaKind)
+        {
+            // Unknown kind
+            return;
+        }
+
+        if(lastStanza.Type?.ToEnum() is StanzaType.Result or StanzaType.Error)
+        {
+            // Must not react
+            return;
+        }
+
+        switch(report.Code)
+        {
+            case StatusCode.Received:
+                // No response needed
+                return;
+            
+            case StatusCode.Success when stanzaKind == StanzaKind.InfoQuery:
+            {
+                // Confirm
+                IStreamHandler handler = this;
+                await using var iq = await handler.InfoQuery(new Stanza(StanzaType.Result.ToToken(), report.Source.ToResource(), lastStanza.From, lastStanza.Identifier ?? default));
+                return;
+            }
+            
+            case StatusCode.SubscriptionRequired when stanzaKind == StanzaKind.Presence:
+            {
+                // Report as "unsubscribed"
+                IStreamHandler handler = this;
+                await using var iq = await handler.Presence(new Stanza(StanzaType.Unsubscribed.ToToken(), report.Source.ToResource(), lastStanza.From));
+                return;
+            }
+        }
+
+        if(report.Code.ToStanzaException() is { } exception)
+        {
+            await WriteException(exception, report.Source.ToResource(), stanzaKind);
         }
     }
 
