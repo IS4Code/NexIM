@@ -1,6 +1,9 @@
 ﻿using System;
 using MessagePack;
+using MessagePack.Formatters;
+using MessagePack.Resolvers;
 using Microsoft.EntityFrameworkCore;
+using Unicord.Primitives;
 using Unicord.Server.Accounts;
 using Unicord.Server.Accounts.VCards;
 using Unicord.Server.Events;
@@ -65,7 +68,7 @@ internal class AccountsContext : DbContext
         });
     }
 
-    static readonly MessagePackSerializerOptions vcardSerializerOptions = MessagePackSerializerOptions.Standard;
+    static readonly MessagePackSerializerOptions serializerOptions = CreateOptions(MessagePackSerializerOptions.Standard);
 
     private static byte[]? SaveVCard(VCard? vcard)
     {
@@ -73,7 +76,7 @@ internal class AccountsContext : DbContext
         {
             return null;
         }
-        return MessagePackSerializer.Serialize(vcard, vcardSerializerOptions);
+        return MessagePackSerializer.Serialize(vcard, serializerOptions);
     }
 
     private static VCard? LoadVCard(byte[]? data)
@@ -82,10 +85,8 @@ internal class AccountsContext : DbContext
         {
             return null;
         }
-        return MessagePackSerializer.Deserialize<VCard>(data, vcardSerializerOptions);
+        return MessagePackSerializer.Deserialize<VCard>(data, serializerOptions);
     }
-
-    static readonly MessagePackSerializerOptions extensionsSerializerOptions = MessagePackSerializerOptions.Standard;
 
     private static byte[] SaveExtensions(EventExtensions extensions)
     {
@@ -93,7 +94,7 @@ internal class AccountsContext : DbContext
         {
             return Array.Empty<byte>();
         }
-        return MessagePackSerializer.Serialize(extensions, extensionsSerializerOptions);
+        return MessagePackSerializer.Serialize(extensions, serializerOptions);
     }
 
     private static EventExtensions LoadExtensions(byte[]? data)
@@ -102,6 +103,36 @@ internal class AccountsContext : DbContext
         {
             return default;
         }
-        return MessagePackSerializer.Deserialize<EventExtensions>(data, extensionsSerializerOptions);
+        return MessagePackSerializer.Deserialize<EventExtensions>(data, serializerOptions);
+    }
+
+    static MessagePackSerializerOptions CreateOptions(MessagePackSerializerOptions from)
+    {
+        return from.WithResolver(
+            CompositeResolver.Create(
+                from.Resolver,
+                new Resolver(from.Resolver)
+            )
+        );
+    }
+
+    sealed class Resolver(IFormatterResolver standardResolver) : IFormatterResolver, IResolver<TimeZoneOffset>
+    {
+        readonly TimeZoneOffsetFormatter timeZoneOffsetFormatter = new(standardResolver);
+
+        public IMessagePackFormatter<T>? GetFormatter<T>()
+        {
+            return (this as IResolver<T>)?.GetFormatter();
+        }
+
+        public IMessagePackFormatter<TimeZoneOffset>? GetFormatter()
+        {
+            return timeZoneOffsetFormatter;
+        }
+    }
+
+    interface IResolver<T>
+    {
+        IMessagePackFormatter<T>? GetFormatter();
     }
 }

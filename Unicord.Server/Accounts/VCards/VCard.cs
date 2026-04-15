@@ -1,71 +1,81 @@
 ﻿using System;
 using System.Collections.Generic;
+using MessagePack;
 using Unicord.Primitives;
 
 namespace Unicord.Server.Accounts.VCards;
 
+[MessagePackObject]
 public sealed class VCard
 {
-    public string? Version;
-    public string? FormattedName;
+    [Key(0)] public string? Version;
+    [Key(1)] public string? FormattedName;
 
-    public string? FamilyName, GivenName, MiddleName, Prefix, Suffix;
+    [Key(2)] public string? FamilyName;
+    [Key(3)] public string? GivenName;
+    [Key(4)] public string? MiddleName;
+    [Key(5)] public string? Prefix;
+    [Key(6)] public string? Suffix;
 
-    public string? Nicknames;
-    public VCardMedia? Photo;
-    public DateTimeOffset? Birthday;
+    [Key(7)] public string? Nicknames;
+    [Key(8)] public VCardMedia? Photo;
+    [Key(9)] public DateTimeOffset? Birthday;
 
-    public List<VCardDeliveryAddress>? DeliveryAddresses;
-    public List<VCardAddressLabel>? AddressLabels;
-    public List<VCardTelephone>? Telephones;
-    public List<VCardEmail>? Emails;
+    [Key(10)] public List<VCardDeliveryAddress>? DeliveryAddresses;
+    [Key(11)] public List<VCardAddressLabel>? AddressLabels;
+    [Key(12)] public List<VCardTelephone>? Telephones;
+    [Key(13)] public List<VCardEmail>? Emails;
 
-    public string? XmppAddress;
-    public string? MailUserAgent;
-    public TimeZoneOffset? TimeZone;
-    public decimal? Latitude, Longitude;
+    [Key(14)] public string? XmppAddress;
+    [Key(15)] public string? MailUserAgent;
+    [Key(16)] public TimeZoneOffset? TimeZone;
+    [Key(17)] public decimal? Latitude;
+    [Key(18)] public decimal? Longitude;
 
-    public string? Title, Role;
+    [Key(19)] public string? Title;
+    [Key(20)] public string? Role;
 
-    public VCardMedia? Logo;
-    public VCardPerson? AdministrativeAgent;
-    public string? OrganizationName;
-    public List<string>? OrganizationUnits;
-    public List<string>? CategoriesKeywords;
+    [Key(21)] public VCardMedia? Logo;
+    [Key(22)] public VCardPerson? AdministrativeAgent;
+    [Key(23)] public string? OrganizationName;
+    [Key(24)] public List<string>? OrganizationUnits;
+    [Key(25)] public List<string>? CategoriesKeywords;
 
-    public string? Note;
-    public string? VCardProduct;
-    public DateTimeOffset? Revised;
-    public string? SortString;
+    [Key(26)] public string? Note;
+    [Key(27)] public string? VCardProduct;
+    [Key(28)] public DateTimeOffset? Revised;
+    [Key(29)] public string? SortString;
 
-    public VCardPronunciation? Pronunciation;
-    public string? UniqueIdentifier;
-    public Uri? AssociatedUrl;
+    [Key(30)] public VCardPronunciation? Pronunciation;
+    [Key(31)] public string? UniqueIdentifier;
+    [Key(32)] public Uri? AssociatedUrl;
 
-    public VCardPrivacyClassification? PrivacyClassification;
-    public string? CredentialType, CredentialValue;
+    [Key(33)] public VCardPrivacyClassification? PrivacyClassification;
+    [Key(34)] public string? CredentialType;
+    [Key(35)] public string? CredentialValue;
 
-    public string? Description;
+    [Key(36)] public string? Description;
 }
 
-public class VCardResource
+public abstract class VCardResource
 {
-    public Uri? ExternalValue;
+    [Key(0)] public Uri? ExternalValue;
 }
 
-public class VCardData : VCardResource
+public abstract class VCardData : VCardResource
 {
-    public TemporaryFile? BinaryValue;
+    [Key(1)] public TemporaryFile? BinaryValue;
 }
 
+[MessagePackObject]
 public sealed class VCardMedia : VCardData
 {
-    public string? FormatType;
+    [Key(2)] public string? FormatType;
 }
 
-public class VCardIdentifier
+public abstract class VCardIdentifier
 {
-    public VCardIdentifierFlags IdentifierFlags;
+    [Key(0)] public VCardIdentifierFlags IdentifierFlags;
 }
 
 [Flags]
@@ -76,10 +86,10 @@ public enum VCardIdentifierFlags
     IsWork = 1 << 2
 }
 
-public class VCardAddress : VCardIdentifier
+public abstract class VCardAddress : VCardIdentifier
 {
-    public VCardAddressFlags AddressFlags;
-    public VCardAddressType? AddressType;
+    [Key(1)] public VCardAddressFlags AddressFlags;
+    [Key(2)] public VCardAddressType? AddressType;
 }
 
 [Flags]
@@ -95,27 +105,30 @@ public enum VCardAddressType
     International
 }
 
+[MessagePackObject]
 public sealed class VCardDeliveryAddress : VCardAddress
 {
-    public string? PostOfficeBox;
-    public string? ExtendedAddress;
-    public string? StreetAddress;
-    public string? Locality;
-    public string? Region;
-    public string? PostalCode;
-    public string? Country;
+    [Key(3)] public string? PostOfficeBox;
+    [Key(4)] public string? ExtendedAddress;
+    [Key(5)] public string? StreetAddress;
+    [Key(6)] public string? Locality;
+    [Key(7)] public string? Region;
+    [Key(8)] public string? PostalCode;
+    [Key(9)] public string? Country;
 }
 
+[MessagePackObject]
 public sealed class VCardAddressLabel : VCardAddress
 {
-    public List<string>? Lines;
+    [Key(3)] public List<string>? Lines;
 }
 
+[MessagePackObject]
 public sealed class VCardTelephone : VCardIdentifier
 {
-    public VCardTelephoneFlags TelephoneFlags;
+    [Key(1)] public VCardTelephoneFlags TelephoneFlags;
 
-    public string? Number;
+    [Key(2)] public string? Number;
 }
 
 [Flags]
@@ -133,10 +146,11 @@ public enum VCardTelephoneFlags
     IsPcs = 1 << 9
 }
 
+[MessagePackObject]
 public sealed class VCardEmail : VCardIdentifier
 {
-    public VCardEmailFlags EmailFlags;
-    public string? Identifier;
+    [Key(1)] public VCardEmailFlags EmailFlags;
+    [Key(2)] public string? Identifier;
 }
 
 [Flags]
@@ -146,14 +160,16 @@ public enum VCardEmailFlags
     IsX400 = 1 << 1
 }
 
+[MessagePackObject]
 public sealed class VCardPerson : VCardResource
 {
-    public VCard? VCard;
+    [Key(1)] public VCard? VCard;
 }
 
+[MessagePackObject]
 public sealed class VCardPronunciation : VCardData
 {
-    public string? PhoneticTranscription;
+    [Key(2)] public string? PhoneticTranscription;
 }
 
 public enum VCardPrivacyClassification
