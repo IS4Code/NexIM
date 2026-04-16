@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 using Unicord.Primitives.Xml.Handlers;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
@@ -9,7 +10,7 @@ namespace Unicord.Xmpp.Server.Handlers;
 
 internal sealed class GetPrivateStorage : BasePrivateStorageHandler<ICommandContext>
 {
-    (string localName, string ns)? element;
+    XName? key;
 
     protected async override ValueTask OnOther(XmlReader payloadReader)
     {
@@ -21,18 +22,17 @@ internal sealed class GetPrivateStorage : BasePrivateStorageHandler<ICommandCont
         {
             throw XmppStanzaException.BadRequest();
         }
-        this.SetOnce(ref element, (payloadReader.LocalName, payloadReader.NamespaceURI));
+        this.SetOnce(ref key, XName.Get(payloadReader.LocalName, payloadReader.NamespaceURI));
     }
 
-    private PrivateStorageData GetData()
+    private PrivateData GetData()
     {
-        if(element is not (var localName, var ns))
+        if(key == null)
         {
             throw XmppStanzaException.BadRequest();
         }
-        return new PrivateStorageData {
-            KeyName = localName,
-            KeyNamespace = ns
+        return new PrivateData {
+            Key = key
         };
     }
 
@@ -58,7 +58,7 @@ internal abstract class DataPrivateStorage : BaseDelegatingPrivateStorageHandler
     protected sealed override CapturingHandler<IPrivateStorageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 
-    (string localName, string ns)? element;
+    XName? key;
 
     protected async override ValueTask OnOther(XmlReader payloadReader)
     {
@@ -70,20 +70,20 @@ internal abstract class DataPrivateStorage : BaseDelegatingPrivateStorageHandler
         {
             throw XmppStanzaException.BadRequest();
         }
-        this.SetOnce(ref element, (payloadReader.LocalName, payloadReader.NamespaceURI));
-        
-        await base.OnOther(payloadReader);
+        this.SetOnce(ref key, XName.Get(payloadReader.LocalName, payloadReader.NamespaceURI));
+
+        using var nested = payloadReader.ReadSubtree();
+        await base.OnOther(nested);
     }
 
-    protected PrivateStorageData GetData()
+    protected PrivateData GetData()
     {
-        if(element is not (var localName, var ns))
+        if(key == null)
         {
             throw XmppStanzaException.BadRequest();
         }
-        return new PrivateStorageData {
-            KeyName = localName,
-            KeyNamespace = ns,
+        return new PrivateData {
+            Key = key,
             Extensions = InnerHandler.ToExtensions()
         };
     }

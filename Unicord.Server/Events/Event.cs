@@ -81,9 +81,9 @@ public record struct EventOrigin
     /// <summary>
     /// Retrieves a new <see cref="EventOrigin"/> instance responding to the event.
     /// </summary>
-    public EventOrigin RespondFrom(Identifier from)
+    public EventOrigin RespondFrom(Identifier from, LanguageCode? language = null)
     {
-        return this with { From = from, To = From };
+        return this with { From = from, To = From, TransactionLanguage = language };
     }
 
     /// <summary>

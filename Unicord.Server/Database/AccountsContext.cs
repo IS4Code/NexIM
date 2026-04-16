@@ -60,7 +60,12 @@ internal class AccountsContext : DbContext
             e.OwnsMany(x => x.PrivateStorageBuilder, e => {
                 e.HasKey(x => new { x.KeyNamespace, x.KeyName });
 
-                e.Property(x => x.Extensions).HasConversion(
+                e.Property(x => x.Language).HasConversion(
+                    x => SaveLanguage(x),
+                    x => LoadLanguage(x)
+                );
+
+                e.Property(x => x.Data).HasConversion(
                     x => SaveExtensions(x),
                     x => LoadExtensions(x)
                 );
@@ -69,6 +74,16 @@ internal class AccountsContext : DbContext
     }
 
     static readonly MessagePackSerializerOptions serializerOptions = CreateOptions(MessagePackSerializerOptions.Standard);
+
+    private static string? SaveLanguage(LanguageCode? language)
+    {
+        return language?.Value;
+    }
+
+    private static LanguageCode? LoadLanguage(string? language)
+    {
+        return language != null ? new LanguageCode(language) : null;
+    }
 
     private static byte[]? SaveVCard(VCard? vcard)
     {

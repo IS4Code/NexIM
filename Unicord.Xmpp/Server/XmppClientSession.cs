@@ -172,7 +172,14 @@ public class XmppClientSession : ClientSession
                     await WriteExtensions(rosterHandler, rosterData.Extensions);
                 }
                 return StatusCode.Received;
-            
+
+            case PrivateData privateData:
+                await using(var privateStorageHandler = await output.PrivateQuery())
+                {
+                    await WriteExtensions(privateStorageHandler, privateData.Extensions);
+                }
+                return StatusCode.Received;
+
             case VCardQueryData vcardData:
                 await using(var vcardHandler = await output.VCard())
                 {
@@ -180,7 +187,7 @@ public class XmppClientSession : ClientSession
                     {
                         await VCardFormatter.WriteTo(vcard, vcardHandler);
                     }
-                    await WriteExtensions(vcardHandler, data.Extensions);
+                    await WriteExtensions(vcardHandler, vcardData.Extensions);
                 }
                 return StatusCode.Received;
             
@@ -193,7 +200,7 @@ public class XmppClientSession : ClientSession
     {
         foreach(var extension in extensions)
         {
-            if(extension is CapturingHandler<THandler> capture)
+            if(extension is ICapturingHandler<THandler> capture)
             {
                 await capture.Replay(handler);
             }

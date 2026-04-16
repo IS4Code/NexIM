@@ -193,7 +193,7 @@ partial class Account : IEventHandler
                 // Removing a contact
                 return RemoveContact(data.Contact.Account);
 
-            case RetrieveEvent { Data: PrivateStorageData data }:
+            case RetrieveEvent { Data: PrivateData data }:
                 // Retrieving private data
                 if(!privateStorage.TryGetValue(data.Key, out var storedData))
                 {
@@ -201,14 +201,14 @@ partial class Account : IEventHandler
                     return new(Report(StatusCode.NotFound));
                 }
                 return Post(new ResponseEvent {
-                    Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
+                    Origin = evnt.Origin.RespondFrom(Name.ToIdentifier(), storedData.Language),
                     Processing = EventProcessing.Create(),
-                    Data = storedData
+                    Data = storedData.EventData
                 });
 
-            case UpdateEvent { Data: PrivateStorageData data }:
+            case UpdateEvent { Data: PrivateData data }:
                 // Updating private data
-                privateStorage.SetItem(data.Key, data);
+                privateStorage.SetItem(data.Key, PrivateStorageData.Create(data, evnt.Origin.TransactionLanguage));
                 return Save();
             
             case UpdateEvent { Data: VCardQueryData vcardData }:
@@ -259,7 +259,7 @@ partial class Account : IEventHandler
                     }
                 });
 
-            case QueryEvent { Data: RosterQueryData or PrivateStorageData or VCardQueryData }:
+            case QueryEvent { Data: RosterQueryData or PrivateData or VCardQueryData }:
                 // Supported but must be owner
                 return new(Report(StatusCode.Unauthorized));
 

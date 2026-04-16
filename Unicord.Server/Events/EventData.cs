@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using Unicord.Primitives.Events;
 
 namespace Unicord.Server.Events;
 
@@ -17,23 +18,24 @@ public abstract record EventData
     public EventExtensions Extensions { get; set; }
 }
 
-[StructLayout(LayoutKind.Auto)]
-public readonly struct EventExtensions : IReadOnlyCollection<object>, IEquatable<EventExtensions>
-{
-    static readonly ImmutableHashSet<object> empty = ImmutableHashSet<object>.Empty;
 
-    readonly ImmutableHashSet<object>? _data;
-    ImmutableHashSet<object> data => _data ?? empty;
+[StructLayout(LayoutKind.Auto)]
+public readonly struct EventExtensions : IReadOnlyCollection<IEventExtension>, IEquatable<EventExtensions>
+{
+    static readonly ImmutableHashSet<IEventExtension> empty = ImmutableHashSet<IEventExtension>.Empty;
+
+    readonly ImmutableHashSet<IEventExtension>? _data;
+    ImmutableHashSet<IEventExtension> data => _data ?? empty;
 
     public int Count => data.Count;
     public bool IsEmpty => Count == 0;
 
-    private EventExtensions(ImmutableHashSet<object> data)
+    internal EventExtensions(ImmutableHashSet<IEventExtension> data)
     {
         _data = data;
     }
 
-    public EventExtensions(object? payload)
+    public EventExtensions(IEventExtension? payload)
     {
         if(payload != null)
         {
@@ -81,9 +83,9 @@ public readonly struct EventExtensions : IReadOnlyCollection<object>, IEquatable
         return new(data.GetEnumerator());
     }
 
-    IEnumerator<object> IEnumerable<object>.GetEnumerator()
+    IEnumerator<IEventExtension> IEnumerable<IEventExtension>.GetEnumerator()
     {
-        return ((IEnumerable<object>)data).GetEnumerator();
+        return ((IEnumerable<IEventExtension>)data).GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -92,16 +94,16 @@ public readonly struct EventExtensions : IReadOnlyCollection<object>, IEquatable
     }
 
     [StructLayout(LayoutKind.Auto)]
-    public struct Enumerator : IEnumerator<object>
+    public struct Enumerator : IEnumerator<IEventExtension>
     {
-        ImmutableHashSet<object>.Enumerator inner;
+        ImmutableHashSet<IEventExtension>.Enumerator inner;
 
-        internal Enumerator(ImmutableHashSet<object>.Enumerator inner)
+        internal Enumerator(ImmutableHashSet<IEventExtension>.Enumerator inner)
         {
             this.inner = inner;
         }
 
-        public object Current => inner.Current;
+        public IEventExtension Current => inner.Current;
 
         object IEnumerator.Current => Current;
 

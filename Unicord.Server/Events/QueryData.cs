@@ -36,10 +36,7 @@ public sealed record RosterRemoveData : RosterQueryData
     public required Contact Contact { get; init; }
 }
 
-public sealed record PrivateStorageData : QueryData
+public sealed record PrivateData : QueryData
 {
-    public required string KeyName { get; init; }
-    public required string KeyNamespace { get; init; }
-
-    public XName Key => XName.Get(KeyName, KeyNamespace);
+    public required XName Key { get; init; }
 }

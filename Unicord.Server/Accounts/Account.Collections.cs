@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
-using Unicord.Server.Events;
 using Unicord.Server.Tools;
 
 namespace Unicord.Server.Accounts;
@@ -17,10 +16,11 @@ partial class Account
     static readonly Func<Contact, AccountName> contactsKeySelector = x => x.Account;
 
     readonly PrivateStorageBuilder.Accessor privateStorageAccessor;
-    static readonly Func<PrivateStorageData, XName> privateStorageKeySelector = x => x.Key;
+    static readonly Func<PrivateStorageData, XName> privateStorageKeySelector = x => x.EventData.Key;
 
     private ValueTuple Collections {
         [MemberNotNull(nameof(contactsAccessor))]
+        [MemberNotNull(nameof(privateStorageAccessor))]
         init {
             contactsAccessor = () => ref contacts;
             privateStorageAccessor = () => ref privateStorage;

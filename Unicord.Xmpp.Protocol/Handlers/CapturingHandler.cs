@@ -1,13 +1,16 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
+using Unicord.Primitives.Events;
 using Unicord.Primitives.Xml;
 using Unicord.Primitives.Xml.Handlers;
 
 namespace Unicord.Xmpp.Protocol.Handlers;
 
 /// <inheritdoc/>
-public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>, IPayloadHandler, IStreamHandler where THandler : IPayloadHandler
+public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>, IPayloadHandler, IStreamHandler, IEventExtension where THandler : IPayloadHandler
 {
+    EventExtensionType IEventExtension.Type => EventExtensionType.Xmpp;
+
     protected virtual CapturingHandler<TNewHandler> ForkInner<TNewHandler>() where TNewHandler : IPayloadHandler
     {
         return new CapturingHandler<TNewHandler>();
@@ -49,6 +52,6 @@ public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
         var container = await payloadReader.CaptureContent();
-        Capture<IPayloadHandler>(handler => container.RestoreContent(handler.Other));
+        Capture<IPayloadHandler>(new XmlClosure(container).Restore);
     }
 }

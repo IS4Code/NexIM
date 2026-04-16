@@ -4,13 +4,26 @@ using System.Threading.Tasks;
 
 namespace Unicord.Primitives.Xml.Handlers;
 
+public abstract class BaseCapturingHandler
+{
+    internal BaseCapturingHandler()
+    {
+
+    }
+
+    internal interface IHandler<out THandler> : IAsyncDisposable
+    {
+        void Capture(Func<THandler, ValueTask> call);
+    }
+}
+
 /// <summary>
 /// Provides a handler that captures all its method calls for later playback.
 /// </summary>
 /// <typeparam name="THandler">
 /// The supported type of the handler.
 /// </typeparam>
-public abstract class BaseCapturingHandler<THandler> : ICapturingHandler<THandler> where THandler : IPayloadHandler
+public abstract class BaseCapturingHandler<THandler> : BaseCapturingHandler, BaseCapturingHandler.IHandler<THandler>, ICapturingHandler<THandler> where THandler : IPayloadHandler
 {
     readonly List<Func<THandler, ValueTask>> calls = new();
     bool disposed;
@@ -27,13 +40,13 @@ public abstract class BaseCapturingHandler<THandler> : ICapturingHandler<THandle
 
     protected void Capture<TImplHandler>(Func<TImplHandler, ValueTask> call)
     {
-        if(!disposed && this is ICapturingHandler<TImplHandler> handler)
+        if(!disposed && this is IHandler<TImplHandler> handler)
         {
             handler.Capture(call);
         }
     }
 
-    void ICapturingHandler<THandler>.Capture(Func<THandler, ValueTask> call)
+    void IHandler<THandler>.Capture(Func<THandler, ValueTask> call)
     {
         calls.Add(call);
     }
@@ -45,7 +58,7 @@ public abstract class BaseCapturingHandler<THandler> : ICapturingHandler<THandle
     }
 }
 
-interface ICapturingHandler<out THandler> : IAsyncDisposable
+public interface ICapturingHandler<in THandler>
 {
-    void Capture(Func<THandler, ValueTask> call);
+    ValueTask Replay(THandler handler);
 }
