@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using MessagePack;
 using Unicord.Primitives;
 
@@ -17,8 +18,8 @@ public sealed class VCard
     [Key(5)] public string? Prefix;
     [Key(6)] public string? Suffix;
 
-    [Key(7)] public string? Nicknames;
-    [Key(8)] public VCardMedia? Photo;
+    [Key(7)] public List<string>? Nicknames;
+    [Key(8)] public List<VCardMedia>? Photos;
     [Key(9)] public DateTimeOffset? Birthday;
 
     [Key(10)] public List<VCardDeliveryAddress>? DeliveryAddresses;
@@ -26,35 +27,32 @@ public sealed class VCard
     [Key(12)] public List<VCardTelephone>? Telephones;
     [Key(13)] public List<VCardEmail>? Emails;
 
-    [Key(14)] public string? XmppAddress;
-    [Key(15)] public string? MailUserAgent;
-    [Key(16)] public TimeZoneOffset? TimeZone;
-    [Key(17)] public decimal? Latitude;
-    [Key(18)] public decimal? Longitude;
+    [Key(14)] public List<string>? XmppAddresses;
+    [Key(15)] public List<string>? MailUserAgents;
+    [Key(16)] public List<TimeZoneOffset>? TimeZones;
+    [Key(17)] public List<VCardGeographicalPosition>? GeographicalPositions;
 
-    [Key(19)] public string? Title;
-    [Key(20)] public string? Role;
+    [Key(18)] public List<string>? Titles;
+    [Key(19)] public List<string>? Roles;
 
-    [Key(21)] public VCardMedia? Logo;
-    [Key(22)] public VCardPerson? AdministrativeAgent;
-    [Key(23)] public string? OrganizationName;
-    [Key(24)] public List<string>? OrganizationUnits;
-    [Key(25)] public List<string>? CategoriesKeywords;
+    [Key(20)] public List<VCardMedia>? Logos;
+    [Key(21)] public List<VCardPerson>? AdministrativeAgents;
+    [Key(22)] public List<VCardOrganization>? Organizations;
+    [Key(23)] public List<List<string>>? CategoriesKeywords;
 
-    [Key(26)] public string? Note;
-    [Key(27)] public string? VCardProduct;
-    [Key(28)] public DateTimeOffset? Revised;
-    [Key(29)] public string? SortString;
+    [Key(24)] public List<string>? Notes;
+    [Key(25)] public string? VCardProduct;
+    [Key(26)] public DateTimeOffset? Revised;
+    [Key(27)] public List<string>? SortStrings;
 
-    [Key(30)] public VCardPronunciation? Pronunciation;
-    [Key(31)] public string? UniqueIdentifier;
-    [Key(32)] public Uri? AssociatedUrl;
+    [Key(28)] public List<VCardPronunciation>? Pronunciations;
+    [Key(29)] public string? UniqueIdentifier;
+    [Key(30)] public List<Uri>? AssociatedUrls;
 
-    [Key(33)] public VCardPrivacyClassification? PrivacyClassification;
-    [Key(34)] public string? CredentialType;
-    [Key(35)] public string? CredentialValue;
+    [Key(31)] public VCardPrivacyClassification? PrivacyClassification;
+    [Key(32)] public List<VCardCredentials>? Credentials;
 
-    [Key(36)] public string? Description;
+    [Key(33)] public List<string>? Descriptions;
 }
 
 public abstract class VCardResource
@@ -153,6 +151,14 @@ public sealed class VCardEmail : VCardIdentifier
     [Key(2)] public string? Identifier;
 }
 
+[MessagePackObject]
+[StructLayout(LayoutKind.Auto)]
+public struct VCardGeographicalPosition
+{
+    [Key(0)] public decimal Latitude;
+    [Key(1)] public decimal Longitude;
+}
+
 [Flags]
 public enum VCardEmailFlags
 {
@@ -167,6 +173,14 @@ public sealed class VCardPerson : VCardResource
 }
 
 [MessagePackObject]
+[StructLayout(LayoutKind.Auto)]
+public struct VCardOrganization
+{
+    [Key(0)] public string Name;
+    [Key(1)] public List<string>? Units;
+}
+
+[MessagePackObject]
 public sealed class VCardPronunciation : VCardData
 {
     [Key(2)] public string? PhoneticTranscription;
@@ -175,4 +189,12 @@ public sealed class VCardPronunciation : VCardData
 public enum VCardPrivacyClassification
 {
     Public, Private, Confidential
+}
+
+[MessagePackObject]
+[StructLayout(LayoutKind.Auto)]
+public struct VCardCredentials
+{
+    [Key(0)] public string? Type;
+    [Key(1)] public string Value;
 }

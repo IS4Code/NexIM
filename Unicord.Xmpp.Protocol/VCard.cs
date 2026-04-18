@@ -19,7 +19,7 @@ public interface IVCardHandler : IPayloadHandler
     ValueTask<IVCardNameHandler> Name();
 
     [Name("NICKNAME")]
-    ValueTask Nicknames(string? nicknames);
+    ValueTask Nickname(string? nickname);
 
     [Name("PHOTO")]
     ValueTask<IVCardMediaHandler> Photo();

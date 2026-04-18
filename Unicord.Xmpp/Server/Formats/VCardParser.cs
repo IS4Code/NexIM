@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
@@ -30,14 +31,14 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         return new NameParser(vcard) { Context = Context };
     }
 
-    protected async override ValueTask OnNicknames(string? nicknames)
+    protected async override ValueTask OnNickname(string? nicknames)
     {
-        this.SetOnce(ref vcard.Nicknames, nicknames);
+        this.AddList(ref vcard.Nicknames, nicknames);
     }
 
     protected async override ValueTask<IVCardMediaHandler> OnPhoto()
     {
-        return new MediaParser(this.SetOnce(ref vcard.Photo, new())) { Context = Context };
+        return new MediaParser(this.AddList(ref vcard.Photos, new())) { Context = Context };
     }
 
     protected async override ValueTask OnBirthday(DateTimeOffset? dateTime)
@@ -75,17 +76,17 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     protected async override ValueTask OnXmppAddress(XmppAddress? address)
     {
-        this.SetOnce(ref vcard.XmppAddress, address?.ToString());
+        this.AddList(ref vcard.XmppAddresses, address?.ToString());
     }
 
     protected async override ValueTask OnMailUserAgent(string? type)
     {
-        this.SetOnce(ref vcard.MailUserAgent, type);
+        this.AddList(ref vcard.MailUserAgents, type);
     }
 
     protected async override ValueTask OnTimeZone(TimeZoneOffset? offset)
     {
-        this.SetOnce(ref vcard.TimeZone, offset);
+        this.AddList(ref vcard.TimeZones, offset);
     }
 
     protected async override ValueTask<IVCardGeoHandler> OnGeographicalPosition()
@@ -95,22 +96,22 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     protected async override ValueTask OnTitle(string? text)
     {
-        this.SetOnce(ref vcard.Title, text);
+        this.AddList(ref vcard.Titles, text);
     }
 
     protected async override ValueTask OnRole(string? text)
     {
-        this.SetOnce(ref vcard.Role, text);
+        this.AddList(ref vcard.Roles, text);
     }
 
     protected async override ValueTask<IVCardMediaHandler> OnLogo()
     {
-        return new MediaParser(this.SetOnce(ref vcard.Logo, new())) { Context = Context };
+        return new MediaParser(this.AddList(ref vcard.Logos, new())) { Context = Context };
     }
 
     protected async override ValueTask<IVCardPersonHandler> OnAdministrativeAgent()
     {
-        return new PersonParser(this.SetOnce(ref vcard.AdministrativeAgent, new())) { Context = Context };
+        return new PersonParser(this.AddList(ref vcard.AdministrativeAgents, new())) { Context = Context };
     }
 
     protected async override ValueTask<IVCardOrganizationHandler> OnOrganization()
@@ -125,7 +126,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     protected async override ValueTask OnNote(string? text)
     {
-        this.SetOnce(ref vcard.Note, text);
+        this.AddList(ref vcard.Notes, text);
     }
 
     protected async override ValueTask OnVCardProduct(string? text)
@@ -140,12 +141,12 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     protected async override ValueTask OnSortString(string? value)
     {
-        this.SetOnce(ref vcard.SortString, value);
+        this.AddList(ref vcard.SortStrings, value);
     }
 
     protected async override ValueTask<IVCardPronunciationHandler> OnPronunciation()
     {
-        return new PronunciationParser(this.SetOnce(ref vcard.Pronunciation, new())) { Context = Context };
+        return new PronunciationParser(this.AddList(ref vcard.Pronunciations, new())) { Context = Context };
     }
 
     protected async override ValueTask OnUniqueIdentifier(string? value)
@@ -155,7 +156,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     protected async override ValueTask OnAssociatedUrl(Uri? value)
     {
-        this.SetOnce(ref vcard.AssociatedUrl, value);
+        this.AddList(ref vcard.AssociatedUrls, value);
     }
 
     protected async override ValueTask<IVCardPrivacyClassificationHandler> OnPrivacyClassification()
@@ -170,7 +171,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     protected async override ValueTask OnDescription(string? text)
     {
-        this.SetOnce(ref vcard.Description, text);
+        this.AddList(ref vcard.Descriptions, text);
     }
 
     protected override ValueTask OnOther(XmlReader payloadReader)
@@ -473,18 +474,27 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     sealed class GeoParser(VCard vcard) : BaseVCardGeoHandler<TContext>
     {
+        decimal? latitude, longitude;
+
         protected async override ValueTask OnLatitude(decimal? value)
         {
-            this.SetOnce(ref vcard.Latitude, value);
+            this.SetOnce(ref latitude, value);
         }
 
         protected async override ValueTask OnLongitude(decimal? value)
         {
-            this.SetOnce(ref vcard.Longitude, value);
+            this.SetOnce(ref longitude, value);
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        public override ValueTask DisposeAsync() => default;
+        
+        public async override ValueTask DisposeAsync()
+        {
+            this.AddList(ref vcard.GeographicalPositions, new() {
+                Latitude = latitude ?? throw XmppStanzaException.BadRequest("Latitude is missing."),
+                Longitude = longitude ?? throw XmppStanzaException.BadRequest("Longitude is missing."),
+            });
+        }
     }
 
     sealed class PersonParser(VCardPerson person) : BaseVCardPersonHandler<TContext>
@@ -506,35 +516,45 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     sealed class OrganizationParser(VCard vcard) : BaseVCardOrganizationHandler<TContext>
     {
+        string? name;
+        List<string>? units;
+
         protected async override ValueTask OnName(string? name)
         {
-            this.SetOnce(ref vcard.OrganizationName, name);
+            this.SetOnce(ref this.name, name);
         }
 
         protected async override ValueTask OnUnit(string? text)
         {
-            if(text != null)
-            {
-                (vcard.OrganizationUnits ??= new()).Add(text);
-            }
+            this.AddList(ref units, text);
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        public override ValueTask DisposeAsync() => default;
+        
+        public async override ValueTask DisposeAsync()
+        {
+            this.AddList(ref vcard.Organizations, new() {
+                Name = name ?? throw XmppStanzaException.BadRequest("Organization name is missing."),
+                Units = units
+            });
+        }
     }
 
     sealed class CategoriesParser(VCard vcard) : BaseVCardCategoriesHandler<TContext>
     {
+        List<string>? keywords;
+
         protected async override ValueTask OnKeyword(string? keyword)
         {
-            if(keyword != null)
-            {
-                (vcard.CategoriesKeywords ??= new()).Add(keyword);
-            }
+            this.AddList(ref keywords, keyword);
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        public override ValueTask DisposeAsync() => default;
+        
+        public async override ValueTask DisposeAsync()
+        {
+            this.AddList(ref vcard.CategoriesKeywords, keywords ?? throw XmppStanzaException.BadRequest("Category keywords are missing."));
+        }
     }
 
     sealed class PronunciationParser(VCardPronunciation pronunciation) : BaseVCardPronunciationHandler<TContext>
@@ -581,17 +601,26 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     sealed class CredentialParser(VCard vcard) : BaseVCardCredentialHandler<TContext>
     {
+        string? type, value;
+
         protected async override ValueTask OnType(string? type)
         {
-            this.SetOnce(ref vcard.CredentialType, type);
+            this.SetOnce(ref this.type, type);
         }
 
         protected async override ValueTask OnValue(string? value)
         {
-            this.SetOnce(ref vcard.CredentialValue, value);
+            this.SetOnce(ref this.value, value);
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        public override ValueTask DisposeAsync() => default;
+        
+        public async override ValueTask DisposeAsync()
+        {
+            this.AddList(ref vcard.Credentials, new() {
+                Type = type,
+                Value = value ?? throw XmppStanzaException.BadRequest("Key value is missing.")
+            });
+        }
     }
 }

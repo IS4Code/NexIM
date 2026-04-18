@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Unicord.Server.Accounts.VCards;
 using Unicord.Xmpp.Protocol;
+using Unicord.Xmpp.Protocol.Handlers;
 
 namespace Unicord.Xmpp.Server.Formats;
 
@@ -12,32 +13,35 @@ internal static class VCardFormatter
         await handler.FormattedName(vcard.FormattedName);
         await using(var n = await handler.Name())
         {
-            await n.FamilyName(vcard.FamilyName);
-            await n.GivenName(vcard.GivenName);
-            await n.MiddleName(vcard.MiddleName);
-            await n.Prefix(vcard.Prefix);
-            await n.Suffix(vcard.Suffix);
+            await n.FamilyNameNotNull(vcard.FamilyName);
+            await n.GivenNameNotNull(vcard.GivenName);
+            await n.MiddleNameNotNull(vcard.MiddleName);
+            await n.PrefixNotNull(vcard.Prefix);
+            await n.SuffixNotNull(vcard.Suffix);
         }
-        await handler.Nicknames(vcard.Nicknames);
-        if(vcard.Photo is { } photo)
+        await handler.NicknameRange(vcard.Nicknames);
+        if(vcard.Photos is { } photos)
         {
-            await using var media = await handler.Photo();
-            await WriteTo(photo, media);
+            foreach(var photo in photos)
+            {
+                await using var media = await handler.Photo();
+                await WriteTo(photo, media);
+            }
         }
-        await handler.Birthday(vcard.Birthday);
+        await handler.BirthdayNotNull(vcard.Birthday);
         if(vcard.DeliveryAddresses is { } addresses)
         {
             foreach(var address in addresses)
             {
                 await using var adr = await handler.DeliveryAddress();
                 await WriteTo(address, adr);
-                await adr.PostOfficeBox(address.PostOfficeBox);
-                await adr.ExtendedAddress(address.ExtendedAddress);
-                await adr.StreetAddress(address.StreetAddress);
-                await adr.Locality(address.Locality);
-                await adr.Region(address.Region);
-                await adr.PostalCode(address.PostalCode);
-                await adr.Country(address.Country);
+                await adr.PostOfficeBoxNotNull(address.PostOfficeBox);
+                await adr.ExtendedAddressNotNull(address.ExtendedAddress);
+                await adr.StreetAddressNotNull(address.StreetAddress);
+                await adr.LocalityNotNull(address.Locality);
+                await adr.RegionNotNull(address.Region);
+                await adr.PostalCodeNotNull(address.PostalCode);
+                await adr.CountryNotNull(address.Country);
             }
         }
         if(vcard.AddressLabels is { } labels)
@@ -46,13 +50,7 @@ internal static class VCardFormatter
             {
                 await using var adr = await handler.AddressLabel();
                 await WriteTo(address, adr);
-                if(address.Lines is { } lines)
-                {
-                    foreach(var line in lines)
-                    {
-                        await adr.Line(line);
-                    }
-                }
+                await adr.LineRange(address.Lines);
             }
         }
         if(vcard.Telephones is { } telephones)
@@ -71,68 +69,82 @@ internal static class VCardFormatter
                 await WriteTo(email, mail);
             }
         }
-        if(vcard.XmppAddress is { } xmpp)
+        if(vcard.XmppAddresses is { } xmppAddresses)
         {
-            await handler.XmppAddress(XmppAddress.Parse(xmpp));
-        }
-        await handler.MailUserAgent(vcard.MailUserAgent);
-        await handler.TimeZone(vcard.TimeZone);
-        if(vcard.Latitude != null || vcard.Longitude != null)
-        {
-            await using var geo = await handler.GeographicalPosition();
-            await geo.Latitude(vcard.Latitude);
-            await geo.Longitude(vcard.Longitude);
-        }
-        await handler.Title(vcard.Title);
-        await handler.Role(vcard.Role);
-        if(vcard.Logo is { } logo)
-        {
-            await using var media = await handler.Logo();
-            await WriteTo(logo, media);
-        }
-        if(vcard.AdministrativeAgent is { } agent)
-        {
-            await using var agentHandler = await handler.AdministrativeAgent();
-            if(agent.VCard is { } agentVCard)
+            foreach(var xmpp in xmppAddresses)
             {
-                await using var nestedHandler = await agentHandler.VCard();
-                await WriteTo(agentVCard, nestedHandler);
+                await handler.XmppAddress(XmppAddress.Parse(xmpp));
             }
-            await agentHandler.ExternalValue(agent.ExternalValue);
         }
-        if(vcard.OrganizationName is { } orgName)
+        await handler.MailUserAgentRange(vcard.MailUserAgents);
+        await handler.TimeZoneRange(vcard.TimeZones);
+        if(vcard.GeographicalPositions is { } positions)
         {
-            await using var org = await handler.Organization();
-            await org.Name(orgName);
-            if(vcard.OrganizationUnits is { } units)
+            foreach(var position in positions)
             {
-                foreach(var unit in units)
+                await using var geo = await handler.GeographicalPosition();
+                await geo.Latitude(position.Latitude);
+                await geo.Longitude(position.Longitude);
+            }
+        }
+        await handler.TitleRange(vcard.Titles);
+        await handler.RoleRange(vcard.Roles);
+        if(vcard.Logos is { } logos)
+        {
+            foreach(var logo in logos)
+            {
+                await using var media = await handler.Logo();
+                await WriteTo(logo, media);
+            }
+        }
+        if(vcard.AdministrativeAgents is { } agents)
+        {
+            foreach(var agent in agents)
+            {
+                await using var agentHandler = await handler.AdministrativeAgent();
+                if(agent.VCard is { } agentVCard)
                 {
-                    await org.Unit(unit);
+                    await using(var nestedHandler = await agentHandler.VCard())
+                    {
+                        await WriteTo(agentVCard, nestedHandler);
+                    }
                 }
+                await agentHandler.ExternalValueNotNull(agent.ExternalValue);
             }
         }
-        if(vcard.CategoriesKeywords is { } keywords)
+        if(vcard.Organizations is { } organizations)
         {
-            await using var categories = await handler.Categories();
-            foreach(var keyword in keywords)
+            foreach(var organization in organizations)
             {
-                await categories.Keyword(keyword);
+                await using var org = await handler.Organization();
+                await org.Name(organization.Name);
+                await org.UnitRange(organization.Units);
             }
         }
-        await handler.Note(vcard.Note);
-        await handler.VCardProduct(vcard.VCardProduct);
-        await handler.Revised(vcard.Revised);
-        await handler.SortString(vcard.SortString);
-        if(vcard.Pronunciation is { } pronunciation)
+        if(vcard.CategoriesKeywords is { } categoriesKeywords)
         {
-            await using var soundHandler = await handler.Pronunciation();
-            await soundHandler.PhoneticTranscription(pronunciation.PhoneticTranscription);
-            await soundHandler.BinaryValue(pronunciation.BinaryValue);
-            await soundHandler.ExternalValue(pronunciation.ExternalValue);
+            foreach(var keywords in categoriesKeywords)
+            {
+                await using var categories = await handler.Categories();
+                await categories.KeywordRange(keywords);
+            }
         }
-        await handler.UniqueIdentifier(vcard.UniqueIdentifier);
-        await handler.AssociatedUrl(vcard.AssociatedUrl);
+        await handler.NoteRange(vcard.Notes);
+        await handler.VCardProductNotNull(vcard.VCardProduct);
+        await handler.RevisedNotNull(vcard.Revised);
+        await handler.SortStringRange(vcard.SortStrings);
+        if(vcard.Pronunciations is { } pronunciations)
+        {
+            foreach(var pronunciation in pronunciations)
+            {
+                await using var soundHandler = await handler.Pronunciation();
+                await soundHandler.PhoneticTranscriptionNotNull(pronunciation.PhoneticTranscription);
+                await soundHandler.BinaryValueNotNull(pronunciation.BinaryValue);
+                await soundHandler.ExternalValueNotNull(pronunciation.ExternalValue);
+            }
+        }
+        await handler.UniqueIdentifierNotNull(vcard.UniqueIdentifier);
+        await handler.AssociatedUrlRange(vcard.AssociatedUrls);
         if(vcard.PrivacyClassification is { } privacy)
         {
             await using var classification = await handler.PrivacyClassification();
@@ -149,20 +161,23 @@ internal static class VCardFormatter
                     break;
             }
         }
-        if(vcard.CredentialValue is { } keyValue)
+        if(vcard.Credentials is { } credentials)
         {
-            await using var key = await handler.Credential();
-            await key.Type(vcard.CredentialType);
-            await key.Value(keyValue);
+            foreach(var credential in credentials)
+            {
+                await using var key = await handler.Credential();
+                await key.TypeNotNull(credential.Type);
+                await key.Value(credential.Value);
+            }
         }
-        await handler.Description(vcard.Description);
+        await handler.DescriptionRange(vcard.Descriptions);
     }
 
     static async ValueTask WriteTo(VCardMedia media, IVCardMediaHandler handler)
     {
         await handler.FormatType(media.FormatType);
-        await handler.BinaryValue(media.BinaryValue);
-        await handler.ExternalValue(media.ExternalValue);
+        await handler.BinaryValueNotNull(media.BinaryValue);
+        await handler.ExternalValueNotNull(media.ExternalValue);
     }
 
     static async ValueTask WriteTo(VCardAddress address, IVCardAddressHandler handler)

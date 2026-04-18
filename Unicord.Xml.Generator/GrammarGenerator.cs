@@ -84,6 +84,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
             context.AddSource($"{nsName}.UniversalHandler.Generated.cs", GenerateUniversalHandler(ns, group));
             context.AddSource($"{nsName}.CapturingHandler.Generated.cs", GenerateCapturingHandler(ns, group));
             context.AddSource($"{nsName}.BaseHandlers.Generated.cs", GenerateBaseHandlers(ns, group));
+            context.AddSource($"{nsName}.Extensions.Generated.cs", GenerateExtensions(ns, group));
             context.AddSource($"{nsName}.Tokens.Generated.cs", GenerateTokens(ns, group));
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -178,6 +179,25 @@ internal static class CommandExtensions
             throw XmppStanzaException.BadRequest(propertySetError);
         }
         return storage = value;
+    }
+
+    public static T? AddList<T, TContext>(this IPayloadHandler<TContext> handler, ref List<T>? list, T? value) where T : struct where TContext : IPayloadHandlerContext
+    {
+        if(value is { } val)
+        {
+            (list ??= new()).Add(val);
+        }
+        return value;
+    }
+
+    [return: NotNullIfNotNull(nameof(value))]
+    public static T? AddList<T, TContext>(this IPayloadHandler<TContext> handler, ref List<T>? list, T? value) where TContext : IPayloadHandlerContext
+    {
+        if(value is { } val)
+        {
+            (list ??= new()).Add(val);
+        }
+        return value;
     }
 
     public static void ValidateSender(this ICommandHandler handler, in Stanza stanza)
