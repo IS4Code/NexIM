@@ -1,50 +1,115 @@
 ﻿using System;
 using System.Buffers;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using static Unicord.Primitives.TemporaryArray<byte>;
 
 namespace Unicord.Primitives;
 
-public abstract class TemporaryFile : IDisposable
+/// <summary>
+/// Represents a file reference with limited lifetime.
+/// </summary>
+public abstract partial class TemporaryFile : IDisposable
 {
-    readonly string path;
+    static readonly ArrayPool<byte> pool = ArrayPool<byte>.Shared;
 
-    protected byte[] Buffer { get; }
     const int bufferSize = 4096;
 
-    protected TemporaryFile(string path)
+    readonly Func<string> pathInitializer;
+
+    string? _path;
+    string? _originalPath;
+    
+    public string FilePath => LazyInitializer.EnsureInitialized(ref _path, pathInitializer)!;
+
+    protected TemporaryFile()
     {
-        this.path = path;
-        Buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+        pathInitializer = CreatePath;
     }
+
+    protected TemporaryFile(TemporaryFile? source)
+    {
+        if(source == null || source == this)
+        {
+            // Nothing to move from
+            pathInitializer = CreatePath;
+            return;
+        }
+
+        // Ensure the path is initialized, and pull it out
+        _ = source.FilePath;
+        _originalPath = Interlocked.Exchange(ref source._path, "");
+
+        // The path might still need to be adjusted based on the concrete class
+        pathInitializer = UpdatePath;
+    }
+
+    protected abstract string CreatePath();
+
+    private string UpdatePath()
+    {
+        var oldPath = Interlocked.Exchange(ref _originalPath, "")!;
+        if(!File.Exists(oldPath))
+        {
+            // Moved from a dead instance
+            return oldPath;
+        }
+
+        var newPath = CreatePath();
+        if(File.Exists(newPath))
+        {
+            // Assume the files are equivalent; delete the old one
+            File.Delete(oldPath);
+        }
+        else
+        {
+            File.Move(oldPath, newPath);
+        }
+        return newPath;
+    }
+
+    public abstract TemporaryFile MoveFrom();
 
     public void WriteTo<TArgs>(SynchronousWriter<TArgs> writer, TArgs args)
     {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-        int read;
-        while((read = stream.Read(Buffer, 0, Buffer.Length)) > 0)
+        var buffer = pool.Rent(bufferSize);
+        try
         {
-            writer(new(Buffer, 0, read), args);
+            using var stream = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length, FileOptions.SequentialScan);
+            int read;
+            while((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                writer(new(buffer, 0, read), args);
+            }
+        }
+        finally
+        {
+            pool.Return(buffer, true);
         }
     }
 
     public async ValueTask WriteToAsync<TArgs>(AsynchronousWriter<TArgs> writer, TArgs args)
     {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan | FileOptions.Asynchronous);
-        int read;
-        while((read = await stream.ReadAsync(Buffer, 0, Buffer.Length)) > 0)
+        var buffer = pool.Rent(bufferSize);
+        try
         {
-            await writer(new(Buffer, 0, read), args);
+            using var stream = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length, FileOptions.SequentialScan | FileOptions.Asynchronous);
+            int read;
+            while((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                await writer(new(buffer, 0, read), args);
+            }
+        }
+        finally
+        {
+            pool.Return(buffer, true);
         }
     }
 
     protected virtual void Dispose(bool disposing)
     {
-        if(disposing)
-        {
-            ArrayPool<byte>.Shared.Return(Buffer, true);
-        }
+        // Ownership determined by deriving classes
     }
 
     public void Dispose()
@@ -60,7 +125,7 @@ public abstract class TemporaryFile : IDisposable
 
     public static TemporaryFile ReadFrom<TArgs>(StorageQuota quota, SynchronousReader<TArgs> reader, TArgs args)
     {
-        var file = new QuotaFile(quota);
+        var file = new PartialFile(quota);
         try
         {
             file.ReadFrom(reader, args);
@@ -80,7 +145,7 @@ public abstract class TemporaryFile : IDisposable
 
     public static async ValueTask<TemporaryFile> ReadFromAsync<TArgs>(StorageQuota quota, AsynchronousReader<TArgs> reader, TArgs args)
     {
-        var file = new QuotaFile(quota);
+        var file = new PartialFile(quota);
         try
         {
             await file.ReadFromAsync(reader, args);
@@ -95,68 +160,6 @@ public abstract class TemporaryFile : IDisposable
         {
             file.Dispose();
             return false;
-        }
-    }
-
-    sealed class QuotaFile : TemporaryFile
-    {
-        readonly StorageQuota quota;
-
-        public QuotaFile(StorageQuota quota) : base(CreateTemporaryFile(quota))
-        {
-            this.quota = quota;
-        }
-
-        static string CreateTemporaryFile(StorageQuota quota)
-        {
-            quota.RequestFiles(1);
-            return Path.GetTempFileName();
-        }
-
-        public void ReadFrom<TArgs>(SynchronousReader<TArgs> reader, TArgs args)
-        {
-            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Delete, bufferSize, FileOptions.SequentialScan);
-            var segment = new ArraySegment<byte>(Buffer, 0, Buffer.Length);
-            int read;
-            while((read = reader(segment, args)) > 0)
-            {
-                quota.RequestBytes(read);
-                stream.Write(Buffer, 0, read);
-            }
-        }
-
-        public async ValueTask ReadFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args)
-        {
-            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Delete, bufferSize, FileOptions.SequentialScan | FileOptions.Asynchronous);
-            var segment = new ArraySegment<byte>(Buffer, 0, Buffer.Length);
-            int read;
-            while((read = await reader(segment, args)) > 0)
-            {
-                quota.RequestBytes(read);
-                await stream.WriteAsync(Buffer, 0, read);
-            }
-        }
-
-        private void Truncate()
-        {
-            using var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Delete);
-            var length = stream.Length;
-            stream.SetLength(0);
-            quota.ReleaseBytes(length);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            try
-            {
-                Truncate();
-                File.Delete(path);
-                quota.ReleaseFiles(1);
-            }
-            finally
-            {
-                base.Dispose(disposing);
-            }
         }
     }
 }

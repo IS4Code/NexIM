@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Unicord.Primitives.Xml.Handlers;
+using Unicord.Server.Accounts;
+using Unicord.Server.Accounts.VCards;
 using Unicord.Server.Events;
 using Unicord.Xmpp.Protocol;
 using Unicord.Xmpp.Protocol.Handlers;
@@ -43,16 +45,30 @@ internal sealed class GetVCardTemp : BaseDelegatingVCardHandler<CapturingHandler
     }
 }
 
-internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<ICommandContext>, EmptyDisposable, ICommandContext>
+internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<ICommandContext>, EmptyDisposable, ICommandContext>, IDisposable
 {
     protected sealed override VCardParser<ICommandContext> InnerHandler { get; } = new(new());
     protected sealed override EmptyDisposable Disposable => default;
 
     protected VCardQueryData GetData()
     {
+        var vcard = InnerHandler.VCard;
+        foreach(var data in vcard.Data)
+        {
+            // Each embedded file must change ownership to the account
+            if(data.BinaryValue is { } file and not UploadedFile)
+            {
+                string? contentType = data switch {
+                    VCardMedia media => media.FormatType,
+                    _ => null
+                };
+                data.BinaryValue = this.GetClientSession().AcquireUploadedFile(file, null, contentType);
+                file.Dispose();
+            }
+        }
         return new VCardQueryData
         {
-            VCard = InnerHandler.VCard,
+            VCard = vcard,
             Extensions = InnerHandler.ExtensionsHandler.ToExtensions()
         };
     }
@@ -68,6 +84,29 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
         finally
         {
             this.Post(GetEvent());
+        }
+    }
+
+    public void Dispose()
+    {
+        using var data = InnerHandler.VCard.Data.GetEnumerator();
+        DisposeRest();
+
+        bool DisposeRest()
+        {
+            while(data.MoveNext())
+            {
+                try
+                {
+                    // Already uploaded files will be unaffected by dispose
+                    data.Current.BinaryValue?.Dispose();
+                }
+                catch when(DisposeRest())
+                {
+                    throw;
+                }
+            }
+            return false;
         }
     }
 }

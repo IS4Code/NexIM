@@ -15,6 +15,9 @@ internal class AccountsContext : DbContext
     public Server Server { get; }
 
     public DbSet<Account> Accounts { get; set; }
+    public DbSet<UploadedFile> UploadedFiles { get; set; }
+
+    readonly MessagePackSerializerOptions serializerOptions;
 
     static AccountsContext()
     {
@@ -24,6 +27,7 @@ internal class AccountsContext : DbContext
     public AccountsContext(Server server)
     {
         Server = server;
+        serializerOptions = CreateOptions(MessagePackSerializerOptions.Standard);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
@@ -70,22 +74,30 @@ internal class AccountsContext : DbContext
                     x => LoadExtensions(x)
                 );
             });
+
+            e.Ignore(x => x.UploadedFiles);
+            e.HasMany(x => x.UploadedFilesBuilder);
+        });
+
+        modelBuilder.Entity<UploadedFile>(e => {
+            e.HasKey(x => x.Identifier);
+
+            e.Property(x => x.Sha1Hash);
+            e.Property(x => x.Sha256Hash);
         });
     }
 
-    static readonly MessagePackSerializerOptions serializerOptions = CreateOptions(MessagePackSerializerOptions.Standard);
-
-    private static string? SaveLanguage(LanguageCode? language)
+    private string? SaveLanguage(LanguageCode? language)
     {
         return language?.Value;
     }
 
-    private static LanguageCode? LoadLanguage(string? language)
+    private LanguageCode? LoadLanguage(string? language)
     {
         return language != null ? new LanguageCode(language) : null;
     }
 
-    private static byte[]? SaveVCard(VCard? vcard)
+    private byte[]? SaveVCard(VCard? vcard)
     {
         if(vcard == null)
         {
@@ -94,7 +106,7 @@ internal class AccountsContext : DbContext
         return MessagePackSerializer.Serialize(vcard, serializerOptions);
     }
 
-    private static VCard? LoadVCard(byte[]? data)
+    private VCard? LoadVCard(byte[]? data)
     {
         if(data == null)
         {
@@ -103,7 +115,7 @@ internal class AccountsContext : DbContext
         return MessagePackSerializer.Deserialize<VCard>(data, serializerOptions);
     }
 
-    private static byte[] SaveExtensions(EventExtensions extensions)
+    private byte[] SaveExtensions(EventExtensions extensions)
     {
         if(extensions.IsEmpty)
         {
@@ -112,7 +124,7 @@ internal class AccountsContext : DbContext
         return MessagePackSerializer.Serialize(extensions, serializerOptions);
     }
 
-    private static EventExtensions LoadExtensions(byte[]? data)
+    private EventExtensions LoadExtensions(byte[]? data)
     {
         if(data is null or { Length: 0 })
         {
@@ -121,22 +133,24 @@ internal class AccountsContext : DbContext
         return MessagePackSerializer.Deserialize<EventExtensions>(data, serializerOptions);
     }
 
-    static MessagePackSerializerOptions CreateOptions(MessagePackSerializerOptions from)
+    MessagePackSerializerOptions CreateOptions(MessagePackSerializerOptions from)
     {
         return from.WithResolver(
             CompositeResolver.Create(
                 from.Resolver,
-                new Resolver(from.Resolver)
+                new Resolver(from.Resolver, Server)
             )
         );
     }
 
-    sealed class Resolver(IFormatterResolver standardResolver) : IFormatterResolver,
+    sealed class Resolver(IFormatterResolver standardResolver, Server server) : IFormatterResolver,
         IResolver<TimeZoneOffset>,
-        IResolver<DateComponents>
+        IResolver<DateComponents>,
+        IResolver<TemporaryFile>
     {
         readonly TimeZoneOffsetFormatter timeZoneOffsetFormatter = new(standardResolver);
         readonly DateFormatter dateFormatter = new(standardResolver);
+        readonly TemporaryFileFormatter temporaryFileFormatter = new(standardResolver, server);
 
         public IMessagePackFormatter<T>? GetFormatter<T>()
         {
@@ -151,6 +165,11 @@ internal class AccountsContext : DbContext
         IMessagePackFormatter<DateComponents>? IResolver<DateComponents>.GetFormatter()
         {
             return dateFormatter;
+        }
+
+        IMessagePackFormatter<TemporaryFile>? IResolver<TemporaryFile>.GetFormatter()
+        {
+            return temporaryFileFormatter;
         }
     }
 

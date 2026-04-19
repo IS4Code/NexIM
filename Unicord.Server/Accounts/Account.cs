@@ -28,6 +28,9 @@ public partial class Account
     SnapshotDictionary<XName, PrivateStorageData> privateStorage = default;
     public ICollection<PrivateStorageData> PrivateStorage => privateStorage.Snapshot.Values;
 
+    SnapshotDictionary<Guid, UploadedFile> uploadedFiles = default;
+    public ICollection<UploadedFile> UploadedFiles => uploadedFiles.Snapshot.Values;
+
     public Account(Server server, string user, string host, byte[] passwordHash)
     {
         Events = default;
@@ -48,6 +51,12 @@ public partial class Account
     {
         await Server.SaveDatabase();
         return Report(StatusCode.Success);
+    }
+
+    internal void AddUploadedFile(UploadedFile file)
+    {
+        uploadedFiles.SetItem(file.Identifier, file);
+        Server.AddUploadedFile(file);
     }
 
     public Contact? GetContact(AccountName name)

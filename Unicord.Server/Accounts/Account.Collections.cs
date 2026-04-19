@@ -9,6 +9,7 @@ namespace Unicord.Server.Accounts;
 
 using ContactsBuilder = Account.SnapshotCollectionBuilder<AccountName, Contact>;
 using PrivateStorageBuilder = Account.SnapshotCollectionBuilder<XName, PrivateStorageData>;
+using UploadedFilesBuilder = Account.SnapshotCollectionBuilder<Guid, UploadedFile>;
 
 partial class Account
 {
@@ -18,18 +19,23 @@ partial class Account
     readonly PrivateStorageBuilder.Accessor privateStorageAccessor;
     static readonly Func<PrivateStorageData, XName> privateStorageKeySelector = x => x.EventData.Key;
 
+    readonly UploadedFilesBuilder.Accessor uploadedFilesAccessor;
+    static readonly Func<UploadedFile, Guid> uploadedFilesKeySelector = x => x.Identifier;
+
     private ValueTuple Collections {
         [MemberNotNull(nameof(contactsAccessor))]
         [MemberNotNull(nameof(privateStorageAccessor))]
+        [MemberNotNull(nameof(uploadedFilesAccessor))]
         init {
             contactsAccessor = () => ref contacts;
             privateStorageAccessor = () => ref privateStorage;
+            uploadedFilesAccessor = () => ref uploadedFiles;
         }
     }
 
     internal ContactsBuilder ContactsBuilder => new(contactsAccessor, contactsKeySelector);
-
     internal PrivateStorageBuilder PrivateStorageBuilder => new(privateStorageAccessor, privateStorageKeySelector);
+    internal UploadedFilesBuilder UploadedFilesBuilder => new(uploadedFilesAccessor, uploadedFilesKeySelector);
 
     internal sealed class SnapshotCollectionBuilder<TKey, TValue> : ICollection<TValue> where TKey : notnull
     {

@@ -9,14 +9,14 @@ namespace Unicord.Server.Database;
 [SuppressMessage("Usage", "MsgPack013:Inaccessible formatter", Justification = "Explicit resolver")]
 internal sealed class DateFormatter(IFormatterResolver standardResolver) : IMessagePackFormatter<DateComponents>
 {
-    readonly IMessagePackFormatter<DateTimeOffset> dateTimeOffset = standardResolver.GetFormatterWithVerify<DateTimeOffset>();
+    readonly IMessagePackFormatter<DateTimeOffset> dateTimeOffsetFormatter = standardResolver.GetFormatterWithVerify<DateTimeOffset>();
 
     public void Serialize(ref MessagePackWriter writer, DateComponents value, MessagePackSerializerOptions options)
     {
         // Components followed by time
         writer.WriteArrayHeader(2);
         writer.WriteUInt8((byte)value.Components);
-        dateTimeOffset.Serialize(ref writer, value.Value, options);
+        dateTimeOffsetFormatter.Serialize(ref writer, value.Value, options);
     }
 
     public DateComponents Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
@@ -26,6 +26,6 @@ internal sealed class DateFormatter(IFormatterResolver standardResolver) : IMess
             throw new ArgumentException("Not a valid Date value.", nameof(reader));
         }
         var components = reader.ReadByte();
-        return new(dateTimeOffset.Deserialize(ref reader, options), (DateComponentsCombination)components);
+        return new(dateTimeOffsetFormatter.Deserialize(ref reader, options), (DateComponentsCombination)components);
     }
 }

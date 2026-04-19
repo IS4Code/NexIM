@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Unicord.Server.Accounts;
 using Unicord.Server.Database;
 
@@ -23,6 +24,16 @@ partial class Server
     internal async Task SaveDatabase()
     {
         await database.SaveChangesAsync();
+    }
+
+    internal void AddUploadedFile(UploadedFile file)
+    {
+        database.UploadedFiles.Add(file);
+    }
+
+    internal UploadedFile? FindUploadedFile(Guid identifier)
+    {
+        return database.UploadedFiles.Find(identifier);
     }
 
     private Account CreateAccount(string user, string host, byte[] passwordHash)

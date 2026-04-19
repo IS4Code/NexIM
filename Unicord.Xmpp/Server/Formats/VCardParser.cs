@@ -228,7 +228,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
         protected async override ValueTask OnBinaryValue(TemporaryFile? data)
         {
-            this.SetOnce(ref media.BinaryValue, data);
+            this.SetOnce(ref media.BinaryValue, data?.MoveFrom());
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
@@ -566,7 +566,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
         protected async override ValueTask OnBinaryValue(TemporaryFile? data)
         {
-            this.SetOnce(ref pronunciation.BinaryValue, data);
+            this.SetOnce(ref pronunciation.BinaryValue, data?.MoveFrom());
         }
 
         protected async override ValueTask OnPhoneticTranscription(string? text)

@@ -95,6 +95,15 @@ public abstract class ClientSession : IAsyncDisposable
         ReceivesRosterUpdates = true;
     }
 
+    public UploadedFile AcquireUploadedFile(TemporaryFile fileSource, string? name, string? contentType)
+    {
+        var file = UploadedFile.MoveFrom(fileSource);
+        file.Name = name;
+        file.ContentType = contentType;
+        Account.AddUploadedFile(file);
+        return file;
+    }
+
     static readonly Func<Identifier, PresenceStore, PresenceStore> addFactory = (_, value) => value;
     static readonly Func<Identifier, PresenceStore, PresenceStore, PresenceStore> keepOriginalIfSameUpdateFactory = (_, previous, updated) => previous == updated ? previous : updated;
 

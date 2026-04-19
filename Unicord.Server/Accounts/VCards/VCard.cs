@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using MessagePack;
 using Unicord.Primitives;
@@ -9,6 +10,35 @@ namespace Unicord.Server.Accounts.VCards;
 [MessagePackObject]
 public sealed class VCard
 {
+    /// <summary>
+    /// Contains all data resources owned by the vCard.
+    /// </summary>
+    [IgnoreMember]
+    public IEnumerable<VCardData> Data {
+        get {
+            var data = Photos ?? Enumerable.Empty<VCardData>();
+            if(Logos is { } logos)
+            {
+                data = data.Concat(logos);
+            }
+            if(Pronunciations is { } pronunciations)
+            {
+                data = data.Concat(pronunciations);
+            }
+            if(AdministrativeAgents is { } agents)
+            {
+                foreach(var agent in agents)
+                {
+                    if(agent.VCard is { } agentVCard)
+                    {
+                        data = data.Concat(agentVCard.Data);
+                    }
+                }
+            }
+            return data;
+        }
+    }
+
     [Key(0)] public string? Version;
     [Key(1)] public string? FormattedName;
 
