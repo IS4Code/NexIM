@@ -8,7 +8,19 @@ namespace Unicord.Primitives.Xml;
 /// <summary>
 /// Provides support for encoding to XML.
 /// </summary>
-public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlEncoder<TemporaryUtf8String>, IValueXmlEncoder<ArraySegment<byte>>, IValueXmlEncoder<TemporaryArray<byte>>, IValueXmlEncoder<TemporaryFile>, IValueXmlEncoder<Token<Enum>>, IValueXmlEncoder<LanguageTaggedString>, IValueXmlEncoder<DateTime>, IValueXmlEncoder<DateTimeOffset>, IValueXmlEncoder<TimeZoneOffset>, IValueXmlEncoder<Uri>
+public abstract class XmlEncoder :
+    IValueXmlEncoder<TemporaryString>,
+    IValueXmlEncoder<TemporaryUtf8String>,
+    IValueXmlEncoder<ArraySegment<byte>>,
+    IValueXmlEncoder<TemporaryArray<byte>>,
+    IValueXmlEncoder<TemporaryFile>,
+    IValueXmlEncoder<Token<Enum>>,
+    IValueXmlEncoder<LanguageTaggedString>,
+    IValueXmlEncoder<DateTime>,
+    IValueXmlEncoder<DateTimeOffset>,
+    IValueXmlEncoder<DateComponents>,
+    IValueXmlEncoder<TimeZoneOffset>,
+    IValueXmlEncoder<Uri>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -112,15 +124,19 @@ public abstract class XmlEncoder : IValueXmlEncoder<TemporaryString>, IValueXmlE
         return new(writer.WriteStringAsync(XmlConvert.ToString(value)));
     }
 
-    async ValueTask IValueXmlEncoder<TimeZoneOffset>.Encode(XmlWriter writer, TimeZoneOffset value)
+    ValueTask IValueXmlEncoder<DateComponents>.Encode(XmlWriter writer, DateComponents value)
     {
-        var dateTime = new DateTimeOffset(62135596800 * TimeSpan.TicksPerSecond, value.Value);
-        await writer.WriteStringAsync(XmlConvert.ToString(dateTime, "zzzzzzz"));
+        return new(writer.WriteStringAsync(value.ToString()));
     }
 
-    async ValueTask IValueXmlEncoder<Uri>.Encode(XmlWriter writer, Uri value)
+    ValueTask IValueXmlEncoder<TimeZoneOffset>.Encode(XmlWriter writer, TimeZoneOffset value)
     {
-        await writer.WriteStringAsync(value.OriginalString);
+        return new(writer.WriteStringAsync(value.ToString()));
+    }
+
+    ValueTask IValueXmlEncoder<Uri>.Encode(XmlWriter writer, Uri value)
+    {
+        return new(writer.WriteStringAsync(value.OriginalString));
     }
 }
 

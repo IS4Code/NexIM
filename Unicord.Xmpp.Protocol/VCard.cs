@@ -25,7 +25,7 @@ public interface IVCardHandler : IPayloadHandler
     ValueTask<IVCardMediaHandler> Photo();
 
     [Name("BDAY")]
-    ValueTask Birthday(DateTimeOffset? dateTime);
+    ValueTask Birthday(DateComponents? date);
 
     [Name("ADR")]
     ValueTask<IVCardDeliveryAddressHandler> DeliveryAddress();
@@ -76,7 +76,7 @@ public interface IVCardHandler : IPayloadHandler
     ValueTask VCardProduct(string? text);
 
     [Name("REV")]
-    ValueTask Revised(DateTimeOffset? dateTime);
+    ValueTask Revised(DateComponents? date);
 
     [Name("SORT-STRING")]
     ValueTask SortString(string? value);

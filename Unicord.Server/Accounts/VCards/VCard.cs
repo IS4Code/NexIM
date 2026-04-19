@@ -20,7 +20,7 @@ public sealed class VCard
 
     [Key(7)] public List<string>? Nicknames;
     [Key(8)] public List<VCardMedia>? Photos;
-    [Key(9)] public DateTimeOffset? Birthday;
+    [Key(9)] public DateComponents? Birthday;
 
     [Key(10)] public List<VCardDeliveryAddress>? DeliveryAddresses;
     [Key(11)] public List<VCardAddressLabel>? AddressLabels;
@@ -42,7 +42,7 @@ public sealed class VCard
 
     [Key(24)] public List<string>? Notes;
     [Key(25)] public string? VCardProduct;
-    [Key(26)] public DateTimeOffset? Revised;
+    [Key(26)] public DateComponents? Revised;
     [Key(27)] public List<string>? SortStrings;
 
     [Key(28)] public List<VCardPronunciation>? Pronunciations;

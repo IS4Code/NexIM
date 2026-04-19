@@ -131,18 +131,26 @@ internal class AccountsContext : DbContext
         );
     }
 
-    sealed class Resolver(IFormatterResolver standardResolver) : IFormatterResolver, IResolver<TimeZoneOffset>
+    sealed class Resolver(IFormatterResolver standardResolver) : IFormatterResolver,
+        IResolver<TimeZoneOffset>,
+        IResolver<DateComponents>
     {
         readonly TimeZoneOffsetFormatter timeZoneOffsetFormatter = new(standardResolver);
+        readonly DateFormatter dateFormatter = new(standardResolver);
 
         public IMessagePackFormatter<T>? GetFormatter<T>()
         {
             return (this as IResolver<T>)?.GetFormatter();
         }
 
-        public IMessagePackFormatter<TimeZoneOffset>? GetFormatter()
+        IMessagePackFormatter<TimeZoneOffset>? IResolver<TimeZoneOffset>.GetFormatter()
         {
             return timeZoneOffsetFormatter;
+        }
+
+        IMessagePackFormatter<DateComponents>? IResolver<DateComponents>.GetFormatter()
+        {
+            return dateFormatter;
         }
     }
 

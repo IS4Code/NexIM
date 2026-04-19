@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Newtonsoft.Json;
 using Unicord.Primitives.Json.Grammar;
 
@@ -13,7 +12,16 @@ using XmlConvert = System.Xml.XmlConvert;
 /// <summary>
 /// Provides support for encoding to JSON.
 /// </summary>
-public abstract class JsonEncoder : IValueJsonEncoder<Token<Enum>>, IValueJsonEncoder<DateTime>, IValueJsonEncoder<DateTimeOffset>, IValueJsonEncoder<Uri>, IValueJsonEncoder<(LanguageCode language, string text)>, IValueJsonEncoder<LanguageTaggedString>, IValueJsonEncoder<LocalizedString>
+public abstract class JsonEncoder :
+    IValueJsonEncoder<Token<Enum>>,
+    IValueJsonEncoder<DateTime>,
+    IValueJsonEncoder<DateTimeOffset>,
+    IValueJsonEncoder<DateComponents>,
+    IValueJsonEncoder<TimeZoneOffset>,
+    IValueJsonEncoder<Uri>,
+    IValueJsonEncoder<(LanguageCode language, string text)>,
+    IValueJsonEncoder<LanguageTaggedString>,
+    IValueJsonEncoder<LocalizedString>
 {
     protected abstract JsonWriter Writer { get; }
 
@@ -46,9 +54,19 @@ public abstract class JsonEncoder : IValueJsonEncoder<Token<Enum>>, IValueJsonEn
         return new(writer.WriteValueAsync(XmlConvert.ToString(value)));
     }
 
-    async ValueTask IValueJsonEncoder<Uri>.Encode(JsonWriter writer, Uri value)
+    ValueTask IValueJsonEncoder<DateComponents>.Encode(JsonWriter writer, DateComponents value)
     {
-        await writer.WriteValueAsync(value.OriginalString);
+        return new(writer.WriteValueAsync(value.ToString()));
+    }
+
+    ValueTask IValueJsonEncoder<TimeZoneOffset>.Encode(JsonWriter writer, TimeZoneOffset value)
+    {
+        return new(writer.WriteValueAsync(value.ToString()));
+    }
+
+    ValueTask IValueJsonEncoder<Uri>.Encode(JsonWriter writer, Uri value)
+    {
+        return new(writer.WriteValueAsync(value.OriginalString));
     }
 
     async ValueTask IValueJsonEncoder<(LanguageCode language, string text)>.Encode(JsonWriter writer, (LanguageCode, string) value)

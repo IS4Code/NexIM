@@ -41,9 +41,9 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         return new MediaParser(this.AddList(ref vcard.Photos, new())) { Context = Context };
     }
 
-    protected async override ValueTask OnBirthday(DateTimeOffset? dateTime)
+    protected async override ValueTask OnBirthday(DateComponents? date)
     {
-        this.SetOnce(ref vcard.Birthday, dateTime);
+        this.SetOnce(ref vcard.Birthday, date);
     }
 
     protected async override ValueTask<IVCardDeliveryAddressHandler> OnDeliveryAddress()
@@ -134,9 +134,9 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         this.SetOnce(ref vcard.VCardProduct, text);
     }
 
-    protected async override ValueTask OnRevised(DateTimeOffset? dateTime)
+    protected async override ValueTask OnRevised(DateComponents? date)
     {
-        this.SetOnce(ref vcard.Revised, dateTime);
+        this.SetOnce(ref vcard.Revised, date);
     }
 
     protected async override ValueTask OnSortString(string? value)
