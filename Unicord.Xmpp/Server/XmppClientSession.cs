@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Primitives.Xml.Handlers;
@@ -167,6 +168,12 @@ public class XmppClientSession : ClientSession
                             break;
                         case RosterRemoveData removeData:
                             await RosterFormatter.WriteTo(removeData.Contact, rosterHandler, true);
+                            break;
+                        default:
+                            foreach(var contact in rosterData.Roster ?? Enumerable.Empty<Contact>())
+                            {
+                                await RosterFormatter.WriteTo(contact, rosterHandler, false);
+                            }
                             break;
                     }
                     await WriteExtensions(rosterHandler, rosterData.Extensions);
