@@ -68,7 +68,7 @@ partial class Account
             // Filled later
             Origin = EventOrigin.FromTo(Name.ToIdentifier(), default),
             Processing = EventProcessing.Create(),
-            Data = new RosterRemoveData {
+            Data = new RosterUpdateData {
                 Contact = contact,
                 Tag = GetRosterVersionString(contacts),
                 Roster = contacts
@@ -84,7 +84,7 @@ partial class Account
             // Filled later
             Origin = EventOrigin.FromTo(Name.ToIdentifier(), default),
             Processing = EventProcessing.Create(),
-            Data = new RosterUpdateData {
+            Data = new RosterRemoveData {
                 Contact = contact,
                 Tag = GetRosterVersionString(contacts),
                 Roster = contacts
