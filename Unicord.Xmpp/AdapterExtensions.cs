@@ -88,6 +88,12 @@ internal static partial class AdapterExtensions
 
     public static Stanza ToStanza(this PresenceEvent evnt, IXmppSession session)
     {
+        var to = evnt.To.ToResource();
+        if(to == session.RemoteResource?.Bare)
+        {
+            // Ignore if mirrored from the account
+            to = null;
+        }
         return new(
             Type: evnt switch {
                 StatusUpdateEvent { Data.Status.Availability: Availability.Unavailable } => StanzaType.Unavailable.ToToken(),
@@ -98,7 +104,7 @@ internal static partial class AdapterExtensions
                 SubscriptionCancelledEvent => StanzaType.Unsubscribe.ToToken()
             },
             From: evnt.From.ToResource(),
-            To: evnt.To.ToResource(),
+            To: to,
             Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
             Language: evnt.TransactionLanguage
         );
