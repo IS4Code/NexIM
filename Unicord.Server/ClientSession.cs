@@ -97,7 +97,7 @@ public abstract class ClientSession : IAsyncDisposable
 
     public UploadedFile AcquireUploadedFile(TemporaryFile fileSource, string? name, string? contentType)
     {
-        var file = UploadedFile.MoveFrom(fileSource);
+        var file = UploadedFile.MoveFrom(fileSource, Account);
         file.Name = name;
         file.ContentType = contentType;
         Account.AddUploadedFile(file);

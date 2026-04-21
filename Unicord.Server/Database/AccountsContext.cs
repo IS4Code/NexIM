@@ -3,10 +3,9 @@ using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Unicord.Primitives;
 using Unicord.Server.Accounts;
-using Unicord.Server.Accounts.VCards;
-using Unicord.Server.Events;
 
 namespace Unicord.Server.Database;
 
@@ -17,7 +16,8 @@ internal class AccountsContext : DbContext
     public DbSet<Account> Accounts { get; set; }
     public DbSet<UploadedFile> UploadedFiles { get; set; }
 
-    readonly MessagePackSerializerOptions serializerOptions;
+    readonly VCardConverter vcardConverter;
+    readonly EventExtensionsConverter eventExtensionsConverter;
 
     static AccountsContext()
     {
@@ -27,7 +27,9 @@ internal class AccountsContext : DbContext
     public AccountsContext(Server server)
     {
         Server = server;
-        serializerOptions = CreateOptions(MessagePackSerializerOptions.Standard);
+        var msgpackOptions = CreateOptions(MessagePackSerializerOptions.Standard);
+        vcardConverter = new(msgpackOptions);
+        eventExtensionsConverter = new(msgpackOptions);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
@@ -38,48 +40,36 @@ internal class AccountsContext : DbContext
         options.UseSqlite("Data Source=accounts.db");
     }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<Guid>().HaveConversion<GuidToBytesConverter>();
+        configurationBuilder.Properties<LanguageCode?>().HaveConversion<LanguageCodeConverter>();
+        configurationBuilder.Properties<SubscriptionState>().HaveConversion<SubscriptionStateConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Account>(e => {
-            e.Ignore(x => x.Name);
-            e.HasKey(x => new { x.Host, x.User });
+            e.HasKey(x => x.Identifier);
+            e.HasIndex(x => new { x.Host, x.User });
 
             e.Property(x => x.PasswordHash);
 
-            e.Property(x => x.VCard).HasConversion(
-                x => SaveVCard(x),
-                x => LoadVCard(x)
-            );
+            e.Property(x => x.VCard).HasConversion(vcardConverter);
 
-            e.Ignore(x => x.Contacts);
             e.OwnsMany(x => x.ContactsBuilder, e => {
-                e.Ignore(x => x.Account);
-
-                e.HasKey(x => new { x.Host, x.User });
-
-                e.Property(x => x.SubscriptionState).HasConversion(
-                    x => (ushort)((byte)x.From | ((byte)x.To << 8)),
-                    x => new((SubscriptionLevel)(x & 0xFF), (SubscriptionLevel)(x >> 8))
-                );
+                e.WithOwner().HasForeignKey(x => x.AccountIdentifier);
+                e.HasKey(x => new { x.AccountIdentifier, x.Host, x.User });
             });
 
-            e.Ignore(x => x.PrivateStorage);
             e.OwnsMany(x => x.PrivateStorageBuilder, e => {
-                e.HasKey(x => new { x.KeyNamespace, x.KeyName });
+                e.WithOwner().HasForeignKey(x => x.AccountIdentifier);
+                e.HasKey(x => new { x.AccountIdentifier, x.KeyNamespace, x.KeyName });
 
-                e.Property(x => x.Language).HasConversion(
-                    x => SaveLanguage(x),
-                    x => LoadLanguage(x)
-                );
-
-                e.Property(x => x.Data).HasConversion(
-                    x => SaveExtensions(x),
-                    x => LoadExtensions(x)
-                );
+                e.Property(x => x.Data).HasConversion(eventExtensionsConverter);
             });
 
-            e.Ignore(x => x.UploadedFiles);
-            e.HasMany(x => x.UploadedFilesBuilder);
+            e.HasMany(x => x.UploadedFilesBuilder).WithOne(x => x.Uploader);
         });
 
         modelBuilder.Entity<UploadedFile>(e => {
@@ -88,52 +78,6 @@ internal class AccountsContext : DbContext
             e.Property(x => x.Sha1Hash);
             e.Property(x => x.Sha256Hash);
         });
-    }
-
-    private string? SaveLanguage(LanguageCode? language)
-    {
-        return language?.Value;
-    }
-
-    private LanguageCode? LoadLanguage(string? language)
-    {
-        return language != null ? new LanguageCode(language) : null;
-    }
-
-    private byte[]? SaveVCard(VCard? vcard)
-    {
-        if(vcard == null)
-        {
-            return null;
-        }
-        return MessagePackSerializer.Serialize(vcard, serializerOptions);
-    }
-
-    private VCard? LoadVCard(byte[]? data)
-    {
-        if(data == null)
-        {
-            return null;
-        }
-        return MessagePackSerializer.Deserialize<VCard>(data, serializerOptions);
-    }
-
-    private byte[] SaveExtensions(EventExtensions extensions)
-    {
-        if(extensions.IsEmpty)
-        {
-            return Array.Empty<byte>();
-        }
-        return MessagePackSerializer.Serialize(extensions, serializerOptions);
-    }
-
-    private EventExtensions LoadExtensions(byte[]? data)
-    {
-        if(data is null or { Length: 0 })
-        {
-            return default;
-        }
-        return MessagePackSerializer.Deserialize<EventExtensions>(data, serializerOptions);
     }
 
     MessagePackSerializerOptions CreateOptions(MessagePackSerializerOptions from)
@@ -149,7 +93,7 @@ internal class AccountsContext : DbContext
     sealed class Resolver(IFormatterResolver standardResolver, Server server) : IFormatterResolver,
         IResolver<TimeZoneOffset>,
         IResolver<DateComponents>,
-        IResolver<TemporaryFile>
+        IResolver<TemporaryFile?>
     {
         readonly TimeZoneOffsetFormatter timeZoneOffsetFormatter = new(standardResolver);
         readonly DateFormatter dateFormatter = new(standardResolver);
@@ -170,7 +114,7 @@ internal class AccountsContext : DbContext
             return dateFormatter;
         }
 
-        IMessagePackFormatter<TemporaryFile>? IResolver<TemporaryFile>.GetFormatter()
+        IMessagePackFormatter<TemporaryFile?>? IResolver<TemporaryFile?>.GetFormatter()
         {
             return temporaryFileFormatter;
         }

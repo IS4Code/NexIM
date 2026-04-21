@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.InteropServices;
 
 namespace Unicord.Server.Accounts;
@@ -7,7 +8,9 @@ using static SubscriptionLevel;
 
 public record Contact : IComparable<Contact>
 {
+    [NotMapped]
     public required AccountName Account { get; init; }
+
     public required SubscriptionState SubscriptionState { get; init; }
     public string? Name { get; init; }
     public string? Group { get; init; }
@@ -21,6 +24,8 @@ public record Contact : IComparable<Contact>
         get => Account.Host;
         init => Account = Account with { Host = value };
     }
+
+    internal Guid AccountIdentifier { get; init; }
 
     public Contact WithSubscriptionState(SubscriptionState newState)
     {

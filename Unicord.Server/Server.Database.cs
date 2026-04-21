@@ -38,7 +38,7 @@ partial class Server
 
     private Account CreateAccount(string user, string host, byte[] passwordHash)
     {
-        var created = new Account(this, user, host, passwordHash);
+        var created = new Account(this, IdentifierHelper.CreateGuid(), user, host, passwordHash);
         database.Accounts.Add(created);
         return created;
     }

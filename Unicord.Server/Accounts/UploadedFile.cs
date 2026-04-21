@@ -17,13 +17,16 @@ public sealed class UploadedFile : TemporaryFile
     public string? ContentType { get; set; }
     public DateTimeOffset? Expires { get; set; }
 
-    public UploadedFile()
+    // Null if account no longer exists
+    internal Account? Uploader { get; init; }
+
+    internal UploadedFile()
     {
         // Ownership of the file is not tied to GC
         GC.SuppressFinalize(this);
     }
 
-    private UploadedFile(TemporaryFile source) : base(source)
+    internal UploadedFile(TemporaryFile source) : base(source)
     {
         GC.SuppressFinalize(this);
     }
@@ -34,7 +37,7 @@ public sealed class UploadedFile : TemporaryFile
         return this;
     }
 
-    public static UploadedFile MoveFrom(TemporaryFile original)
+    internal static UploadedFile MoveFrom(TemporaryFile original, Account uploader)
     {
         if(original is UploadedFile file)
         {
@@ -57,7 +60,8 @@ public sealed class UploadedFile : TemporaryFile
             Identifier = IdentifierHelper.CreateGuid(date),
             Uploaded = date,
             Sha1Hash = sha1,
-            Sha256Hash = sha256
+            Sha256Hash = sha256,
+            Uploader = uploader
         };
     }
 

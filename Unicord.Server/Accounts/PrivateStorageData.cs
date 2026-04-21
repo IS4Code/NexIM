@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Xml.Linq;
 using Unicord.Primitives;
 using Unicord.Server.Events;
@@ -19,7 +20,9 @@ public record PrivateStorageData
         Extensions = Data
     });
 
-    public PrivateStorageData()
+    internal Guid AccountIdentifier { get; init; }
+
+    internal PrivateStorageData()
     {
 
     }

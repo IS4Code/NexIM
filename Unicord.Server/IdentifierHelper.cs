@@ -9,6 +9,8 @@ internal static class IdentifierHelper
 {
     public static DateTimeOffset IdentifierTimeNow => GetPreciseDateTime();
 
+    public static Guid CreateGuid() => CreateGuid(IdentifierTimeNow);
+
     public static Guid CreateGuid(DateTimeOffset timestamp)
     {
         // Precision lost when converted to milliseconds

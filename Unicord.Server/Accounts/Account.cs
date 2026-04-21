@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -14,7 +15,11 @@ public partial class Account
 {
     public Server Server { get; }
 
+    public Guid Identifier { get; }
+
+    [NotMapped]
     public AccountName Name => new(User, Host);
+
     internal byte[] PasswordHash { get; }
 
     public string User { get; private set; }
@@ -23,26 +28,33 @@ public partial class Account
     public VCard? VCard { get; set; }
 
     SnapshotDictionary<AccountName, Contact> contacts = default;
+
+    [NotMapped]
     public ICollection<Contact> Contacts => contacts.Snapshot.Values;
 
     SnapshotDictionary<XName, PrivateStorageData> privateStorage = default;
+
+    [NotMapped]
     public ICollection<PrivateStorageData> PrivateStorage => privateStorage.Snapshot.Values;
 
     SnapshotDictionary<Guid, UploadedFile> uploadedFiles = default;
+
+    [NotMapped]
     public ICollection<UploadedFile> UploadedFiles => uploadedFiles.Snapshot.Values;
 
-    public Account(Server server, string user, string host, byte[] passwordHash)
+    internal Account(Server server, Guid identifier, string user, string host, byte[] passwordHash)
     {
         Events = default;
         Collections = default;
 
         Server = server;
+        Identifier = identifier;
         User = user;
         Host = host;
         PasswordHash = passwordHash;
     }
 
-    internal Account(AccountsContext context, string user, string host, byte[] passwordHash) : this(context.Server, user, host, passwordHash)
+    internal Account(AccountsContext context, Guid identifier, string user, string host, byte[] passwordHash) : this(context.Server, identifier, user, host, passwordHash)
     {
 
     }
