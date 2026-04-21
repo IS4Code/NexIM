@@ -56,22 +56,22 @@ partial class Account : IEventHandler
 
     private ValueTask<StatusReports> RouteMessage(TargetType targetType, Identifiers targetTo, MessageEvent msgEvent)
     {
-        if(targetType == TargetType.Server)
-        {
-            // Not intended for this account
-            return Server.Post(msgEvent.WithTo(targetTo));
-        }
-
-        var tasks = new List<ValueTask<StatusReports>>();
-
+        List<ValueTask<StatusReports>> tasks;
         switch(targetType)
         {
+            case TargetType.Server:
+                // Not intended for this account
+                return Server.Post(msgEvent.WithTo(targetTo));
+
             case TargetType.Sessions:
+                tasks = new();
                 RouteToSessions(msgEvent, targetTo, tasks);
                 break;
-            case TargetType.Account:
+
+            default:
                 // Deliver to all sessions with top priority
                 // TODO Different receiving strategy
+                tasks = new();
                 sbyte? priority = null;
                 foreach(var session in GetSessions(true))
                 {
@@ -95,7 +95,7 @@ partial class Account : IEventHandler
         {
             return false;
         }
-        return account == Name || GetContact(account)?.SubscriptionState.From == SubscriptionLevel.Accepted;
+        return account == Name || GetContact(account)?.SubscriptionState.AcceptedFrom == true;
     }
 
     private ValueTask<StatusReports> RoutePresence(TargetType targetType, Identifiers targetTo, PresenceEvent presEvent)
@@ -116,6 +116,7 @@ partial class Account : IEventHandler
                         // Route normally
                         return Server.Post(presEvent);
                 }
+
             case TargetType.Sessions:
                 switch(presEvent)
                 {
@@ -127,6 +128,7 @@ partial class Account : IEventHandler
                 tasks = new();
                 RouteToSessions(presEvent, targetTo, tasks);
                 return tasks.Combine();
+
             default:
                 switch(presEvent)
                 {
@@ -138,8 +140,32 @@ partial class Account : IEventHandler
                 tasks = new();
                 foreach(var session in GetSessions(false))
                 {
+                    // Also includes the originating session (echo)
                     tasks.Add(session.Outbound(presEvent));
                 }
+
+                if(presEvent.From.Account == Name)
+                {
+                    // Deliver to all eligible contacts
+                    var subscribedSet = Identifiers.Builder.Empty;
+                    foreach(var contact in Contacts)
+                    {
+                        if(!contact.SubscriptionState.AcceptedFrom)
+                        {
+                            // Not accepted
+                            continue;
+                        }
+
+                        subscribedSet.Add(contact.Account.ToIdentifier());
+                    }
+
+                    if(subscribedSet.TryToSet() is { } contactIdentifiers)
+                    {
+                        // Send
+                        tasks.Add(Server.Post(presEvent.WithTo(contactIdentifiers)));
+                    }
+                }
+
                 return tasks.Combine();
         }
     }
