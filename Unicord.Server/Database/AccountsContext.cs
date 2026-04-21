@@ -32,6 +32,9 @@ internal class AccountsContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
+#if DEBUG
+        options.EnableSensitiveDataLogging();
+#endif
         options.UseSqlite("Data Source=accounts.db");
     }
 
