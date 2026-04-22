@@ -13,40 +13,29 @@ using UploadedFilesBuilder = Account.SnapshotCollectionBuilder<Guid, UploadedFil
 
 partial class Account
 {
-    readonly ContactsBuilder.Accessor contactsAccessor;
-    static readonly Func<Contact, AccountName> contactsKeySelector = x => x.Account;
-
-    readonly PrivateStorageBuilder.Accessor privateStorageAccessor;
-    static readonly Func<PrivateStorageData, XName> privateStorageKeySelector = x => x.EventData.Key;
-
-    readonly UploadedFilesBuilder.Accessor uploadedFilesAccessor;
-    static readonly Func<UploadedFile, Guid> uploadedFilesKeySelector = x => x.Identifier;
-
     private ValueTuple Collections {
-        [MemberNotNull(nameof(contactsAccessor))]
-        [MemberNotNull(nameof(privateStorageAccessor))]
-        [MemberNotNull(nameof(uploadedFilesAccessor))]
+        [MemberNotNull(nameof(ContactsBuilder))]
+        [MemberNotNull(nameof(PrivateStorageBuilder))]
+        [MemberNotNull(nameof(UploadedFilesBuilder))]
         init {
-            contactsAccessor = () => ref contacts;
-            privateStorageAccessor = () => ref privateStorage;
-            uploadedFilesAccessor = () => ref uploadedFiles;
+            ContactsBuilder = new(() => ref contacts, x => x.Account);
+            PrivateStorageBuilder = new(() => ref privateStorage, x => x.EventData.Key);
+            UploadedFilesBuilder = new(() => ref uploadedFiles, x => x.Identifier);
         }
     }
 
-    internal ContactsBuilder ContactsBuilder => new(contactsAccessor, contactsKeySelector);
-    internal PrivateStorageBuilder PrivateStorageBuilder => new(privateStorageAccessor, privateStorageKeySelector);
-    internal UploadedFilesBuilder UploadedFilesBuilder => new(uploadedFilesAccessor, uploadedFilesKeySelector);
+    internal ContactsBuilder ContactsBuilder { get; init; }
+    internal PrivateStorageBuilder PrivateStorageBuilder { get; init; }
+    internal UploadedFilesBuilder UploadedFilesBuilder { get; init; }
 
-    internal sealed class SnapshotCollectionBuilder<TKey, TValue> : ICollection<TValue> where TKey : notnull
+    internal sealed class SnapshotCollectionBuilder<TKey, TValue> : ICollection<TValue> where TKey : notnull where TValue : class
     {
         public delegate ref SnapshotDictionary<TKey, TValue> Accessor();
 
         readonly Accessor accessor;
         readonly Func<TValue, TKey> keySelector;
 
-        readonly SnapshotDictionary<TKey, TValue>.Builder builder;
-
-        public int Count => builder.Count;
+        public int Count => accessor().Count;
 
         bool ICollection<TValue>.IsReadOnly => false;
 
@@ -54,51 +43,36 @@ partial class Account
         {
             this.accessor = accessor;
             this.keySelector = keySelector;
-
-            builder = accessor().ToBuilder();
-        }
-
-        private void Update()
-        {
-            // TODO Avoid replacing every time
-            accessor() = builder.ToDictionary();
         }
 
         public void Add(TValue item)
         {
-            builder.Add(keySelector(item), item);
-            Update();
+            accessor().SetItem(keySelector(item), item);
         }
 
         public void Clear()
         {
-            builder.Clear();
-            Update();
+            accessor().Clear();
         }
 
         public bool Contains(TValue item)
         {
-            return builder.Contains(new(keySelector(item), item));
+            return accessor().TryGetValue(keySelector(item), out var value) && value == item;
         }
 
         public void CopyTo(TValue[] array, int arrayIndex)
         {
-            builder.Values.CopyTo(array, arrayIndex);
+            accessor().Snapshot.Values.CopyTo(array, arrayIndex);
         }
 
         public bool Remove(TValue item)
         {
-            if(builder.Remove(new KeyValuePair<TKey, TValue>(keySelector(item), item)))
-            {
-                Update();
-                return true;
-            }
-            return false;
+            return accessor().TryRemove(new KeyValuePair<TKey, TValue>(keySelector(item), item));
         }
 
         public IEnumerator<TValue> GetEnumerator()
         {
-            return builder.Values.GetEnumerator();
+            return accessor().Values.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

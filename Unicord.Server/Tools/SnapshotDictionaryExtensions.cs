@@ -22,6 +22,36 @@ internal static class SnapshotDictionaryExtensions
         AddOrUpdate(ref dictionary, key, Storage<TKey, TValue>.SimpleAddFactory, Storage<TKey, TValue>.SimpleUpdateFactory, out previous, out updated, out snapshot, value);
     }
 
+    public static void Clear<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary) where TKey : notnull
+    {
+        Clear(ref dictionary, out _);
+    }
+
+    public static void Clear<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, out IDictionary<TKey, TValue> snapshot) where TKey : notnull
+    {
+        while(true)
+        {
+            // Get the current state
+            var originalDict = SnapshotDictionary<TKey, TValue>.Storage.Get(ref dictionary);
+
+            // Update the dictionary
+            var updatedDict = originalDict.Clear();
+            if(originalDict == updatedDict)
+            {
+                // No change
+                snapshot = originalDict;
+                return;
+            }
+
+            if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updatedDict, originalDict))
+            {
+                // Unchanged in the meantime, store
+                snapshot = updatedDict;
+                return;
+            }
+        }
+    }
+
     public static bool AddOrUpdate<TKey, TValue, TArg>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue?> addFactory, Func<TKey, TValue, TArg, TValue?> updateFactory, out TValue? previous, out TValue? updated, out IDictionary<TKey, TValue> snapshot, TArg arg) where TKey : notnull where TValue : class
     {
         while(true)
@@ -69,6 +99,11 @@ internal static class SnapshotDictionaryExtensions
         }
     }
 
+    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key) where TKey : notnull
+    {
+        return TryRemove(ref dictionary, key, out _, out _);
+    }
+
     public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, [MaybeNullWhen(false)] out TValue value, out IDictionary<TKey, TValue> snapshot) where TKey : notnull
     {
         while(true)
@@ -85,6 +120,37 @@ internal static class SnapshotDictionaryExtensions
 
             // Remove the item
             var updated = original.Remove(key);
+
+            if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updated, original))
+            {
+                // Unchanged in the meantime, store
+                snapshot = updated;
+                return true;
+            }
+        }
+    }
+
+    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, KeyValuePair<TKey, TValue> pair) where TKey : notnull where TValue : class
+    {
+        return TryRemove(ref dictionary, pair, out _);
+    }
+
+    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, KeyValuePair<TKey, TValue> pair, out IDictionary<TKey, TValue> snapshot) where TKey : notnull where TValue : class
+    {
+        while(true)
+        {
+            // Get the current state
+            var original = SnapshotDictionary<TKey, TValue>.Storage.Get(ref dictionary);
+
+            if(!original.TryGetValue(pair.Key, out var value) || value != pair.Value)
+            {
+                // Not present or has wrong value
+                snapshot = original;
+                return false;
+            }
+
+            // Remove the item
+            var updated = original.Remove(pair.Key);
 
             if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updated, original))
             {
