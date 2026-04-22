@@ -25,7 +25,7 @@ public record Contact : IComparable<Contact>
         init => Account = Account with { Host = value };
     }
 
-    internal Guid AccountIdentifier { get; init; }
+    internal Guid OwnerIdentifier { get; init; }
 
     /// <summary>
     /// Uses the data from a <see cref="Contact"/> instance
@@ -39,7 +39,7 @@ public record Contact : IComparable<Contact>
             subscriptionState = subscriptionState.WithApprovedTo();
         }
         return value with {
-            AccountIdentifier = owner.Identifier,
+            OwnerIdentifier = owner.Identifier,
             SubscriptionState = subscriptionState
         };
     }
@@ -52,7 +52,7 @@ public record Contact : IComparable<Contact>
     {
         return new Contact() {
             Account = name,
-            AccountIdentifier = owner.Identifier,
+            OwnerIdentifier = owner.Identifier,
             SubscriptionState = subscriptionState
         };
     }
@@ -69,7 +69,7 @@ public record Contact : IComparable<Contact>
             subscriptionState = subscriptionState.WithApprovedTo();
         }
         return other with {
-            AccountIdentifier = AccountIdentifier,
+            OwnerIdentifier = OwnerIdentifier,
             SubscriptionState = subscriptionState
         };
     }

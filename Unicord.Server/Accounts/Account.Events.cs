@@ -234,7 +234,7 @@ partial class Account : IEventHandler
 
             case UpdateEvent { Data: PrivateData data }:
                 // Updating private data
-                privateStorage.SetItem(data.Key, PrivateStorageData.Create(data, evnt.Origin.TransactionLanguage));
+                privateStorage.SetItem(data.Key, PrivateStorageData.Create(this, data, evnt.Origin.TransactionLanguage));
                 return Save();
             
             case UpdateEvent { Data: VCardQueryData vcardData }:

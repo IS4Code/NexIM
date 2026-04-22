@@ -14,6 +14,8 @@ internal class AccountsContext : DbContext
     public Server Server { get; }
 
     public DbSet<Account> Accounts { get; set; }
+    public DbSet<Contact> Contacts { get; set; }
+    public DbSet<PrivateStorageData> PrivateStorage { get; set; }
     public DbSet<UploadedFile> UploadedFiles { get; set; }
 
     readonly VCardConverter vcardConverter;
@@ -57,19 +59,19 @@ internal class AccountsContext : DbContext
 
             e.Property(x => x.VCard).HasConversion(vcardConverter);
 
-            e.OwnsMany(x => x.ContactsBuilder, e => {
-                e.WithOwner().HasForeignKey(x => x.AccountIdentifier);
-                e.HasKey(x => new { x.AccountIdentifier, x.Host, x.User });
-            });
-
-            e.OwnsMany(x => x.PrivateStorageBuilder, e => {
-                e.WithOwner().HasForeignKey(x => x.AccountIdentifier);
-                e.HasKey(x => new { x.AccountIdentifier, x.KeyNamespace, x.KeyName });
-
-                e.Property(x => x.Data).HasConversion(eventExtensionsConverter);
-            });
-
+            e.HasMany(x => x.ContactsBuilder).WithOne().HasForeignKey(x => x.OwnerIdentifier);
+            e.HasMany(x => x.PrivateStorageBuilder).WithOne().HasForeignKey(x => x.OwnerIdentifier);
             e.HasMany(x => x.UploadedFilesBuilder).WithOne(x => x.Uploader);
+        });
+
+        modelBuilder.Entity<Contact>(e => {
+            e.HasKey(x => new { x.OwnerIdentifier, x.Host, x.User });
+        });
+
+        modelBuilder.Entity<PrivateStorageData>(e => {
+            e.HasKey(x => new { x.OwnerIdentifier, x.KeyNamespace, x.KeyName });
+
+            e.Property(x => x.Data).HasConversion(eventExtensionsConverter);
         });
 
         modelBuilder.Entity<UploadedFile>(e => {

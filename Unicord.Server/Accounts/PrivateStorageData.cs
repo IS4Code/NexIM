@@ -20,22 +20,29 @@ public record PrivateStorageData
         Extensions = Data
     });
 
-    internal Guid AccountIdentifier { get; init; }
+    internal Guid OwnerIdentifier { get; }
 
-    internal PrivateStorageData()
+    private PrivateStorageData(Guid ownerIdentifier)
+    {
+        // DB constructor
+        OwnerIdentifier = ownerIdentifier;
+    }
+
+    internal PrivateStorageData(Account owner) : this(owner.Identifier)
     {
 
     }
 
-    private PrivateStorageData(PrivateData eventData)
+    private PrivateStorageData(Account owner, PrivateData eventData)
     {
+        OwnerIdentifier = owner.Identifier;
         this.eventData = eventData;
     }
 
-    public static PrivateStorageData Create(PrivateData eventData, LanguageCode? language)
+    internal static PrivateStorageData Create(Account owner, PrivateData eventData, LanguageCode? language)
     {
         var key = eventData.Key;
-        return new(eventData) {
+        return new(owner, eventData) {
             KeyName = key.LocalName,
             KeyNamespace = key.NamespaceName,
             Language = language,
