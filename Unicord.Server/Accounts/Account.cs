@@ -76,7 +76,7 @@ public partial class Account
         return contacts.TryGetValue(name, out var contact) ? contact : null;
     }
 
-    private bool AddOrUpdateContact(AccountName name, Func<AccountName, ValueTuple, Contact?> addFactory, Func<AccountName, Contact, ValueTuple, Contact?> updateFactory, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
+    private bool AddOrUpdateContact<TArgs>(AccountName name, Func<AccountName, TArgs, Contact?> addFactory, Func<AccountName, Contact, TArgs, Contact?> updateFactory, TArgs args, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
     {
         if(IsProhibitedContact(name))
         {
@@ -85,7 +85,7 @@ public partial class Account
             finalContacts = Contacts;
             return false;
         }
-        var success = contacts.AddOrUpdate(name, addFactory, updateFactory, out previous, out updated, out var snapshot, default);
+        var success = contacts.AddOrUpdate(name, addFactory, updateFactory, out previous, out updated, out var snapshot, args);
         finalContacts = snapshot.Values;
         return success;
     }
@@ -96,30 +96,19 @@ public partial class Account
         return name == Name;
     }
 
-    // New contact's subscription state "approved to" flag is set only if the request originates from the user.
-
-    static readonly Func<AccountName, Contact, Contact> addContact = (name, added) => {
-        var newState = added.SubscriptionState.ApprovedTo ? SubscriptionState.InitialApprovedTo : SubscriptionState.Initial;
-        return added.WithSubscriptionState(newState);
+    static readonly Func<AccountName, (Account, Contact), Contact> addContact = (name, info) => {
+        var (self, added) = info;
+        return Contact.Create(added, self);
     };
 
-    static readonly Func<AccountName, Contact, Contact, Contact> updateContact = (name, existing, added) => {
-        var newState = added.SubscriptionState.ApprovedTo ? existing.SubscriptionState.WithApprovedTo() : existing.SubscriptionState;
-        return added.WithSubscriptionState(newState);
+    static readonly Func<AccountName, Contact, (Account, Contact), Contact> updateContact = (name, existing, info) => {
+        var (self, added) = info;
+        return existing.Update(added);
     };
 
     public bool SetContact(Contact info, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
     {
-        if(IsProhibitedContact(info.Account))
-        {
-            previous = null;
-            updated = null;
-            finalContacts = Contacts;
-            return false;
-        }
-        var success = contacts.AddOrUpdate(info.Account, addContact, updateContact, out previous, out updated, out var snapshot, info);
-        finalContacts = snapshot.Values;
-        return success;
+        return AddOrUpdateContact(info.Account, addContact, updateContact, (this, info), out previous, out updated, out finalContacts);
     }
 
     public bool RemoveContact(AccountName name, [MaybeNullWhen(false)] out Contact result, out ICollection<Contact> finalContacts)
@@ -129,133 +118,124 @@ public partial class Account
         return success;
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetPendingSubscriptionTo = (name, _) => new Contact {
-        Account = name,
-        SubscriptionState = SubscriptionState.InitialPendingTo
+    static readonly Func<AccountName, (Account, Func<SubscriptionState, SubscriptionState>), Contact?> addContactWithSubscriptionState = (name, info) => {
+        var (self, update) = info;
+        var state = update(default);
+        if(state.IsEmpty)
+        {
+            // No reason to add
+            return null;
+        }
+        return Contact.Create(name, state, self);
     };
-    static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetPendingSubscriptionTo = (name, existing, _) => {
-        var existingState = existing.SubscriptionState;
+
+    static readonly Func<AccountName, Contact, (Account, Func<SubscriptionState, SubscriptionState>), Contact?> updateContactWithSubscriptionState = (name, existing, info) => {
+        var (_, update) = info;
+        var state = update(existing.SubscriptionState);
+        if(state.IsEmpty)
+        {
+            // No reason to keep
+            return null;
+        }
+        return existing.WithSubscriptionState(state);
+    };
+
+    private bool UpdateContactSubscriptionState(AccountName name, Func<SubscriptionState, SubscriptionState> updater, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
+    {
+        return AddOrUpdateContact(name, addContactWithSubscriptionState, updateContactWithSubscriptionState, (this, updater), out previous, out updated, out finalContacts);
+    }
+
+    static readonly Func<SubscriptionState, SubscriptionState> updateTrySetPendingSubscriptionTo = existingState => {
         if(existingState.AcceptedTo || existingState.PendingTo)
         {
             // Already subscribed or pending
-            return existing;
+            return existingState;
         }
-        return existing.WithSubscriptionState(existingState.WithPendingTo());
+        return existingState.WithPendingTo();
     };
 
     public bool TrySetPendingSubscriptionTo(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
     {
-        return AddOrUpdateContact(name, addTrySetPendingSubscriptionTo, updateTrySetPendingSubscriptionTo, out previous, out updated, out finalContacts);
+        return UpdateContactSubscriptionState(name, updateTrySetPendingSubscriptionTo, out previous, out updated, out finalContacts);
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetPendingSubscriptionFrom = (name, _) => new Contact {
-        Account = name,
-        SubscriptionState = SubscriptionState.InitialPendingFrom
-    };
-    static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetPendingSubscriptionFrom = (name, existing, _) => {
-        var existingState = existing.SubscriptionState;
+    static readonly Func<SubscriptionState, SubscriptionState> updateTrySetPendingSubscriptionFrom = existingState => {
         if(existingState.AcceptedFrom)
         {
             // Already accepted
-            return existing;
+            return existingState;
         }
         if(existingState.ApprovedFrom)
         {
             // Auto-accept
-            return existing with {
-                SubscriptionState = existingState.WithAcceptedFrom()
-            };
+            return existingState.WithAcceptedFrom();
         }
-        return existing with { SubscriptionState = existingState.WithPendingFrom() };
+        return existingState.WithPendingFrom();
     };
 
     public bool TrySetPendingSubscriptionFrom(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
     {
-        return AddOrUpdateContact(name, addTrySetPendingSubscriptionFrom, updateTrySetPendingSubscriptionFrom, out previous, out updated, out finalContacts);
+        return UpdateContactSubscriptionState(name, updateTrySetPendingSubscriptionFrom, out previous, out updated, out finalContacts);
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetAcceptedSubscriptionFrom = (name, _) => new Contact {
-        Account = name,
-        SubscriptionState = SubscriptionState.InitialApprovedFrom
-    };
-    static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetAcceptedSubscriptionFrom = (name, existing, _) => {
-        var existingState = existing.SubscriptionState;
+    static readonly Func<SubscriptionState, SubscriptionState> updateTrySetAcceptedSubscriptionFrom = existingState => {
         if(existingState.AcceptedFrom || existingState.ApprovedFrom)
         {
             // Already subscribed or approved from
-            return existing;
+            return existingState;
         }
         if(existingState.PendingFrom)
         {
             // Requested previously, consider accepted from now
-            return existing with {
-                SubscriptionState = existingState.WithAcceptedFrom()
-            };
+            return existingState.WithAcceptedFrom();
         }
-        return existing with { SubscriptionState = existingState.WithApprovedFrom() };
+        return existingState.WithApprovedFrom();
     };
 
     public bool TrySetAcceptedSubscriptionFrom(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
     {
-        return AddOrUpdateContact(name, addTrySetAcceptedSubscriptionFrom, updateTrySetAcceptedSubscriptionFrom, out previous, out updated, out finalContacts);
+        return UpdateContactSubscriptionState(name, updateTrySetAcceptedSubscriptionFrom, out previous, out updated, out finalContacts);
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetAcceptedSubscriptionTo = delegate { return null; };
-    static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetAcceptedSubscriptionTo = (name, existing, _) => {
-        var existingState = existing.SubscriptionState;
+    static readonly Func<SubscriptionState, SubscriptionState> updateTrySetAcceptedSubscriptionTo = existingState => {
         if(!existingState.PendingTo)
         {
             // Not pending
-            return existing;
+            return existingState;
         }
-        return existing with {
-            SubscriptionState = existingState.WithAcceptedTo()
-        };
+        return existingState.WithAcceptedTo();
     };
 
     public bool TrySetAcceptedSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
     {
-        return AddOrUpdateContact(name, addTrySetAcceptedSubscriptionTo, updateTrySetAcceptedSubscriptionTo, out previous, out updated, out finalContacts);
+        return UpdateContactSubscriptionState(name, updateTrySetAcceptedSubscriptionTo, out previous, out updated, out finalContacts);
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetCancelledSubscriptionFrom = delegate { return null; };
-    static readonly Func<AccountName, Contact, ValueTuple, Contact?> updateTrySetCancelledSubscriptionFrom = (name, existing, _) => {
-        var existingState = existing.SubscriptionState;
+    static readonly Func<SubscriptionState, SubscriptionState> updateTrySetCancelledSubscriptionFrom = existingState => {
         if(!existingState.AcceptedFrom && !existingState.ApprovedFrom && !existingState.PendingFrom)
         {
             // Already unsubscribed from
-            return existing;
+            return existingState;
         }
-        if(!existingState.ApprovedTo)
-        {
-            // Not interested in the contact at all
-            return null;
-        }
-        return existing with {
-            SubscriptionState = existingState.WithoutFrom()
-        };
+        return existingState.WithoutFrom();
     };
 
     public bool TrySetCancelledSubscriptionFrom(AccountName name, [NotNullWhen(true)] out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
     {
-        return AddOrUpdateContact(name, addTrySetCancelledSubscriptionFrom, updateTrySetCancelledSubscriptionFrom, out previous, out updated, out finalContacts);
+        return UpdateContactSubscriptionState(name, updateTrySetCancelledSubscriptionFrom, out previous, out updated, out finalContacts);
     }
 
-    static readonly Func<AccountName, ValueTuple, Contact?> addTrySetCancelledSubscriptionTo = delegate { return null; };
-    static readonly Func<AccountName, Contact, ValueTuple, Contact> updateTrySetCancelledSubscriptionTo = (name, existing, _) => {
-        var existingState = existing.SubscriptionState;
+    static readonly Func<SubscriptionState, SubscriptionState> updateTrySetCancelledSubscriptionTo = existingState => {
         if(!existingState.AcceptedTo && !existingState.PendingTo)
         {
             // No change needed
-            return existing;
+            return existingState;
         }
-        return existing with {
-            SubscriptionState = existingState.WithoutTo()
-        };
+        return existingState.WithoutTo();
     };
 
     public bool TrySetCancelledSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
     {
-        return AddOrUpdateContact(name, addTrySetCancelledSubscriptionTo, updateTrySetCancelledSubscriptionTo, out previous, out updated, out finalContacts);
+        return UpdateContactSubscriptionState(name, updateTrySetCancelledSubscriptionTo, out previous, out updated, out finalContacts);
     }
 }

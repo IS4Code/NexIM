@@ -27,7 +27,56 @@ public record Contact : IComparable<Contact>
 
     internal Guid AccountIdentifier { get; init; }
 
-    public Contact WithSubscriptionState(SubscriptionState newState)
+    /// <summary>
+    /// Uses the data from a <see cref="Contact"/> instance
+    /// to initialize a new owned contact.
+    /// </summary>
+    internal static Contact Create(Contact value, Account owner)
+    {
+        var subscriptionState = default(SubscriptionState);
+        if(value.SubscriptionState.ApprovedTo)
+        {
+            subscriptionState = subscriptionState.WithApprovedTo();
+        }
+        return value with {
+            AccountIdentifier = owner.Identifier,
+            SubscriptionState = subscriptionState
+        };
+    }
+
+    /// <summary>
+    /// Uses the data from a <see cref="Contact"/> instance
+    /// to initialize a new owned contact.
+    /// </summary>
+    internal static Contact Create(AccountName name, SubscriptionState subscriptionState, Account owner)
+    {
+        return new Contact() {
+            Account = name,
+            AccountIdentifier = owner.Identifier,
+            SubscriptionState = subscriptionState
+        };
+    }
+
+    /// <summary>
+    /// Updates the <see cref="Contact"/> instance
+    /// with new data.
+    /// </summary>
+    internal Contact Update(Contact other)
+    {
+        var subscriptionState = SubscriptionState;
+        if(other.SubscriptionState.ApprovedTo)
+        {
+            subscriptionState = subscriptionState.WithApprovedTo();
+        }
+        return other with {
+            AccountIdentifier = AccountIdentifier,
+            SubscriptionState = subscriptionState
+        };
+    }
+
+    // New contact's subscription state "approved to" flag is set only if the request originates from the user.
+
+    internal Contact WithSubscriptionState(SubscriptionState newState)
     {
         if(SubscriptionState == newState)
         {
@@ -78,6 +127,8 @@ public readonly record struct SubscriptionState(
         init => To |= value ? Pending : 0;
     }
 
+    public bool IsEmpty => From == 0 && To == 0;
+
     public SubscriptionDirection Direction {
         get =>
             ((From & Accepted) != 0 ? SubscriptionDirection.From : 0) |
@@ -99,31 +150,6 @@ public readonly record struct SubscriptionState(
             }
         }
     }
-
-    /// <summary>
-    /// The initial state of a new contact added by the user.
-    /// </summary>
-    public static readonly SubscriptionState Initial = default;
-
-    /// <summary>
-    /// The initial state of a new contact added by the user.
-    /// </summary>
-    public static readonly SubscriptionState InitialApprovedTo = Initial.WithApprovedTo();
-
-    /// <summary>
-    /// The initial state of a new contact added by the user approving subscription from.
-    /// </summary>
-    public static readonly SubscriptionState InitialApprovedFrom = Initial.WithApprovedFrom();
-
-    /// <summary>
-    /// The initial state of a new contact created by sending a subscription request.
-    /// </summary>
-    public static readonly SubscriptionState InitialPendingTo = Initial.WithPendingTo();
-
-    /// <summary>
-    /// The initial state of a new contact created by receiving a subscription request.
-    /// </summary>
-    public static readonly SubscriptionState InitialPendingFrom = Initial.WithPendingFrom();
 
     /// <summary>
     /// Clears any "approved/pending from" state and sets the "accepted from" and "approved to" state.
