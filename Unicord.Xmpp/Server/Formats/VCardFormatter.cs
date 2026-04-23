@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Server.Accounts.VCards;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
+using NexIM.Server.Accounts.VCards;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server.Formats;
+namespace NexIM.Xmpp.Server.Formats;
 
 internal static class VCardFormatter
 {

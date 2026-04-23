@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Unicord.Primitives;
-using Unicord.Server.Accounts;
-using Unicord.Server.Events;
+using NexIM.Primitives;
+using NexIM.Server.Accounts;
+using NexIM.Server.Events;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 /// <summary>
 /// Represents an active connected session from a client.

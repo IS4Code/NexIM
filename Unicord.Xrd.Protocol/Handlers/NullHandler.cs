@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Unicord.Primitives.Json.Handlers;
+using NexIM.Primitives.Json.Handlers;
 
-namespace Unicord.Xrd.Protocol.Handlers;
+namespace NexIM.Xrd.Protocol.Handlers;
 
 /// <summary>
 /// Provides a handler with empty implementation of all handler methods.

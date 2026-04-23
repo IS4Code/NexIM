@@ -1,8 +1,8 @@
 ﻿using MessagePack;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Unicord.Server.Accounts.VCards;
+using NexIM.Server.Accounts.VCards;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 internal sealed class VCardConverter : ValueConverter<VCard?, byte[]?>
 {

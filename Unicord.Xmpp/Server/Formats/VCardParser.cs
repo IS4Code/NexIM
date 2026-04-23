@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server.Accounts.VCards;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server.Handlers;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Accounts.VCards;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Handlers;
 
-namespace Unicord.Xmpp.Server.Formats;
+namespace NexIM.Xmpp.Server.Formats;
 
 internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> where TContext : IPayloadHandlerContext
 {

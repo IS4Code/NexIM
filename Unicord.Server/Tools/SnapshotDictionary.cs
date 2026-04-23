@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace Unicord.Server.Tools;
+namespace NexIM.Server.Tools;
 
 [StructLayout(LayoutKind.Auto)]
 internal partial struct SnapshotDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>, IEquatable<SnapshotDictionary<TKey, TValue>> where TKey : notnull

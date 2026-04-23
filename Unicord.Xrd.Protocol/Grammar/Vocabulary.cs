@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml;
 
-namespace Unicord.Xrd.Protocol.Grammar;
+namespace NexIM.Xrd.Protocol.Grammar;
 
 /// <summary>
 /// Provides atomized common XMPP vocabulary elements.

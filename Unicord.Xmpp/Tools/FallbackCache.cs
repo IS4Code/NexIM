@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Unicord.Xmpp.Tools;
+namespace NexIM.Xmpp.Tools;
 
 internal class FallbackCache<TKey, TValue> where TKey : notnull where TValue : class
 {

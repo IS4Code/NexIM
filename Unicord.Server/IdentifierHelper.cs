@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using Unicord.Tools;
+using NexIM.Tools;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 internal static class IdentifierHelper
 {

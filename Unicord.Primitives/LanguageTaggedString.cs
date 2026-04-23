@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Runtime.InteropServices;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct LanguageTaggedString(string Value, LanguageCode Language)

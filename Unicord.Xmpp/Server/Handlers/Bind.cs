@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 internal class SetBind : BindHandler<ICommandContext>
 {

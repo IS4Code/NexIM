@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 public abstract class StorageQuota
 {

@@ -2,9 +2,9 @@
 using System.Xml;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Unicord.Primitives.Xml;
+using NexIM.Primitives.Xml;
 
-namespace Unicord.Xrd.Protocol.Handlers;
+namespace NexIM.Xrd.Protocol.Handlers;
 
 using Xml = Primitives.Xml.Handlers;
 using Json = Primitives.Json.Handlers;

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Server;
-using Unicord.Server.Net;
+using NexIM.Server;
+using NexIM.Server.Net;
 
-namespace Unicord.Metadata;
+namespace NexIM.Metadata;
 
 public partial class WellKnownServices
 {

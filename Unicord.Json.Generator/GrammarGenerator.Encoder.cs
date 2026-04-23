@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace Unicord.Json.Generator;
+namespace NexIM.Json.Generator;
 
 partial class GrammarGenerator
 {
@@ -18,9 +18,9 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using Newtonsoft.Json;");
-        writer.WriteLine("using Unicord.Primitives;");
-        writer.WriteLine("using Unicord.Primitives.Json;");
-        writer.WriteLine("using Unicord.Primitives.Json.Grammar;");
+        writer.WriteLine("using NexIM.Primitives;");
+        writer.WriteLine("using NexIM.Primitives.Json;");
+        writer.WriteLine("using NexIM.Primitives.Json.Grammar;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
         writer.Write("partial class JsonEncoder : IUniversalHandler");

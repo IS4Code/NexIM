@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading.Tasks;
-using Unicord.Server.Events;
-using Unicord.Server.Tools;
+using NexIM.Server.Events;
+using NexIM.Server.Tools;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 partial class Account : IEventHandler
 {

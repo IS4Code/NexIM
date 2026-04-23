@@ -1,6 +1,6 @@
 ﻿using System.Buffers;
 
-namespace Unicord.Primitives.Events;
+namespace NexIM.Primitives.Events;
 
 public enum EventExtensionType : sbyte
 {

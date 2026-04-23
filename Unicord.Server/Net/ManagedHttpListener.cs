@@ -7,7 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using SpaceWizards.HttpListener;
 
-namespace Unicord.Server.Net;
+namespace NexIM.Server.Net;
 
 using CookieCollection = System.Net.CookieCollection;
 using EndPoint = System.Net.EndPoint;

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
+using NexIM.Primitives;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 internal sealed class GetAuthQuery : AuthQueryHandler<ICommandContext>
 {

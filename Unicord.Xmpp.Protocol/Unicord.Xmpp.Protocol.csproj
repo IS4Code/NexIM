@@ -14,8 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Unicord.Primitives\Unicord.Primitives.csproj" />
-    <ProjectReference Include="..\Unicord.Xml.Generator\Unicord.Xml.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    <ProjectReference Include="..\NexIM.Primitives\NexIM.Primitives.csproj" />
+    <ProjectReference Include="..\NexIM.Xml.Generator\NexIM.Xml.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>
 
 </Project>

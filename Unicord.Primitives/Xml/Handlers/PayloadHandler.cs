@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace Unicord.Primitives.Xml.Handlers;
+namespace NexIM.Primitives.Xml.Handlers;
 
 public interface IPayloadHandler : IAsyncDisposable
 {

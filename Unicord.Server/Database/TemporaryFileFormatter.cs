@@ -2,10 +2,10 @@
 using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 using MessagePack.Formatters;
-using Unicord.Primitives;
-using Unicord.Server.Accounts;
+using NexIM.Primitives;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 [SuppressMessage("Usage", "MsgPack013:Inaccessible formatter", Justification = "Explicit resolver")]
 internal sealed class TemporaryFileFormatter(IFormatterResolver standardResolver, Server server) : IMessagePackFormatter<TemporaryFile?>

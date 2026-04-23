@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives.Xml;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives.Xml;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xrd.Protocol.Grammar;
+namespace NexIM.Xrd.Protocol.Grammar;
 
 public partial class Decoder : XmlDecoder
 {

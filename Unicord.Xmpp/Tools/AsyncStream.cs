@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Unicord.Xmpp.Tools;
+namespace NexIM.Xmpp.Tools;
 
 internal abstract class AsyncStream : Stream
 {

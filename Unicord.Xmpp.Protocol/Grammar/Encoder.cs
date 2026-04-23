@@ -3,11 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xmpp.Protocol.Grammar;
+namespace NexIM.Xmpp.Protocol.Grammar;
 
 public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHandler, IValueXmlEncoder<XmppAddress>, IValueXmlEncoder<XmppResource>
 {

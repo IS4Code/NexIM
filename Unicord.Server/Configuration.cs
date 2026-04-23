@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
-using Unicord.Server.Net;
+using NexIM.Server.Net;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 public class Configuration
 {

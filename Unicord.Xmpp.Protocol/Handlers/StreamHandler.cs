@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace NexIM.Xmpp.Protocol.Handlers;
 
 public abstract partial class StreamHandler<TContext> : TransportHandler<TContext> where TContext : IPayloadHandlerContext
 {

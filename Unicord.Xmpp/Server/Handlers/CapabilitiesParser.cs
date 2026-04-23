@@ -2,14 +2,14 @@
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Xmpp.Model;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Tools;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Xmpp.Model;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Tools;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 using static Capabilities;
 

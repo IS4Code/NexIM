@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Unicord.Xrd.Protocol;
+using NexIM.Xrd.Protocol;
 
-namespace Unicord.Metadata;
+namespace NexIM.Metadata;
 
 public interface IMetadataProvider
 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 
-namespace Unicord.Tools;
+namespace NexIM.Tools;
 
 public class HashStream(HashAlgorithm algorithm) : NonSeekableStream
 {

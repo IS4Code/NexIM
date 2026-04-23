@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Unicord.Primitives\Unicord.Primitives.csproj" />
-    <ProjectReference Include="..\Unicord.Tools\Unicord.Tools.csproj" />
+    <ProjectReference Include="..\NexIM.Primitives\NexIM.Primitives.csproj" />
+    <ProjectReference Include="..\NexIM.Tools\NexIM.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
-using Unicord.Server.Accounts;
-using Unicord.Server.Database;
+using NexIM.Server.Accounts;
+using NexIM.Server.Database;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 partial class Server
 {

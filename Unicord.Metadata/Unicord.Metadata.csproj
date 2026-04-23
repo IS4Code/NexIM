@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Unicord.Server\Unicord.Server.csproj" />
-    <ProjectReference Include="..\Unicord.Xrd.Protocol\Unicord.Xrd.Protocol.csproj" />
+    <ProjectReference Include="..\NexIM.Server\NexIM.Server.csproj" />
+    <ProjectReference Include="..\NexIM.Xrd.Protocol\NexIM.Xrd.Protocol.csproj" />
   </ItemGroup>
 
 </Project>

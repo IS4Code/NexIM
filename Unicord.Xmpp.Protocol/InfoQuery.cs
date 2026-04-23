@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Grammar;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Grammar;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xmpp.Protocol;
+namespace NexIM.Xmpp.Protocol;
 
 [ComplexType]
 public interface IInfoQueryHandler : IStanzaHandler

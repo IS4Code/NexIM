@@ -8,7 +8,7 @@ using System.Xml;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Unicord.Xml.Generator;
+namespace NexIM.Xml.Generator;
 
 partial class GrammarGenerator
 {
@@ -20,9 +20,9 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
-        writer.WriteLine("using Unicord.Primitives;");
-        writer.WriteLine("using Unicord.Primitives.Xml;");
-        writer.WriteLine("using Unicord.Primitives.Xml.Handlers;");
+        writer.WriteLine("using NexIM.Primitives;");
+        writer.WriteLine("using NexIM.Primitives.Xml;");
+        writer.WriteLine("using NexIM.Primitives.Xml.Handlers;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
         writer.WriteLine("partial class Vocabulary");
@@ -384,7 +384,7 @@ partial class GrammarGenerator
 
         void UsingIfDisposable(ITypeSymbol type)
         {
-            if(GetQualifiedName(type).StartsWith("Unicord.Primitives.Temporary") || type.Interfaces.Any(i => GetQualifiedName(i) == typeof(IDisposable).FullName))
+            if(GetQualifiedName(type).StartsWith("NexIM.Primitives.Temporary") || type.Interfaces.Any(i => GetQualifiedName(i) == typeof(IDisposable).FullName))
             {
                 writer.Write("using ");
             }

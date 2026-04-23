@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
-using Unicord.Primitives;
+using NexIM.Primitives;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 public sealed class UploadedFile : TemporaryFile
 {

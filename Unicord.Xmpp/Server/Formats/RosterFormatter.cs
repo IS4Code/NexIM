@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Server.Accounts;
-using Unicord.Xmpp.Protocol;
+using NexIM.Server.Accounts;
+using NexIM.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server.Formats;
+namespace NexIM.Xmpp.Server.Formats;
 
 internal static class RosterFormatter
 {

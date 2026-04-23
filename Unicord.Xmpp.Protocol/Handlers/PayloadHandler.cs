@@ -4,11 +4,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Primitives.Xml;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Xmpp.Protocol.Grammar;
+using NexIM.Primitives.Xml;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Xmpp.Protocol.Grammar;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace NexIM.Xmpp.Protocol.Handlers;
 
 public abstract class PayloadHandler<TContext> : BasePayloadHandler<TContext> where TContext : IPayloadHandlerContext
 {

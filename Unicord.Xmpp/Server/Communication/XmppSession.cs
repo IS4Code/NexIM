@@ -6,11 +6,11 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Primitives;
-using Unicord.Server;
-using Unicord.Xmpp.Protocol;
+using NexIM.Primitives;
+using NexIM.Server;
+using NexIM.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace NexIM.Xmpp.Server.Communication;
 
 /// <summary>
 /// Represents an outgoing XMPP session, i.e. a channel that supports

@@ -1,10 +1,10 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives.Events;
-using Unicord.Primitives.Xml;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives.Events;
+using NexIM.Primitives.Xml;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace NexIM.Xmpp.Protocol.Handlers;
 
 /// <inheritdoc/>
 public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>, IPayloadHandler, IStreamHandler, IEventExtension where THandler : IPayloadHandler

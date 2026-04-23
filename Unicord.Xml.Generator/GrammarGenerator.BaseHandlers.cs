@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace Unicord.Xml.Generator;
+namespace NexIM.Xml.Generator;
 
 partial class GrammarGenerator
 {
@@ -18,7 +18,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
-        writer.WriteLine("using Unicord.Primitives.Xml.Handlers;");
+        writer.WriteLine("using NexIM.Primitives.Xml.Handlers;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
         writer.WriteLine("#nullable disable");
 

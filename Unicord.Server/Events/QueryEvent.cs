@@ -1,4 +1,4 @@
-﻿namespace Unicord.Server.Events;
+﻿namespace NexIM.Server.Events;
 
 /// <summary>
 /// Represents a general query event.

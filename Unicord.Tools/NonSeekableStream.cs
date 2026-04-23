@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Unicord.Tools;
+namespace NexIM.Tools;
 
 public abstract class NonSeekableStream : Stream
 {

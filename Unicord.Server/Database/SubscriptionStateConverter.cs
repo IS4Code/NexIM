@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Unicord.Server.Accounts;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 internal sealed class SubscriptionStateConverter : ValueConverter<SubscriptionState, ushort>
 {

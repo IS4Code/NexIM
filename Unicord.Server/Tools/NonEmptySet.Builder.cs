@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 
-namespace Unicord.Server.Tools;
+namespace NexIM.Server.Tools;
 
 partial struct NonEmptySet<T>
 {

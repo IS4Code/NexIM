@@ -1,20 +1,20 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server;
-using Unicord.Server.Accounts;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Model;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server.Communication;
-using Unicord.Xmpp.Server.Formats;
-using Unicord.Xmpp.Server.Handlers;
-using Unicord.Xmpp.Tools;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server;
+using NexIM.Server.Accounts;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Model;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Communication;
+using NexIM.Xmpp.Server.Formats;
+using NexIM.Xmpp.Server.Handlers;
+using NexIM.Xmpp.Tools;
 
-namespace Unicord.Xmpp.Server;
+namespace NexIM.Xmpp.Server;
 
 using CapabilitiesCache = FallbackCache<CapabilitiesIdentifier, ICapabilities>;
 

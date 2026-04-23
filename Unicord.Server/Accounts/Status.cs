@@ -1,6 +1,6 @@
-﻿using Unicord.Primitives;
+﻿using NexIM.Primitives;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 public record struct Status(
     Availability Availability,

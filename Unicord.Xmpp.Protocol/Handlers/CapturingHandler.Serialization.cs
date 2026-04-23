@@ -6,11 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Primitives.Events;
-using Unicord.Primitives.Xml;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives.Events;
+using NexIM.Primitives.Xml;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace NexIM.Xmpp.Protocol.Handlers;
 
 partial class CapturingHandler<THandler>
 {

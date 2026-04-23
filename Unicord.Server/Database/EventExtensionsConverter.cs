@@ -1,9 +1,9 @@
 ﻿using System;
 using MessagePack;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Unicord.Server.Events;
+using NexIM.Server.Events;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 internal sealed class EventExtensionsConverter : ValueConverter<EventExtensions, byte[]?>
 {

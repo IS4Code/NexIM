@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Xmpp.Protocol.Handlers;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Protocol;
+namespace NexIM.Xmpp.Protocol;
 
 /// <summary>
 /// Represents an entity capable of accepting incoming

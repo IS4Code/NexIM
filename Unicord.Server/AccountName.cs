@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using Unicord.Server.Accounts;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 public readonly record struct AccountName(string? User, string Host) : IComparable<AccountName>
 {

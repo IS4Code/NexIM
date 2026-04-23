@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using MessagePack;
-using Unicord.Primitives;
+using NexIM.Primitives;
 
-namespace Unicord.Server.Accounts.VCards;
+namespace NexIM.Server.Accounts.VCards;
 
 [MessagePackObject]
 public sealed class VCard

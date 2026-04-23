@@ -1,4 +1,4 @@
-﻿namespace Unicord.Server.Events;
+﻿namespace NexIM.Server.Events;
 
 /// <summary>
 /// Represents a presence event. Such an event contains availability

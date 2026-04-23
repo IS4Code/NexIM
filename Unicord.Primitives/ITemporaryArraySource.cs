@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Buffers;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 public interface ITemporaryArraySource<T> where T : unmanaged
 {

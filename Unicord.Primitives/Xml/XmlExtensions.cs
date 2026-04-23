@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace Unicord.Primitives.Xml;
+namespace NexIM.Primitives.Xml;
 
 public static class XmlExtensions
 {

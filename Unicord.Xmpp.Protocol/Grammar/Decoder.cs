@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives.Xml;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives.Xml;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xmpp.Protocol.Grammar;
+namespace NexIM.Xmpp.Protocol.Grammar;
 
 public abstract partial class Decoder : XmlDecoder, IValueXmlDecoder<XmppAddress>, IValueXmlDecoder<XmppResource>
 {

@@ -4,12 +4,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Unicord.Server.Accounts.VCards;
-using Unicord.Server.Database;
-using Unicord.Server.Events;
-using Unicord.Server.Tools;
+using NexIM.Server.Accounts.VCards;
+using NexIM.Server.Database;
+using NexIM.Server.Events;
+using NexIM.Server.Tools;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 public partial class Account
 {

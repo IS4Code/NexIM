@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
-using Unicord.Primitives.Events;
+using NexIM.Primitives.Events;
 
-namespace Unicord.Server.Events;
+namespace NexIM.Server.Events;
 
 /// <summary>
 /// Represents an arbitrary payload of an event.

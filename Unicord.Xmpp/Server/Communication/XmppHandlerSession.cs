@@ -4,16 +4,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Grammar;
-using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server.Handlers;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Grammar;
+using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Handlers;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace NexIM.Xmpp.Server.Communication;
 
 using static Vocabulary.Standard;
 

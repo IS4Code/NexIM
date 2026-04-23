@@ -4,10 +4,10 @@ using MessagePack.Formatters;
 using MessagePack.Resolvers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Unicord.Primitives;
-using Unicord.Server.Accounts;
+using NexIM.Primitives;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 internal class AccountsContext : DbContext
 {

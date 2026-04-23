@@ -2,9 +2,9 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml;
-using Unicord.Primitives.Xml;
+using NexIM.Primitives.Xml;
 
-namespace Unicord.Xmpp.Protocol;
+namespace NexIM.Xmpp.Protocol;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct XmppAddress : IEquatable<XmppAddress>

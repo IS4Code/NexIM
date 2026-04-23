@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace Unicord.Primitives.Xml;
+namespace NexIM.Primitives.Xml;
 
 /// <summary>
 /// Provides support for encoding to XML.

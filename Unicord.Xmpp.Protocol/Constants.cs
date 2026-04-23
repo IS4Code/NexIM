@@ -1,6 +1,6 @@
-﻿global using static Unicord.Xmpp.Protocol.Constants;
+﻿global using static NexIM.Xmpp.Protocol.Constants;
 
-namespace Unicord.Xmpp.Protocol;
+namespace NexIM.Xmpp.Protocol;
 
 static class Constants
 {

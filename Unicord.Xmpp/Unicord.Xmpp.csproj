@@ -11,10 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Unicord.Metadata\Unicord.Metadata.csproj" />
-    <ProjectReference Include="..\Unicord.Server\Unicord.Server.csproj" />
-    <ProjectReference Include="..\Unicord.Tools\Unicord.Tools.csproj" />
-    <ProjectReference Include="..\Unicord.Xmpp.Protocol\Unicord.Xmpp.Protocol.csproj" />
+    <ProjectReference Include="..\NexIM.Metadata\NexIM.Metadata.csproj" />
+    <ProjectReference Include="..\NexIM.Server\NexIM.Server.csproj" />
+    <ProjectReference Include="..\NexIM.Tools\NexIM.Tools.csproj" />
+    <ProjectReference Include="..\NexIM.Xmpp.Protocol\NexIM.Xmpp.Protocol.csproj" />
   </ItemGroup>
 
 </Project>

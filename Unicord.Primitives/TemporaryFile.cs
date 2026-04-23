@@ -3,9 +3,9 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using static Unicord.Primitives.TemporaryArray<byte>;
+using static NexIM.Primitives.TemporaryArray<byte>;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 /// <summary>
 /// Represents a file reference with limited lifetime.

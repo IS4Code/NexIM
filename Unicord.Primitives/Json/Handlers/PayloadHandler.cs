@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace Unicord.Primitives.Json.Handlers;
+namespace NexIM.Primitives.Json.Handlers;
 
 public interface IPayloadHandler : IAsyncDisposable
 {

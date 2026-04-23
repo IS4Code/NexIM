@@ -2,12 +2,12 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Grammar;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Grammar;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace NexIM.Xmpp.Server.Communication;
 
 /// <summary>
 /// Provides an implementation of <see cref="IXmppSession"/> capable of

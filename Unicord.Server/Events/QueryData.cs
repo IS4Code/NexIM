@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Xml.Linq;
-using Unicord.Server.Accounts;
-using Unicord.Server.Accounts.VCards;
+using NexIM.Server.Accounts;
+using NexIM.Server.Accounts.VCards;
 
-namespace Unicord.Server.Events;
+namespace NexIM.Server.Events;
 
 /// <summary>
 /// Stores data for a query event.

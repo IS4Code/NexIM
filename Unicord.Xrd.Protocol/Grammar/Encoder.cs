@@ -3,10 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Newtonsoft.Json;
-using Unicord.Primitives.Json.Handlers;
-using Unicord.Primitives.Xml;
+using NexIM.Primitives.Json.Handlers;
+using NexIM.Primitives.Xml;
 
-namespace Unicord.Xrd.Protocol.Grammar;
+namespace NexIM.Xrd.Protocol.Grammar;
 
 using Xml = Primitives.Xml.Handlers;
 using Json = Primitives.Json.Handlers;

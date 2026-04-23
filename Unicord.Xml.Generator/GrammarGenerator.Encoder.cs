@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace Unicord.Xml.Generator;
+namespace NexIM.Xml.Generator;
 
 partial class GrammarGenerator
 {
@@ -16,8 +16,8 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Threading.Tasks;");
         writer.WriteLine("using System.Xml;");
-        writer.WriteLine("using Unicord.Primitives;");
-        writer.WriteLine("using Unicord.Primitives.Xml;");
+        writer.WriteLine("using NexIM.Primitives;");
+        writer.WriteLine("using NexIM.Primitives.Xml;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Grammar;");
         writer.WriteLine("#nullable disable");
         writer.Write("partial class Encoder : IUniversalHandler");

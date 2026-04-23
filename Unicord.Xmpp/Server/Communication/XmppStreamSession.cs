@@ -3,9 +3,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace NexIM.Xmpp.Server.Communication;
 
 using Xmpp = Protocol.Grammar.Vocabulary.Standard;
 

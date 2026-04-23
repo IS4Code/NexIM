@@ -8,11 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Newtonsoft.Json;
-using Unicord.Server.Net;
-using Unicord.Xrd.Protocol;
-using Unicord.Xrd.Protocol.Grammar;
+using NexIM.Server.Net;
+using NexIM.Xrd.Protocol;
+using NexIM.Xrd.Protocol.Grammar;
 
-namespace Unicord.Metadata;
+namespace NexIM.Metadata;
 
 partial class WellKnownServices
 {

@@ -6,9 +6,9 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Xmpp.Tools;
+using NexIM.Xmpp.Tools;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace NexIM.Xmpp.Server.Communication;
 
 /// <summary>
 /// Provides an implementation of <see cref="IXmppSession"/> 

@@ -3,9 +3,9 @@ using System.Buffers;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Tools;
+using NexIM.Tools;
 
-namespace Unicord.Xmpp.Tools;
+namespace NexIM.Xmpp.Tools;
 
 internal abstract class WebSocketStream : NonSeekableStream
 {

@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace Unicord.Server.Tools;
+namespace NexIM.Server.Tools;
 
 partial struct SnapshotDictionary<TKey, TValue>
 {

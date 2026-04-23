@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace Unicord.Xml.Generator;
+namespace NexIM.Xml.Generator;
 
 partial class GrammarGenerator
 {

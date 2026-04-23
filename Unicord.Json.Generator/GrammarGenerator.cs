@@ -7,14 +7,14 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Unicord.Json.Generator;
+namespace NexIM.Json.Generator;
 
 [Generator]
 public sealed partial class GrammarGenerator : IIncrementalGenerator
 {
     const string indent = "    ";
 
-    const string grammarNs = nameof(Unicord) + ".Primitives.Json.Grammar";
+    const string grammarNs = nameof(NexIM) + ".Primitives.Json.Grammar";
     const string complexTypeAttributeSimpleName = "ComplexType";
     const string simpleTypeAttributeSimpleName = "SimpleType";
     const string complexTypeAttributeFullName = grammarNs + "." + complexTypeAttributeSimpleName + "Attribute";

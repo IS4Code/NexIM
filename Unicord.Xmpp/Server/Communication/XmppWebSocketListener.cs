@@ -7,12 +7,12 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Metadata;
-using Unicord.Server;
-using Unicord.Server.Net;
-using Unicord.Xrd.Protocol;
+using NexIM.Metadata;
+using NexIM.Server;
+using NexIM.Server.Net;
+using NexIM.Xrd.Protocol;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace NexIM.Xmpp.Server.Communication;
 
 /// <summary>
 /// Listens to WebSocket XMPP connections.

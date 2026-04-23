@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Xml;
 
-namespace Unicord.Primitives.Xml;
+namespace NexIM.Primitives.Xml;
 
 public abstract class XmlMemoryNameTable : XmlNameTable
 {

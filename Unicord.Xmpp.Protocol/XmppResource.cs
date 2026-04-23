@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Xml;
-using Unicord.Primitives.Xml;
+using NexIM.Primitives.Xml;
 
-namespace Unicord.Xmpp.Protocol;
+namespace NexIM.Xmpp.Protocol;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct XmppResource

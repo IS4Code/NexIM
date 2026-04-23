@@ -1,13 +1,13 @@
 ﻿using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp;
+namespace NexIM.Xmpp;
 
 using static StatusCode;
 

@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 /// <summary>
 /// Provides a mutable string implementation whose contents can be determinstically

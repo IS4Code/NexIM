@@ -7,7 +7,7 @@ using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
-namespace Unicord.Server.Net;
+namespace NexIM.Server.Net;
 
 public sealed class NativeHttpListener : IHttpListener
 {

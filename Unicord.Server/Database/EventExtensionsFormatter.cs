@@ -2,10 +2,10 @@
 using System.Collections.Immutable;
 using MessagePack;
 using MessagePack.Formatters;
-using Unicord.Primitives.Events;
-using Unicord.Server.Events;
+using NexIM.Primitives.Events;
+using NexIM.Server.Events;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 internal sealed partial class EventExtensionsFormatter : IMessagePackFormatter<EventExtensions>
 {

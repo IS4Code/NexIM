@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 /// <summary>
 /// Represents an ISO 8601 date or date/time, with optional offset.

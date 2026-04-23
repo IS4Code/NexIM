@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 /// <summary>
 /// Stores a reference to a value that may be in the process of caching.

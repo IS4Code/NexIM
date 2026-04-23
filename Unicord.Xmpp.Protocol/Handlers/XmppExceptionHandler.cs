@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
 
-namespace Unicord.Xmpp.Protocol.Handlers;
+namespace NexIM.Xmpp.Protocol.Handlers;
 
 public abstract class XmppExceptionHandler<TException, THandler> : CapturingHandler<THandler> where TException : XmppException<THandler> where THandler : IPayloadHandler
 {

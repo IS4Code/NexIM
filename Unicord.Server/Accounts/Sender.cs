@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct SenderPresentation(

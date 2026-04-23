@@ -2,9 +2,9 @@
 using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 using MessagePack.Formatters;
-using Unicord.Primitives;
+using NexIM.Primitives;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 [SuppressMessage("Usage", "MsgPack013:Inaccessible formatter", Justification = "Explicit resolver")]
 internal sealed class DateFormatter(IFormatterResolver standardResolver) : IMessagePackFormatter<DateComponents>

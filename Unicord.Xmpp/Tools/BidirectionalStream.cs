@@ -2,9 +2,9 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Tools;
+using NexIM.Tools;
 
-namespace Unicord.Xmpp.Tools;
+namespace NexIM.Xmpp.Tools;
 
 internal sealed class BidirectionalStream(Stream input, Stream output) : NonSeekableStream
 {

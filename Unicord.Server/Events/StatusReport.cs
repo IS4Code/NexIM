@@ -1,9 +1,9 @@
-﻿global using StatusReports = Unicord.Server.Tools.NonEmptySet<Unicord.Server.Events.StatusReport>;
+﻿global using StatusReports = NexIM.Server.Tools.NonEmptySet<NexIM.Server.Events.StatusReport>;
 using System;
 using System.Runtime.InteropServices;
-using Unicord.Server.Accounts;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server.Events;
+namespace NexIM.Server.Events;
 
 public enum StatusCode
 {

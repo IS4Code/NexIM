@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 /// <summary>
 /// A language code used as a language tag.

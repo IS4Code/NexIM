@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server.Communication;
-using Unicord.Xmpp.Server.Handlers;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Communication;
+using NexIM.Xmpp.Server.Handlers;
 
-namespace Unicord.Xmpp.Server;
+namespace NexIM.Xmpp.Server;
 
-public class XmppServer : Unicord.Server.Server, IXmppReceiver<XmppHandlerSession>
+public class XmppServer : NexIM.Server.Server, IXmppReceiver<XmppHandlerSession>
 {
     public ValueTask<IXmppReceivingHandler> Connected(XmppHandlerSession session)
     {

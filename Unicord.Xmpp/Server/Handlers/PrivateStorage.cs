@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 internal sealed class GetPrivateStorage : BasePrivateStorageHandler<ICommandContext>
 {

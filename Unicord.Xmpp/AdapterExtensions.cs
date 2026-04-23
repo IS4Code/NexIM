@@ -1,16 +1,16 @@
 ﻿using System;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server;
-using Unicord.Server.Accounts;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server.Communication;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server;
+using NexIM.Server.Accounts;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Communication;
 
-namespace Unicord.Xmpp;
+namespace NexIM.Xmpp;
 
-using Identifiers = Unicord.Server.Tools.NonEmptySet<Identifier>;
+using Identifiers = NexIM.Server.Tools.NonEmptySet<Identifier>;
 
 #pragma warning disable 8509, 8524
 

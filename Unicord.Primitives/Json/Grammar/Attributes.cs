@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Unicord.Primitives.Json.Grammar;
+namespace NexIM.Primitives.Json.Grammar;
 
 [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
 public sealed class ComplexTypeAttribute : Attribute

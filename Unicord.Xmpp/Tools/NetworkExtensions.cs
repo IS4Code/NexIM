@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Unicord.Xmpp.Tools;
+namespace NexIM.Xmpp.Tools;
 
 public static class NetworkExtensions
 {

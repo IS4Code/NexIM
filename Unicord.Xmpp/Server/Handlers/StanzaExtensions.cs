@@ -1,8 +1,8 @@
-﻿using Unicord.Primitives;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
+﻿using NexIM.Primitives;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 internal static class StanzaExtensions
 {

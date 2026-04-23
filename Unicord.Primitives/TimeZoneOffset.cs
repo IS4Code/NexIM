@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Xml;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 public readonly record struct TimeZoneOffset(TimeSpan Value)
 {

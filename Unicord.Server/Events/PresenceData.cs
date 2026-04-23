@@ -1,7 +1,7 @@
-﻿using Unicord.Primitives;
-using Unicord.Server.Accounts;
+﻿using NexIM.Primitives;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server.Events;
+namespace NexIM.Server.Events;
 
 /// <summary>
 /// Stores data for a presence.

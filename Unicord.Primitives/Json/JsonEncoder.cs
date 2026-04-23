@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Unicord.Primitives.Json.Grammar;
+using NexIM.Primitives.Json.Grammar;
 
-namespace Unicord.Primitives.Json;
+namespace NexIM.Primitives.Json;
 
 using XmlConvert = System.Xml.XmlConvert;
 

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Unicord.Primitives.Xml.Grammar;
+namespace NexIM.Primitives.Xml.Grammar;
 
 [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
 public sealed class ComplexTypeAttribute : Attribute

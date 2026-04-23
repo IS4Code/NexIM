@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Unicord.Primitives;
+using NexIM.Primitives;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 internal sealed class LanguageCodeConverter : ValueConverter<LanguageCode?, string?>
 {

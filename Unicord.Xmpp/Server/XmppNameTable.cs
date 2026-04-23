@@ -3,9 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using Unicord.Xmpp.Protocol.Grammar;
+using NexIM.Xmpp.Protocol.Grammar;
 
-namespace Unicord.Xmpp.Server;
+namespace NexIM.Xmpp.Server;
 
 public class XmppNameTable : Vocabulary,
     IEqualityComparer<XmppNameTable.PreHashed<XmppNameTable.WeakStringReference>>,

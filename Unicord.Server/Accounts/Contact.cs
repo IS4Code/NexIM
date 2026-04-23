@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.InteropServices;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 using static SubscriptionLevel;
 

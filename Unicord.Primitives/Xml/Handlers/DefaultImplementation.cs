@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Unicord.Primitives.Xml.Handlers;
+namespace NexIM.Primitives.Xml.Handlers;
 
 public abstract class DefaultImplementation<T>
 {

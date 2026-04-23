@@ -1,8 +1,8 @@
 ﻿using System.Net;
-using Unicord.Primitives;
-using Unicord.Server.Accounts;
+using NexIM.Primitives;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server.Events;
+namespace NexIM.Server.Events;
 
 public sealed record ErrorEvent : Event<ErrorData>;
 

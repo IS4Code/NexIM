@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Schema;
 
-namespace Unicord.Primitives.Xml;
+namespace NexIM.Primitives.Xml;
 
 internal sealed class XmlAsyncOverSyncReader(XmlReader inner) : XmlReader
 {

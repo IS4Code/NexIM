@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Unicord.Xmpp.Tools;
+namespace NexIM.Xmpp.Tools;
 
 internal class EncodedStringComparer(Encoding encoding) : IEqualityComparer<string>, IComparer<string>, IEqualityComparer<ReadOnlyMemory<char>>, IComparer<ReadOnlyMemory<char>>, IAlternateEqualityComparer<ReadOnlyMemory<char>, string>, IAlternateEqualityComparer<ReadOnlyMemory<byte>, string>, IAlternateEqualityComparer<ReadOnlyMemory<byte>, ReadOnlyMemory<char>>
 {

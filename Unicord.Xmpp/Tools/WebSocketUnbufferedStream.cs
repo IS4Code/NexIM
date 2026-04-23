@@ -3,7 +3,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Unicord.Xmpp.Tools;
+namespace NexIM.Xmpp.Tools;
 
 internal sealed class WebSocketUnbufferedStream(WebSocket webSocket) : WebSocketStream(webSocket)
 {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerable<LanguageTaggedString>
 {

@@ -1,8 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Unicord.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Server.Communication;
+namespace NexIM.Xmpp.Server.Communication;
 
 /// <summary>
 /// Represents an entity capable of accepting XMPP connections.

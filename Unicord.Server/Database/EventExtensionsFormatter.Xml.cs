@@ -5,12 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Primitives.Events;
-using Unicord.Primitives.Xml;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server.Tools;
+using NexIM.Primitives.Events;
+using NexIM.Primitives.Xml;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Tools;
 
-namespace Unicord.Server.Database;
+namespace NexIM.Server.Database;
 
 partial class EventExtensionsFormatter
 {

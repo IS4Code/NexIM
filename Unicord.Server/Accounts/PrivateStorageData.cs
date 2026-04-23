@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading;
 using System.Xml.Linq;
-using Unicord.Primitives;
-using Unicord.Server.Events;
+using NexIM.Primitives;
+using NexIM.Server.Events;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 public record PrivateStorageData
 {

@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace Unicord.Server.Tools;
+namespace NexIM.Server.Tools;
 
 partial struct SnapshotDictionary<TKey, TValue>
 {

@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Metadata;
-using Unicord.Xmpp.Server;
-using Unicord.Xmpp.Server.Communication;
+using NexIM.Metadata;
+using NexIM.Xmpp.Server;
+using NexIM.Xmpp.Server.Communication;
 
-namespace Unicord.Xmpp;
+namespace NexIM.Xmpp;
 
 internal class Program
 {

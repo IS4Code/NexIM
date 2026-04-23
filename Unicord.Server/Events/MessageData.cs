@@ -3,10 +3,10 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Unicord.Primitives;
-using Unicord.Server.Accounts;
+using NexIM.Primitives;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server.Events;
+namespace NexIM.Server.Events;
 
 using MessageBodyCollectionData = ImmutableDictionary<(MessageFormat format, LanguageCode language), object>;
 

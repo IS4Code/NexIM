@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 partial class Account
 {

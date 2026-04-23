@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
-using Unicord.Server.Tools;
+using NexIM.Server.Tools;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 using ContactsBuilder = Account.SnapshotCollectionBuilder<AccountName, Contact>;
 using PrivateStorageBuilder = Account.SnapshotCollectionBuilder<XName, PrivateStorageData>;

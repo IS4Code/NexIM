@@ -5,12 +5,12 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Xml;
-using Unicord.Primitives;
-using Unicord.Server.Events;
-using Unicord.Tools;
-using Unicord.Xmpp.Protocol;
+using NexIM.Primitives;
+using NexIM.Server.Events;
+using NexIM.Tools;
+using NexIM.Xmpp.Protocol;
 
-namespace Unicord.Xmpp.Model;
+namespace NexIM.Xmpp.Model;
 
 public record Capabilities : ICapabilities
 {

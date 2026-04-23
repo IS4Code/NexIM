@@ -1,4 +1,4 @@
-﻿namespace Unicord.Server;
+﻿namespace NexIM.Server;
 
 public partial class Server
 {

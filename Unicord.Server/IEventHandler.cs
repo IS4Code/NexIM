@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Unicord.Server.Events;
+using NexIM.Server.Events;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 /// <summary>
 /// Represents an entity capable of accepting events,

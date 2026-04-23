@@ -6,14 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Unicord.Primitives;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server.Accounts;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Server.Communication;
+using NexIM.Primitives;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Accounts;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Server.Communication;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 internal static class CommandExtensions
 {

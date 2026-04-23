@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
-using Unicord.Server.Events;
+using NexIM.Server.Events;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 partial class Account
 {

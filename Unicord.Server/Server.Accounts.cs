@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Unicord.Server.Accounts;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 partial class Server
 {

@@ -3,10 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using Unicord.Primitives;
-using Unicord.Server.Accounts;
+using NexIM.Primitives;
+using NexIM.Server.Accounts;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 partial class Server
 {

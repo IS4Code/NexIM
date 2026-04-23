@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server.Accounts;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Protocol.Handlers;
-using Unicord.Xmpp.Server.Formats;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Accounts;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Formats;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 internal class GetRosterQuery : BaseDelegatingRosterQueryHandler<CapturingHandler<IRosterQueryHandler>, EmptyDisposable, ICommandContext>
 {

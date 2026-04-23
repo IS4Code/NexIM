@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using static Unicord.Primitives.TemporaryArray<byte>;
+using static NexIM.Primitives.TemporaryArray<byte>;
 
-namespace Unicord.Primitives;
+namespace NexIM.Primitives;
 
 partial class TemporaryFile
 {
@@ -12,7 +12,7 @@ partial class TemporaryFile
         protected override string CreatePath()
         {
             quota.RequestFiles(1);
-            return Path.Combine(Path.GetTempPath(), $"{nameof(Unicord)}_{Guid.NewGuid():N}");
+            return Path.Combine(Path.GetTempPath(), $"{nameof(NexIM)}_{Guid.NewGuid():N}");
         }
 
         public override TemporaryFile MoveFrom()

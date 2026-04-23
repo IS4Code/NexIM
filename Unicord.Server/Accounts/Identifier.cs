@@ -1,8 +1,8 @@
-﻿global using Identifiers = Unicord.Server.Tools.NonEmptySet<Unicord.Server.Accounts.Identifier>;
+﻿global using Identifiers = NexIM.Server.Tools.NonEmptySet<NexIM.Server.Accounts.Identifier>;
 using System;
 using System.Collections.Generic;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 public readonly record struct Identifier(AccountName? Account, string? Resource) : IComparable<Identifier>
 {

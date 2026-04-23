@@ -1,6 +1,6 @@
-﻿global using static Unicord.Xrd.Protocol.Constants;
+﻿global using static NexIM.Xrd.Protocol.Constants;
 
-namespace Unicord.Xrd.Protocol;
+namespace NexIM.Xrd.Protocol;
 
 static class Constants
 {

@@ -1,4 +1,4 @@
-﻿namespace Unicord.Server.Events;
+﻿namespace NexIM.Server.Events;
 
 /// <summary>
 /// Represents a message event. Such an event is suitable for long-term storage,

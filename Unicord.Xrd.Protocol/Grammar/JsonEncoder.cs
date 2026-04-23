@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using System.Xml;
 using Newtonsoft.Json;
-using Unicord.Primitives.Json.Handlers;
+using NexIM.Primitives.Json.Handlers;
 
-namespace Unicord.Xrd.Protocol.Grammar;
+namespace NexIM.Xrd.Protocol.Grammar;
 
 using Json = Primitives.Json.Handlers;
 using Xml = Primitives.Xml.Handlers;

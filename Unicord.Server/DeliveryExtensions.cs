@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Unicord.Server.Accounts;
-using Unicord.Server.Events;
+using NexIM.Server.Accounts;
+using NexIM.Server.Events;
 
-namespace Unicord.Server;
+namespace NexIM.Server;
 
 internal static class DeliveryExtensions
 {

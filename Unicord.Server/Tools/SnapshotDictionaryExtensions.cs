@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Unicord.Server.Tools;
+namespace NexIM.Server.Tools;
 
 internal static class SnapshotDictionaryExtensions
 {

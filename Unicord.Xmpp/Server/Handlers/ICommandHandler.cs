@@ -1,12 +1,12 @@
-﻿global using ICommandHandler = Unicord.Primitives.Xml.Handlers.IPayloadHandler<Unicord.Xmpp.Server.Handlers.ICommandContext>;
+﻿global using ICommandHandler = NexIM.Primitives.Xml.Handlers.IPayloadHandler<NexIM.Xmpp.Server.Handlers.ICommandContext>;
 using System;
 using System.Collections.Generic;
-using Unicord.Primitives.Xml.Handlers;
-using Unicord.Server.Events;
-using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Server.Communication;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Server.Communication;
 
-namespace Unicord.Xmpp.Server.Handlers;
+namespace NexIM.Xmpp.Server.Handlers;
 
 internal interface ICommandContext : IPayloadHandlerContext
 {

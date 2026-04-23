@@ -3,7 +3,7 @@ using System.Buffers;
 using System.ComponentModel;
 using System.IO;
 
-namespace Unicord.Server.Tools;
+namespace NexIM.Server.Tools;
 
 internal sealed class ReadOnlySequenceStream(ReadOnlySequence<byte> source) : Stream
 {

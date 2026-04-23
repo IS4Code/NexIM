@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Unicord.Primitives;
+using NexIM.Primitives;
 
-using Xml = Unicord.Primitives.Xml.Grammar;
-using XmlHandlers = Unicord.Primitives.Xml.Handlers;
-using Json = Unicord.Primitives.Json.Grammar;
-using JsonHandlers = Unicord.Primitives.Json.Handlers;
+using Xml = NexIM.Primitives.Xml.Grammar;
+using XmlHandlers = NexIM.Primitives.Xml.Handlers;
+using Json = NexIM.Primitives.Json.Grammar;
+using JsonHandlers = NexIM.Primitives.Json.Handlers;
 
-namespace Unicord.Xrd.Protocol;
+namespace NexIM.Xrd.Protocol;
 
 public partial interface IUniversalHandler : XmlHandlers.IPayloadHandler
 {

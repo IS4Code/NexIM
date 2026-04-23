@@ -1,7 +1,7 @@
 ﻿using System;
-using Unicord.Server.Database;
+using NexIM.Server.Database;
 
-namespace Unicord.Server.Accounts;
+namespace NexIM.Server.Accounts;
 
 internal sealed class Identity : IEquatable<Identity>
 {
