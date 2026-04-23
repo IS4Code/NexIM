@@ -191,7 +191,7 @@ partial class Account : IEventHandler
         {
             case RetrieveEvent { Data: RosterQueryData data }:
                 // Retrieving the roster
-                var roster = contacts.Snapshot.Values;
+                var roster = contacts.Values;
                 if(data.Roster == roster || UInt32.TryParse(data.Tag, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var tag) && tag == GetRosterVersion(roster))
                 {
                     // Same version

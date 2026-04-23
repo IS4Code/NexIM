@@ -9,14 +9,15 @@ using System.Threading;
 namespace Unicord.Server.Tools;
 
 [StructLayout(LayoutKind.Auto)]
-internal partial struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>, IEquatable<SnapshotDictionary<TKey, TValue>> where TKey : notnull
+internal partial struct SnapshotDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>, IEquatable<SnapshotDictionary<TKey, TValue>> where TKey : notnull
 {
     static readonly ImmutableDictionary<TKey, TValue> defaultStorage = ImmutableDictionary<TKey, TValue>.Empty;
 
     ImmutableDictionary<TKey, TValue>? _storage;
     readonly ImmutableDictionary<TKey, TValue> storage => _storage ?? defaultStorage;
 
-    public readonly IDictionary<TKey, TValue> Snapshot => storage;
+    public readonly IReadOnlyCollection<TKey> Keys => new KeysCollection(storage);
+    public readonly IReadOnlyCollection<TValue> Values => new ValuesCollection(storage);
 
     public SnapshotDictionary(IDictionary<TKey, TValue> entries)
     {
@@ -25,6 +26,11 @@ internal partial struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<T
             ImmutableDictionary<TKey, TValue>.Builder builder => builder.ToImmutable(),
             _ => ImmutableDictionary.CreateRange(entries)
         };
+    }
+
+    internal SnapshotDictionary(ImmutableDictionary<TKey, TValue> entries)
+    {
+        _storage = entries;
     }
 
     private SnapshotDictionary(ImmutableDictionary<TKey, TValue>.Builder builder)
@@ -71,11 +77,21 @@ internal partial struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<T
         }
     }
 
-    #region IReadOnlyDictionary implementation
-    public readonly TValue this[TKey key] => storage[key];
-    public readonly IEnumerable<TKey> Keys => storage.Keys;
-    public readonly IEnumerable<TValue> Values => storage.Values;
+    #region Interface implementation
     public readonly int Count => storage.Count;
+    public readonly TValue this[TKey key] => storage[key];
+
+    readonly IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => storage.Keys;
+    readonly IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => storage.Values;
+    readonly ICollection<TKey> IDictionary<TKey, TValue>.Keys => new KeysCollection(storage);
+    readonly ICollection<TValue> IDictionary<TKey, TValue>.Values => new ValuesCollection(storage);
+
+    readonly bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly => true;
+
+    readonly TValue IDictionary<TKey, TValue>.this[TKey key] {
+        get => this[key];
+        set => throw new NotSupportedException();
+    }
 
     public readonly bool ContainsKey(TKey key) => storage.ContainsKey(key);
     public readonly bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value) => storage.TryGetValue(key, out value);
@@ -89,6 +105,25 @@ internal partial struct SnapshotDictionary<TKey, TValue> : IReadOnlyDictionary<T
     {
         return ((IEnumerable)storage).GetEnumerator();
     }
+
+    public readonly bool Contains(KeyValuePair<TKey, TValue> item)
+    {
+        return storage.Contains(item);
+    }
+
+    readonly void ICollection<KeyValuePair<TKey, TValue>>.CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
+    {
+        foreach(var pair in storage)
+        {
+            array[arrayIndex++] = pair;
+        }
+    }
+
+    readonly void IDictionary<TKey, TValue>.Add(TKey key, TValue value) => throw new NotSupportedException();
+    readonly void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> item) => throw new NotSupportedException();
+    readonly bool IDictionary<TKey, TValue>.Remove(TKey key) => throw new NotSupportedException();
+    readonly bool ICollection<KeyValuePair<TKey, TValue>>.Remove(KeyValuePair<TKey, TValue> item) => throw new NotSupportedException();
+    readonly void ICollection<KeyValuePair<TKey, TValue>>.Clear() => throw new NotSupportedException();
     #endregion
 
     public struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>

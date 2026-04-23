@@ -22,7 +22,7 @@ public sealed record VCardQueryData : QueryData
 
 public record RosterQueryData : QueryData
 {
-    public required ICollection<Contact>? Roster { get; init; }
+    public required IReadOnlyCollection<Contact>? Roster { get; init; }
     public required string? Tag { get; init; }
 }
 

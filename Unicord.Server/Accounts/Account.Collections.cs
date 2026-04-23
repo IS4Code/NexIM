@@ -62,7 +62,10 @@ partial class Account
 
         public void CopyTo(TValue[] array, int arrayIndex)
         {
-            accessor().Snapshot.Values.CopyTo(array, arrayIndex);
+            foreach(var value in accessor().Values)
+            {
+                array[arrayIndex++] = value;
+            }
         }
 
         public bool Remove(TValue item)

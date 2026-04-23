@@ -60,7 +60,7 @@ partial class Account
         return tasks.Combine();
     }
 
-    private void OnContactUpdated(Contact contact, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
+    private void OnContactUpdated(Contact contact, IReadOnlyCollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
         tasks.Add(Save());
 
@@ -76,7 +76,7 @@ partial class Account
         }, tasks);
     }
 
-    private void OnContactRemoved(Contact contact, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
+    private void OnContactRemoved(Contact contact, IReadOnlyCollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
         tasks.Add(Save());
 
@@ -92,7 +92,7 @@ partial class Account
         }, tasks);
     }
 
-    private void OnContactUpdateOrRemoved(Contact previous, Contact? updated, ICollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
+    private void OnContactUpdateOrRemoved(Contact previous, Contact? updated, IReadOnlyCollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
         if(updated is not null)
         {
@@ -104,12 +104,12 @@ partial class Account
         }
     }
 
-    string GetRosterVersionString(ICollection<Contact> contacts)
+    string GetRosterVersionString(IReadOnlyCollection<Contact> contacts)
     {
         return GetRosterVersion(contacts).ToString("x08", CultureInfo.InvariantCulture);
     }
 
-    uint GetRosterVersion(ICollection<Contact> contacts)
+    uint GetRosterVersion(IReadOnlyCollection<Contact> contacts)
     {
         // New immutable instance each time
         return unchecked((uint)contacts.GetHashCode());

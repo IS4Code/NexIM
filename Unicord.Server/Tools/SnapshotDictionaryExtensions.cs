@@ -17,7 +17,7 @@ internal static class SnapshotDictionaryExtensions
         SetItem(ref dictionary, key, value, out _, out _, out _);
     }
 
-    public static void SetItem<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, TValue value, out TValue? previous, out TValue? updated, out IDictionary<TKey, TValue> snapshot) where TKey : notnull where TValue : class
+    public static void SetItem<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, TValue value, out TValue? previous, out TValue? updated, out SnapshotDictionary<TKey, TValue> snapshot) where TKey : notnull where TValue : class
     {
         AddOrUpdate(ref dictionary, key, Storage<TKey, TValue>.SimpleAddFactory, Storage<TKey, TValue>.SimpleUpdateFactory, out previous, out updated, out snapshot, value);
     }
@@ -27,7 +27,7 @@ internal static class SnapshotDictionaryExtensions
         Clear(ref dictionary, out _);
     }
 
-    public static void Clear<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, out IDictionary<TKey, TValue> snapshot) where TKey : notnull
+    public static void Clear<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, out SnapshotDictionary<TKey, TValue> snapshot) where TKey : notnull
     {
         while(true)
         {
@@ -39,20 +39,20 @@ internal static class SnapshotDictionaryExtensions
             if(originalDict == updatedDict)
             {
                 // No change
-                snapshot = originalDict;
+                snapshot = new(originalDict);
                 return;
             }
 
             if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updatedDict, originalDict))
             {
                 // Unchanged in the meantime, store
-                snapshot = updatedDict;
+                snapshot = new(updatedDict);
                 return;
             }
         }
     }
 
-    public static bool AddOrUpdate<TKey, TValue, TArg>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue?> addFactory, Func<TKey, TValue, TArg, TValue?> updateFactory, out TValue? previous, out TValue? updated, out IDictionary<TKey, TValue> snapshot, TArg arg) where TKey : notnull where TValue : class
+    public static bool AddOrUpdate<TKey, TValue, TArg>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TArg, TValue?> addFactory, Func<TKey, TValue, TArg, TValue?> updateFactory, out TValue? previous, out TValue? updated, out SnapshotDictionary<TKey, TValue> snapshot, TArg arg) where TKey : notnull where TValue : class
     {
         while(true)
         {
@@ -69,7 +69,7 @@ internal static class SnapshotDictionaryExtensions
                 {
                     // No change
                     updated = existing;
-                    snapshot = originalDict;
+                    snapshot = new(originalDict);
                     return false;
                 }
             }
@@ -85,7 +85,7 @@ internal static class SnapshotDictionaryExtensions
             {
                 // No change
                 updated = item;
-                snapshot = originalDict;
+                snapshot = new(originalDict);
                 return false;
             }
 
@@ -93,7 +93,7 @@ internal static class SnapshotDictionaryExtensions
             {
                 // Unchanged in the meantime, store
                 updated = item;
-                snapshot = updatedDict;
+                snapshot = new(updatedDict);
                 return true;
             }
         }
@@ -104,7 +104,7 @@ internal static class SnapshotDictionaryExtensions
         return TryRemove(ref dictionary, key, out _, out _);
     }
 
-    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, [MaybeNullWhen(false)] out TValue value, out IDictionary<TKey, TValue> snapshot) where TKey : notnull
+    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, TKey key, [MaybeNullWhen(false)] out TValue value, out SnapshotDictionary<TKey, TValue> snapshot) where TKey : notnull
     {
         while(true)
         {
@@ -114,7 +114,7 @@ internal static class SnapshotDictionaryExtensions
             if(!original.TryGetValue(key, out value))
             {
                 // Not present
-                snapshot = original;
+                snapshot = new(original);
                 return false;
             }
 
@@ -124,7 +124,7 @@ internal static class SnapshotDictionaryExtensions
             if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updated, original))
             {
                 // Unchanged in the meantime, store
-                snapshot = updated;
+                snapshot = new(updated);
                 return true;
             }
         }
@@ -135,7 +135,7 @@ internal static class SnapshotDictionaryExtensions
         return TryRemove(ref dictionary, pair, out _);
     }
 
-    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, KeyValuePair<TKey, TValue> pair, out IDictionary<TKey, TValue> snapshot) where TKey : notnull where TValue : class
+    public static bool TryRemove<TKey, TValue>(ref this SnapshotDictionary<TKey, TValue> dictionary, KeyValuePair<TKey, TValue> pair, out SnapshotDictionary<TKey, TValue> snapshot) where TKey : notnull where TValue : class
     {
         while(true)
         {
@@ -145,7 +145,7 @@ internal static class SnapshotDictionaryExtensions
             if(!original.TryGetValue(pair.Key, out var value) || value != pair.Value)
             {
                 // Not present or has wrong value
-                snapshot = original;
+                snapshot = new(original);
                 return false;
             }
 
@@ -155,7 +155,7 @@ internal static class SnapshotDictionaryExtensions
             if(SnapshotDictionary<TKey, TValue>.Storage.TryUpdate(ref dictionary, updated, original))
             {
                 // Unchanged in the meantime, store
-                snapshot = updated;
+                snapshot = new(updated);
                 return true;
             }
         }

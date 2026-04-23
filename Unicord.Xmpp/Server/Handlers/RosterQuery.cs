@@ -129,7 +129,7 @@ internal sealed class ResultRosterQuery : DataRosterQuery
         // Ignore removed contacts
         return new RosterQueryData {
             Tag = Version,
-            Roster = InnerHandler.AddedContacts ?? (ICollection<Contact>)Array.Empty<Contact>()
+            Roster = InnerHandler.AddedContacts ?? (IReadOnlyCollection<Contact>)Array.Empty<Contact>()
         };
     }
 

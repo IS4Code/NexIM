@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -25,19 +24,12 @@ public partial class Account
     public VCard? VCard { get; set; }
 
     SnapshotDictionary<AccountName, Contact> contacts = default;
-
-    [NotMapped]
-    public ICollection<Contact> Contacts => contacts.Snapshot.Values;
-
     SnapshotDictionary<XName, PrivateStorageData> privateStorage = default;
-
-    [NotMapped]
-    public ICollection<PrivateStorageData> PrivateStorage => privateStorage.Snapshot.Values;
-
     SnapshotDictionary<Guid, UploadedFile> uploadedFiles = default;
 
-    [NotMapped]
-    public ICollection<UploadedFile> UploadedFiles => uploadedFiles.Snapshot.Values;
+    public IReadOnlyCollection<Contact> Contacts => contacts.Values;
+    public IReadOnlyCollection<PrivateStorageData> PrivateStorage => privateStorage.Values;
+    public IReadOnlyCollection<UploadedFile> UploadedFiles => uploadedFiles.Values;
 
     internal Account(Server server, Identity identity, byte[] passwordHash)
     {
@@ -78,13 +70,13 @@ public partial class Account
         return contacts.TryGetValue(name, out var contact) ? contact : null;
     }
 
-    private bool AddOrUpdateContact<TArgs>(AccountName name, Func<AccountName, TArgs, Contact?> addFactory, Func<AccountName, Contact, TArgs, Contact?> updateFactory, TArgs args, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
+    private bool AddOrUpdateContact<TArgs>(AccountName name, Func<AccountName, TArgs, Contact?> addFactory, Func<AccountName, Contact, TArgs, Contact?> updateFactory, TArgs args, out Contact? previous, out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         if(IsProhibitedContact(name))
         {
             previous = null;
             updated = null;
-            finalContacts = Contacts;
+            finalContacts = contacts.Values;
             return false;
         }
         var success = contacts.AddOrUpdate(name, addFactory, updateFactory, out previous, out updated, out var snapshot, args);
@@ -109,14 +101,15 @@ public partial class Account
         return existing.Update(added);
     };
 
-    public bool SetContact(Contact info, out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
+    public bool SetContact(Contact info, out Contact? previous, out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return AddOrUpdateContact(info.Account, addContact, updateContact, (this, info), out previous, out updated, out finalContacts);
     }
 
-    public bool RemoveContact(AccountName name, [MaybeNullWhen(false)] out Contact result, out ICollection<Contact> finalContacts)
+    public bool RemoveContact(AccountName name, [MaybeNullWhen(false)] out Contact result, out IReadOnlyCollection<Contact> finalContacts)
     {
-        var success = contacts.TryRemove(name, out result, out var snapshot);
+        var success = contacts.TryRemove(name, out var resultValue, out var snapshot);
+        result = resultValue;
         finalContacts = snapshot.Values;
         return success;
     }
@@ -144,7 +137,7 @@ public partial class Account
         return existing.WithSubscriptionState(state);
     };
 
-    private bool UpdateContactSubscriptionState(AccountName name, Func<SubscriptionState, SubscriptionState> updater, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
+    private bool UpdateContactSubscriptionState(AccountName name, Func<SubscriptionState, SubscriptionState> updater, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return AddOrUpdateContact(name, addContactWithSubscriptionState, updateContactWithSubscriptionState, (this, updater), out previous, out updated, out finalContacts);
     }
@@ -158,7 +151,7 @@ public partial class Account
         return existingState.WithPendingTo();
     };
 
-    public bool TrySetPendingSubscriptionTo(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
+    public bool TrySetPendingSubscriptionTo(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return UpdateContactSubscriptionState(name, updateTrySetPendingSubscriptionTo, out previous, out updated, out finalContacts);
     }
@@ -177,7 +170,7 @@ public partial class Account
         return existingState.WithPendingFrom();
     };
 
-    public bool TrySetPendingSubscriptionFrom(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
+    public bool TrySetPendingSubscriptionFrom(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return UpdateContactSubscriptionState(name, updateTrySetPendingSubscriptionFrom, out previous, out updated, out finalContacts);
     }
@@ -196,7 +189,7 @@ public partial class Account
         return existingState.WithApprovedFrom();
     };
 
-    public bool TrySetAcceptedSubscriptionFrom(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
+    public bool TrySetAcceptedSubscriptionFrom(AccountName name, out Contact? previous, [NotNullWhen(true)] out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return UpdateContactSubscriptionState(name, updateTrySetAcceptedSubscriptionFrom, out previous, out updated, out finalContacts);
     }
@@ -210,7 +203,7 @@ public partial class Account
         return existingState.WithAcceptedTo();
     };
 
-    public bool TrySetAcceptedSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
+    public bool TrySetAcceptedSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return UpdateContactSubscriptionState(name, updateTrySetAcceptedSubscriptionTo, out previous, out updated, out finalContacts);
     }
@@ -224,7 +217,7 @@ public partial class Account
         return existingState.WithoutFrom();
     };
 
-    public bool TrySetCancelledSubscriptionFrom(AccountName name, [NotNullWhen(true)] out Contact? previous, out Contact? updated, out ICollection<Contact> finalContacts)
+    public bool TrySetCancelledSubscriptionFrom(AccountName name, [NotNullWhen(true)] out Contact? previous, out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return UpdateContactSubscriptionState(name, updateTrySetCancelledSubscriptionFrom, out previous, out updated, out finalContacts);
     }
@@ -238,7 +231,7 @@ public partial class Account
         return existingState.WithoutTo();
     };
 
-    public bool TrySetCancelledSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out ICollection<Contact> finalContacts)
+    public bool TrySetCancelledSubscriptionTo(AccountName name, [NotNullWhen(true)] out Contact? previous, [NotNullWhen(true)] out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         return UpdateContactSubscriptionState(name, updateTrySetCancelledSubscriptionTo, out previous, out updated, out finalContacts);
     }
