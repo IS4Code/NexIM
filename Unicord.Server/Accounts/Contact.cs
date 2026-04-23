@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.InteropServices;
 
@@ -127,16 +128,24 @@ public readonly record struct SubscriptionState(
         init {
             switch(value)
             {
+                case SubscriptionDirection.None:
+                    To &= ~Accepted;
+                    From &= ~Accepted;
+                    break;
                 case SubscriptionDirection.To:
                     To |= Accepted;
+                    From &= ~Accepted;
                     break;
                 case SubscriptionDirection.From:
+                    To &= ~Accepted;
                     From |= Accepted;
                     break;
                 case SubscriptionDirection.Both:
                     To |= Accepted;
                     From |= Accepted;
                     break;
+                default:
+                    throw new InvalidEnumArgumentException(nameof(value), (int)value, typeof(SubscriptionDirection));
             }
         }
     }
