@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -27,9 +28,9 @@ public partial class Account
     SnapshotDictionary<XName, PrivateStorageData> privateStorage = default;
     SnapshotDictionary<Guid, UploadedFile> uploadedFiles = default;
 
-    public IReadOnlyCollection<Contact> Contacts => contacts.Values;
-    public IReadOnlyCollection<PrivateStorageData> PrivateStorage => privateStorage.Values;
-    public IReadOnlyCollection<UploadedFile> UploadedFiles => uploadedFiles.Values;
+    [NotMapped] public IReadOnlyCollection<Contact> Contacts => contacts.Values;
+    [NotMapped] public IReadOnlyCollection<PrivateStorageData> PrivateStorage => privateStorage.Values;
+    [NotMapped] public IReadOnlyCollection<UploadedFile> UploadedFiles => uploadedFiles.Values;
 
     internal Account(Server server, Identity identity, byte[] passwordHash)
     {
