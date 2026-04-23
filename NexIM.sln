@@ -2,23 +2,23 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34601.278
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xmpp", "Unicord.Xmpp\Unicord.Xmpp.csproj", "{AE773674-6177-4694-A144-860BF116FF17}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Xmpp", "NexIM.Xmpp\NexIM.Xmpp.csproj", "{AE773674-6177-4694-A144-860BF116FF17}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xml.Generator", "Unicord.Xml.Generator\Unicord.Xml.Generator.csproj", "{F7E98F9D-95B1-465F-8413-19944EC9A964}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Xml.Generator", "NexIM.Xml.Generator\NexIM.Xml.Generator.csproj", "{F7E98F9D-95B1-465F-8413-19944EC9A964}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Server", "Unicord.Server\Unicord.Server.csproj", "{15D1C188-75E4-48FB-BE36-318C6953CFA0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Server", "NexIM.Server\NexIM.Server.csproj", "{15D1C188-75E4-48FB-BE36-318C6953CFA0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xmpp.Protocol", "Unicord.Xmpp.Protocol\Unicord.Xmpp.Protocol.csproj", "{AF91CF4E-6DE3-4E7C-A81B-D180749EB19E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Xmpp.Protocol", "NexIM.Xmpp.Protocol\NexIM.Xmpp.Protocol.csproj", "{AF91CF4E-6DE3-4E7C-A81B-D180749EB19E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Primitives", "Unicord.Primitives\Unicord.Primitives.csproj", "{310424AF-EC44-4415-AC8C-2A4AA88257FD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Primitives", "NexIM.Primitives\NexIM.Primitives.csproj", "{310424AF-EC44-4415-AC8C-2A4AA88257FD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xrd.Protocol", "Unicord.Xrd.Protocol\Unicord.Xrd.Protocol.csproj", "{A3A96E77-82CD-411F-8070-632C705A0D50}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Xrd.Protocol", "NexIM.Xrd.Protocol\NexIM.Xrd.Protocol.csproj", "{A3A96E77-82CD-411F-8070-632C705A0D50}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Metadata", "Unicord.Metadata\Unicord.Metadata.csproj", "{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Metadata", "NexIM.Metadata\NexIM.Metadata.csproj", "{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Json.Generator", "Unicord.Json.Generator\Unicord.Json.Generator.csproj", "{040A8DCB-6C8C-453D-AD35-6250E229B56B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Json.Generator", "NexIM.Json.Generator\NexIM.Json.Generator.csproj", "{040A8DCB-6C8C-453D-AD35-6250E229B56B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Tools", "Unicord.Tools\Unicord.Tools.csproj", "{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NexIM.Tools", "NexIM.Tools\NexIM.Tools.csproj", "{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
