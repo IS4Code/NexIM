@@ -11,7 +11,7 @@ public record Contact : IComparable<Contact>
     [NotMapped]
     public required AccountName Account { get; init; }
 
-    public required SubscriptionState SubscriptionState { get; init; }
+    public SubscriptionState SubscriptionState { get; init; }
     public string? Nickname { get; init; }
     public string? Group { get; init; }
 
@@ -23,19 +23,14 @@ public record Contact : IComparable<Contact>
     /// Uses the data from a <see cref="Contact"/> instance
     /// to initialize a new owned contact.
     /// </summary>
-    internal static Contact Create(Identity identity, Contact value, Account owner)
+    internal static Contact Create(Identity identity, Contact data, Account owner)
     {
-        var subscriptionState = default(SubscriptionState);
-        if(value.SubscriptionState.ApprovedTo)
-        {
-            subscriptionState = subscriptionState.WithApprovedTo();
-        }
-        return value with {
+        return data with {
             Account = identity.Name,
             Identity = identity,
             Identifier = identity.Identifier,
             OwnerIdentifier = owner.Identifier,
-            SubscriptionState = subscriptionState
+            SubscriptionState = default(SubscriptionState) with { ApprovedTo = data.SubscriptionState.ApprovedTo }
         };
     }
 
@@ -60,14 +55,12 @@ public record Contact : IComparable<Contact>
     /// </summary>
     internal Contact Update(Contact other)
     {
-        var subscriptionState = SubscriptionState;
-        if(other.SubscriptionState.ApprovedTo)
-        {
-            subscriptionState = subscriptionState.WithApprovedTo();
-        }
         return other with {
+            Account = Account,
+            Identity = Identity,
+            Identifier = Identifier,
             OwnerIdentifier = OwnerIdentifier,
-            SubscriptionState = subscriptionState
+            SubscriptionState = SubscriptionState with { ApprovedTo = other.SubscriptionState.ApprovedTo }
         };
     }
 
@@ -101,27 +94,27 @@ public readonly record struct SubscriptionState(
 {
     public bool AcceptedFrom {
         get => (Accepted & From) != 0;
-        init => From |= value ? Accepted : 0;
+        init => From = SetBit(From, Accepted, value);
     }
     public bool AcceptedTo {
         get => (Accepted & To) != 0;
-        init => To |= value ? Accepted : 0;
+        init => To = SetBit(To, Accepted, value);
     }
     public bool ApprovedFrom {
         get => (Approved & From) != 0;
-        init => From |= value ? Approved : 0;
+        init => From = SetBit(From, Approved, value);
     }
     public bool ApprovedTo {
         get => (Approved & To) != 0;
-        init => To |= value ? Approved : 0;
+        init => To = SetBit(From, Approved, value);
     }
     public bool PendingFrom {
         get => (Pending & From) != 0;
-        init => From |= value ? Pending : 0;
+        init => From = SetBit(To, Pending, value);
     }
     public bool PendingTo {
         get => (Pending & To) != 0;
-        init => To |= value ? Pending : 0;
+        init => To = SetBit(To, Pending, value);
     }
 
     public bool IsEmpty => From == 0 && To == 0;
@@ -187,6 +180,11 @@ public readonly record struct SubscriptionState(
     /// Clears the "accepted/pending to" state.
     /// </summary>
     public SubscriptionState WithoutTo() => this with { To = To & Approved };
+
+    static SubscriptionLevel SetBit(SubscriptionLevel level, SubscriptionLevel bit, bool set)
+    {
+        return set ? (level | bit) : (level &= ~bit);
+    }
 }
 
 [Flags]
