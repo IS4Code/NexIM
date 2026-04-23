@@ -14,6 +14,7 @@ internal class AccountsContext : DbContext
     public Server Server { get; }
 
     public DbSet<Account> Accounts { get; set; }
+    public DbSet<Identity> Identities { get; set; }
     public DbSet<Contact> Contacts { get; set; }
     public DbSet<PrivateStorageData> PrivateStorage { get; set; }
     public DbSet<UploadedFile> UploadedFiles { get; set; }
@@ -38,6 +39,12 @@ internal class AccountsContext : DbContext
     {
 #if DEBUG
         options.EnableSensitiveDataLogging();
+        options.LogTo(str => {
+            lock(typeof(Console))
+            {
+                Console.WriteLine(str);
+            }
+        }, Microsoft.Extensions.Logging.LogLevel.Information);
 #endif
         options.UseSqlite("Data Source=accounts.db");
     }
@@ -51,9 +58,17 @@ internal class AccountsContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Identity>(e => {
+            e.HasKey(x => x.Identifier);
+
+            // Explicitly mapped because they are passed through the constructor
+            e.Property(x => x.User);
+            e.Property(x => x.Host);
+        });
+
         modelBuilder.Entity<Account>(e => {
             e.HasKey(x => x.Identifier);
-            e.HasIndex(x => new { x.Host, x.User });
+            e.HasOne(x => x.Identity).WithOne().HasForeignKey<Account>(x => x.Identifier);
 
             e.Property(x => x.PasswordHash);
 
@@ -65,7 +80,8 @@ internal class AccountsContext : DbContext
         });
 
         modelBuilder.Entity<Contact>(e => {
-            e.HasKey(x => new { x.OwnerIdentifier, x.Host, x.User });
+            e.HasKey(x => new { x.OwnerIdentifier, x.Identifier });
+            e.HasOne(x => x.Identity).WithMany().HasForeignKey(x => x.Identifier);
         });
 
         modelBuilder.Entity<PrivateStorageData>(e => {

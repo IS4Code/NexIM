@@ -14,7 +14,7 @@ internal static class RosterFormatter
             return;
         }
 
-        await using var item = await handler.Item(contact.Account.ToResource(null), contact.Name, (removed ? RosterSubscriptionDirection.Remove : contact.SubscriptionState.Direction switch {
+        await using var item = await handler.Item(contact.Account.ToResource(null), contact.Nickname, (removed ? RosterSubscriptionDirection.Remove : contact.SubscriptionState.Direction switch {
             SubscriptionDirection.To => RosterSubscriptionDirection.To,
             SubscriptionDirection.From => RosterSubscriptionDirection.From,
             SubscriptionDirection.Both => RosterSubscriptionDirection.Both,

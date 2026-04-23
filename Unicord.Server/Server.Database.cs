@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Unicord.Server.Accounts;
 using Unicord.Server.Database;
@@ -9,15 +10,17 @@ partial class Server
 {
     readonly AccountsContext database;
 
-    private void InitDatabase(out AccountsContext database)
-    {
-        database = new(this);
-        database.Database.EnsureCreated();
+    private ValueTuple Database {
+        [MemberNotNull(nameof(database))]
+        init {
+            database = new(this);
+            database.Database.EnsureCreated();
 
-        // TODO Load only active ones
-        foreach(var account in database.Accounts)
-        {
-            accounts[account.Name] = account;
+            // TODO Load only active ones
+            foreach(var account in database.Accounts)
+            {
+                accounts[account.Identifier] = account;
+            }
         }
     }
 
@@ -36,10 +39,28 @@ partial class Server
         return database.UploadedFiles.Find(identifier);
     }
 
-    private Account CreateAccount(string user, string host, byte[] passwordHash)
+    private Account CreateAccount(Identity identity, byte[] passwordHash)
     {
-        var created = new Account(this, IdentifierHelper.CreateGuid(), user, host, passwordHash);
+        var created = new Account(this, identity, passwordHash);
         database.Accounts.Add(created);
         return created;
+    }
+
+    private Identity GetIdentity(AccountName name, Func<AccountName, Identity> factory, out bool created)
+    {
+        try
+        {
+            var identity = identityByAccount.GetOrAdd(name, factory);
+            created = identity == createdIdentity;
+            if(created)
+            {
+                database.Identities.Add(identity);
+            }
+            return identity;
+        }
+        finally
+        {
+            createdIdentity = null;
+        }
     }
 }

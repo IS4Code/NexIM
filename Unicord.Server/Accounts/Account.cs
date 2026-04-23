@@ -15,15 +15,12 @@ public partial class Account
 {
     public Server Server { get; }
 
-    public Guid Identifier { get; }
+    internal Identity Identity { get; init; }
+    internal Guid Identifier { get; }
 
-    [NotMapped]
-    public AccountName Name => new(User, Host);
+    public AccountName Name => Identity.Name;
 
     internal byte[] PasswordHash { get; }
-
-    public string User { get; private set; }
-    public string Host { get; private set; }
 
     public VCard? VCard { get; set; }
 
@@ -42,21 +39,26 @@ public partial class Account
     [NotMapped]
     public ICollection<UploadedFile> UploadedFiles => uploadedFiles.Snapshot.Values;
 
-    internal Account(Server server, Guid identifier, string user, string host, byte[] passwordHash)
+    internal Account(Server server, Identity identity, byte[] passwordHash)
     {
         Events = default;
         Collections = default;
 
         Server = server;
-        Identifier = identifier;
-        User = user;
-        Host = host;
+        Identity = identity;
+        Identifier = identity.Identifier;
         PasswordHash = passwordHash;
     }
 
-    internal Account(AccountsContext context, Guid identifier, string user, string host, byte[] passwordHash) : this(context.Server, identifier, user, host, passwordHash)
+    internal Account(AccountsContext context, Guid identifier, byte[] passwordHash)
     {
+        Events = default;
+        Collections = default;
 
+        Server = context.Server;
+        Identity = null!;
+        Identifier = identifier;
+        PasswordHash = passwordHash;
     }
 
     private async ValueTask<StatusReports> Save()
@@ -98,7 +100,8 @@ public partial class Account
 
     static readonly Func<AccountName, (Account, Contact), Contact> addContact = (name, info) => {
         var (self, added) = info;
-        return Contact.Create(added, self);
+        var identity = self.Server.GetAccountIdentity(added.Account, out _);
+        return Contact.Create(identity, added, self);
     };
 
     static readonly Func<AccountName, Contact, (Account, Contact), Contact> updateContact = (name, existing, info) => {
@@ -126,7 +129,8 @@ public partial class Account
             // No reason to add
             return null;
         }
-        return Contact.Create(name, state, self);
+        var identity = self.Server.GetAccountIdentity(name, out _);
+        return Contact.Create(identity, state, self);
     };
 
     static readonly Func<AccountName, Contact, (Account, Func<SubscriptionState, SubscriptionState>), Contact?> updateContactWithSubscriptionState = (name, existing, info) => {

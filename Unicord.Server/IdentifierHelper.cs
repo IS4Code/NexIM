@@ -1,7 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
+using Unicord.Tools;
 
 namespace Unicord.Server;
 
@@ -10,6 +15,34 @@ internal static class IdentifierHelper
     public static DateTimeOffset IdentifierTimeNow => GetPreciseDateTime();
 
     public static Guid CreateGuid() => CreateGuid(IdentifierTimeNow);
+    
+    static readonly byte[] urlNamespace = { 0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8 };
+
+    public static Guid CreateGuid(AccountName account)
+    {
+        var uri = account.ToUri();
+        return GuidFromName(urlNamespace, uri.OriginalString);
+    }
+
+    static Guid GuidFromName(byte[] namespaceBytes, string name)
+    {
+        using var sha1 = SHA1.Create();
+        using var stream = new HashStream(sha1);
+        stream.Write(namespaceBytes, 0, namespaceBytes.Length);
+        using var writer = new StreamWriter(stream);
+        writer.Write(name);
+        writer.Flush();
+
+        Span<byte> hash = stackalloc byte[stream.HashSize];
+        hash = stream.ComputeHash(hash);
+
+        // Version 5
+        hash[6] = unchecked((byte)((hash[6] & 0x0F) | (5 << 4)));
+        // Variant 1
+        hash[8] = unchecked((byte)((hash[8] & 0x3F) | 0x80));
+
+        return new(hash.Slice(0, 16), true);
+    }
 
     public static Guid CreateGuid(DateTimeOffset timestamp)
     {

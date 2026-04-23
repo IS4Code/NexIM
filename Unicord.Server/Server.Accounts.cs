@@ -1,64 +1,71 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
+using System.Diagnostics.CodeAnalysis;
 using Unicord.Server.Accounts;
 
 namespace Unicord.Server;
 
 partial class Server
 {
-    readonly ConcurrentDictionary<AccountName, Account> accounts = new();
+    readonly ConcurrentDictionary<Guid, Account> accounts = new();
+    readonly ConcurrentDictionary<Guid, Identity> identityByGuid = new();
+    readonly ConcurrentDictionary<AccountName, Identity> identityByAccount = new();
 
-    public async ValueTask<Account?> AuthenticateAccount(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
+    readonly Func<AccountName, Identity> createUnownedIdentity;
+    readonly Func<AccountName, Identity> createOwnedIdentity;
+
+    [ThreadStatic]
+    static Identity? createdIdentity;
+
+    private ValueTuple Accounts {
+        [MemberNotNull(nameof(createUnownedIdentity))]
+        [MemberNotNull(nameof(createOwnedIdentity))]
+        init {
+            createUnownedIdentity = name => {
+                var identity = new Identity(IdentifierHelper.CreateGuid(name), name);
+                identityByGuid[identity.Identifier] = identity;
+                createdIdentity = identity;
+                return identity;
+            };
+
+            createOwnedIdentity = name => {
+                var identity = new Identity(IdentifierHelper.CreateGuid(), name);
+                identityByGuid[identity.Identifier] = identity;
+                createdIdentity = identity;
+                return identity;
+            };
+        }
+    }
+
+    internal void RegisterIdentity(Identity identity)
     {
-        if(!accountName.IsValid || password.Length == 0)
-        {
-            return null;
-        }
+        // Called from DB
+        identityByGuid[identity.Identifier] = identity;
+        identityByAccount[identity.Name] = identity;
+    }
 
-        // TODO Normal password hashing algorithm
-        var hash = GetHash();
+    internal Identity GetAccountIdentity(AccountName name, out bool created)
+    {
+        return GetIdentity(name, createUnownedIdentity, out created);
+    }
 
-        // TODO Registration
-        var account = accounts.GetOrAdd(accountName, _ => CreateAccount(accountName.User, accountName.Host, hash));
-        if(account.PasswordHash == hash)
-        {
-            // Newly added
-            await SaveDatabase();
-            return account;
-        }
-        else if(CryptographicOperations.FixedTimeEquals(hash, account.PasswordHash))
-        {
-            return account;
-        }
-        return null;
-
-        byte[] GetHash()
-        {
-            try
-            {
-                var buffer = new byte[SHA256.HashSizeInBytes];
-
-                Span<byte> data = stackalloc byte[SHA256.HashSizeInBytes * 2];
-
-                SHA256.HashData(MemoryMarshal.Cast<char, byte>(accountName.ToString()), data);
-                SHA256.HashData(MemoryMarshal.Cast<char, byte>(password.Span), data.Slice(SHA256.HashSizeInBytes));
-                SHA256.HashData(data, buffer);
-
-                return buffer;
-            }
-            finally
-            {
-                // No longer needed
-                memoryHandle?.Dispose();
-            }
-        }
+    internal Identity NewAccountIdentity(AccountName name, out bool created)
+    {
+        return GetIdentity(name, createOwnedIdentity, out created);
     }
 
     public Account? GetAccount(AccountName name)
     {
-        return accounts.TryGetValue(name, out var account) ? account : null;
+        // Does not create identity if non-existent
+        return
+            identityByAccount.TryGetValue(name, out var id)
+            ? GetAccount(id) : null;
+    }
+
+    internal Account? GetAccount(Identity identity)
+    {
+        return
+            accounts.TryGetValue(identity.Identifier, out var account)
+            ? account : null;
     }
 }

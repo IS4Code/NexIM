@@ -12,26 +12,18 @@ public record Contact : IComparable<Contact>
     public required AccountName Account { get; init; }
 
     public required SubscriptionState SubscriptionState { get; init; }
-    public string? Name { get; init; }
+    public string? Nickname { get; init; }
     public string? Group { get; init; }
 
-    internal string? User {
-        get => Account.User;
-        init => Account = Account with { User = value };
-    }
-
-    internal string Host {
-        get => Account.Host;
-        init => Account = Account with { Host = value };
-    }
-
+    internal Identity Identity { get; init; } = null!;
+    internal Guid Identifier { get; init; }
     internal Guid OwnerIdentifier { get; init; }
 
     /// <summary>
     /// Uses the data from a <see cref="Contact"/> instance
     /// to initialize a new owned contact.
     /// </summary>
-    internal static Contact Create(Contact value, Account owner)
+    internal static Contact Create(Identity identity, Contact value, Account owner)
     {
         var subscriptionState = default(SubscriptionState);
         if(value.SubscriptionState.ApprovedTo)
@@ -39,6 +31,9 @@ public record Contact : IComparable<Contact>
             subscriptionState = subscriptionState.WithApprovedTo();
         }
         return value with {
+            Account = identity.Name,
+            Identity = identity,
+            Identifier = identity.Identifier,
             OwnerIdentifier = owner.Identifier,
             SubscriptionState = subscriptionState
         };
@@ -48,10 +43,12 @@ public record Contact : IComparable<Contact>
     /// Uses the data from a <see cref="Contact"/> instance
     /// to initialize a new owned contact.
     /// </summary>
-    internal static Contact Create(AccountName name, SubscriptionState subscriptionState, Account owner)
+    internal static Contact Create(Identity identity, SubscriptionState subscriptionState, Account owner)
     {
         return new Contact() {
-            Account = name,
+            Account = identity.Name,
+            Identity = identity,
+            Identifier = identity.Identifier,
             OwnerIdentifier = owner.Identifier,
             SubscriptionState = subscriptionState
         };

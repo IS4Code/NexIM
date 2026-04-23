@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Unicord.Server.Accounts;
 using Unicord.Server.Events;
@@ -20,22 +21,24 @@ partial class Server
         return new(default, code);
     }
 
-    private void InitDelivery(out Func<AccountName, Identifiers, Event, ValueTask<StatusReports>> accountTarget)
-    {
-        accountTarget = (accountName, accountTo, evnt) => {
-            if(!accountName.IsValid)
-            {
-                // TODO Recognize other entities
-                return new(Report(StatusCode.Unavailable));
-            }
+    private ValueTuple Delivery {
+        [MemberNotNull(nameof(accountTarget))]
+        init {
+            accountTarget = (accountName, accountTo, evnt) => {
+                if(!accountName.IsValid)
+                {
+                    // TODO Recognize other entities
+                    return new(Report(StatusCode.Unavailable));
+                }
 
-            if(GetAccount(accountName) is not { } account)
-            {
-                return new(Report(StatusCode.Unavailable));
-            }
+                if(GetAccount(accountName) is not { } account)
+                {
+                    return new(Report(StatusCode.Unavailable));
+                }
 
-            // Deliver to the relevant account
-            return account.Post(evnt.WithTo(accountTo));
-        };
+                // Deliver to the relevant account
+                return account.Post(evnt.WithTo(accountTo));
+            };
+        }
     }
 }

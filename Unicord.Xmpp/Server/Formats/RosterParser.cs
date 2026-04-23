@@ -55,7 +55,7 @@ internal sealed class RosterParser<TContext> : BaseRosterQueryHandler<TContext> 
 
             contacts.Add(new Contact {
                 Account = identifier.ToAccountName(out _),
-                Name = name,
+                Nickname = name,
                 Group = group,
                 SubscriptionState = new() {
                     Direction = subscription switch {

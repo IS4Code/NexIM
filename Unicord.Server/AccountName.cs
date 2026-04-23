@@ -31,4 +31,15 @@ public readonly record struct AccountName(string? User, string Host) : IComparab
             ? $"{user}@{Host}"
             : Host;
     }
+
+    public Uri ToUri()
+    {
+        if(User is not { } user)
+        {
+            // TODO DNS escaping with \
+            return new Uri("dns:" + Uri.EscapeDataString(Host));
+        }
+        // TODO A-label normalization
+        return new Uri($"acct:{Uri.EscapeDataString(user)}@{Uri.EscapeDataString(Host)}");
+    }
 }
