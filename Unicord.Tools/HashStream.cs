@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Security.Cryptography;
 
-namespace Unicord.Xmpp.Tools;
+namespace Unicord.Tools;
 
-internal class HashStream(HashAlgorithm algorithm) : NonSeekableStream
+public class HashStream(HashAlgorithm algorithm) : NonSeekableStream
 {
     public override bool CanRead => false;
     public override bool CanWrite => true;

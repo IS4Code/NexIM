@@ -7,8 +7,8 @@ using System.Security.Cryptography;
 using System.Xml;
 using Unicord.Primitives;
 using Unicord.Server.Events;
+using Unicord.Tools;
 using Unicord.Xmpp.Protocol;
-using Unicord.Xmpp.Tools;
 
 namespace Unicord.Xmpp.Model;
 

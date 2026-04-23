@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Unicord.Metadata\Unicord.Metadata.csproj" />
     <ProjectReference Include="..\Unicord.Server\Unicord.Server.csproj" />
+    <ProjectReference Include="..\Unicord.Tools\Unicord.Tools.csproj" />
     <ProjectReference Include="..\Unicord.Xmpp.Protocol\Unicord.Xmpp.Protocol.csproj" />
   </ItemGroup>
 

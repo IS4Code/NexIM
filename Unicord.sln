@@ -16,7 +16,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Xrd.Protocol", "Uni
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Metadata", "Unicord.Metadata\Unicord.Metadata.csproj", "{A2C7CD63-2E32-4D5B-AE7C-BAF907264F16}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Json.Generator", "Unicord.Json.Generator\Unicord.Json.Generator.csproj", "{040A8DCB-6C8C-453D-AD35-6250E229B56B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicord.Json.Generator", "Unicord.Json.Generator\Unicord.Json.Generator.csproj", "{040A8DCB-6C8C-453D-AD35-6250E229B56B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicord.Tools", "Unicord.Tools\Unicord.Tools.csproj", "{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -56,6 +58,10 @@ Global
 		{040A8DCB-6C8C-453D-AD35-6250E229B56B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{040A8DCB-6C8C-453D-AD35-6250E229B56B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{040A8DCB-6C8C-453D-AD35-6250E229B56B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

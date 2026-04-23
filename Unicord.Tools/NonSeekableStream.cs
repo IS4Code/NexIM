@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 
-namespace Unicord.Xmpp.Tools;
+namespace Unicord.Tools;
 
-internal abstract class NonSeekableStream : Stream
+public abstract class NonSeekableStream : Stream
 {
     public sealed override bool CanSeek => false;
     public sealed override long Length => throw new NotSupportedException();

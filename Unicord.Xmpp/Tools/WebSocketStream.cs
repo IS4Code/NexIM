@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Unicord.Tools;
 
 namespace Unicord.Xmpp.Tools;
 

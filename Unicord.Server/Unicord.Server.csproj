@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Unicord.Primitives\Unicord.Primitives.csproj" />
+    <ProjectReference Include="..\Unicord.Tools\Unicord.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>
