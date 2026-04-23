@@ -106,11 +106,11 @@ public readonly record struct SubscriptionState(
     }
     public bool ApprovedTo {
         get => (Approved & To) != 0;
-        init => To = SetBit(From, Approved, value);
+        init => To = SetBit(To, Approved, value);
     }
     public bool PendingFrom {
         get => (Pending & From) != 0;
-        init => From = SetBit(To, Pending, value);
+        init => From = SetBit(From, Pending, value);
     }
     public bool PendingTo {
         get => (Pending & To) != 0;
