@@ -191,6 +191,6 @@ internal sealed class Utf8StringComparer : EncodedStringComparer
 
     private Utf8StringComparer() : base(new UTF8Encoding(false))
     {
-        
+
     }
 }

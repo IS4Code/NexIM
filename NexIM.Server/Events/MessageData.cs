@@ -122,6 +122,16 @@ public readonly struct MessageBodyCollection(MessageBodyCollectionData data) : I
         return obj is MessageBodyCollection body && Equals(body);
     }
 
+    public static bool operator ==(MessageBodyCollection a, MessageBodyCollection b)
+    {
+        return a.Equals(b);
+    }
+
+    public static bool operator !=(MessageBodyCollection a, MessageBodyCollection b)
+    {
+        return !a.Equals(b);
+    }
+
     public override int GetHashCode()
     {
         var hashCode = new HashCode();

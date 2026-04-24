@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives.Xml.Handlers;
@@ -10,6 +11,7 @@ public abstract class PayloadHandler<TContext> : BasePayloadHandler<TContext> wh
 {
     static readonly Decoder fallbackDecoder = new();
 
+    [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Called from generated code")]
     private protected NullHandler GetEncoder(bool exit)
     {
         return NullHandler.Instance;
@@ -89,7 +91,7 @@ public abstract class PayloadHandler<TContext> : BasePayloadHandler<TContext> wh
         }
     }
 
-    private protected struct ExitDisposable(PayloadHandler<TContext> instance) : IAsyncDisposable
+    private protected readonly struct ExitDisposable(PayloadHandler<TContext> instance) : IAsyncDisposable
     {
         public ValueTask DisposeAsync()
         {

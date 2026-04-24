@@ -20,11 +20,9 @@ internal sealed class XmppTcpSession(XmppServer server, NetworkStream networkStr
     public override string DefaultLanguage => "en";
     public override XmppServer Server => server;
 
-    protected override SslServerAuthenticationOptions ServerAuthenticationOptions => new SslServerAuthenticationOptions()
-    {
+    protected override SslServerAuthenticationOptions ServerAuthenticationOptions => new() {
         EnabledSslProtocols = (SslProtocols)(-1),
-        RemoteCertificateValidationCallback = delegate
-        {
+        RemoteCertificateValidationCallback = delegate {
             return true;
         },
         ClientCertificateRequired = true,

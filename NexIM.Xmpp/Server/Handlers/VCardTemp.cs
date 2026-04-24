@@ -66,8 +66,7 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
                 file.Dispose();
             }
         }
-        return new VCardQueryData
-        {
+        return new VCardQueryData {
             VCard = vcard,
             Extensions = InnerHandler.ExtensionsHandler.ToExtensions()
         };

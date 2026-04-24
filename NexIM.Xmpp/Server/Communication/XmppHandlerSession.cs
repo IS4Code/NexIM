@@ -222,21 +222,13 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         IStreamHandler errorHandler = this;
         var stanza = new Stanza(Type: StanzaType.Error.ToToken(), From: from, To: lastStanza.From, Identifier: lastStanza.Identifier ?? default);
 
-        IStanzaHandler command;
-        switch(lastStanzaKind)
-        {
-            case StanzaKind.Message:
-                command = await errorHandler.Message(stanza);
-                break;
-            case StanzaKind.Presence:
-                command = await errorHandler.Presence(stanza);
-                break;
-            case StanzaKind.InfoQuery:
-                command = await errorHandler.InfoQuery(stanza);
-                break;
-            default:
-                throw new InvalidOperationException("Invalid stanza type.");
-        }
+        IStanzaHandler command = lastStanzaKind switch {
+            StanzaKind.Message => await errorHandler.Message(stanza),
+            StanzaKind.Presence => await errorHandler.Presence(stanza),
+            StanzaKind.InfoQuery => await errorHandler.InfoQuery(stanza),
+            _ => throw new InvalidOperationException("Invalid stanza type."),
+        };
+
         try
         {
             await using var err = await command.Error(exception.Type?.ToToken(), exception.Code, LocalResource);
@@ -266,6 +258,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         await exception.Output(error);
     }
 
+    [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Requires XmlException")]
     async ValueTask HandleException(XmlException exception)
     {
         var reader = Reader;
@@ -331,7 +324,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             case StatusCode.Received:
                 // No response needed
                 return;
-            
+
             case StatusCode.Success when stanzaKind == StanzaKind.InfoQuery:
             {
                 // Confirm
@@ -339,7 +332,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 await using var iq = await handler.InfoQuery(new Stanza(StanzaType.Result.ToToken(), report.Source.ToResource(this), lastStanza.From, lastStanza.Identifier ?? default));
                 return;
             }
-            
+
             case StatusCode.SubscriptionRequired when stanzaKind == StanzaKind.Presence:
             {
                 // Report as "unsubscribed"

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -133,8 +134,6 @@ public abstract class JsonEncoder :
                 break;
         }
         scopes.Push(!String.IsNullOrEmpty(path) ? path + "." + name : name);
-
-        //return writerData.GetOrCreateValue(writer).EnterProperty(writer, name, kind);
     }
 
     private string? GetContainingPath(string path)
@@ -185,8 +184,6 @@ public abstract class JsonEncoder :
             (path.Length == prefix.Length || path[prefix.Length] == '.');
     }
 
-    static readonly ConditionalWeakTable<JsonWriter, JsonWriterExtra> writerData = new();
-
     sealed class JsonWriterExtra
     {
         public async ValueTask EnterProperty(JsonWriter writer, string name, ValueKind kind)
@@ -215,6 +212,7 @@ public abstract class JsonEncoder :
             }
         }
 
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Used from generated code")]
         public ValueTask WriteLanguageString(JsonWriter writer, LanguageTaggedString value)
         {
             return default;

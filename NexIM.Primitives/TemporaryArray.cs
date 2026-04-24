@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -280,6 +281,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
         return true;
     }
 
+    [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Pattern")]
     private void Dispose(bool disposing)
     {
         if(storage.Length == 0)

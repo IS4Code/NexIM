@@ -121,12 +121,12 @@ public abstract class XmppStreamSession : XmppHandlerSession
                 // Stream is ready
                 await EnterStream();
                 break;
-                
+
             case (XmlNodeType.Element, 1):
                 // Individual command
                 await EnterCommand(reader);
                 break;
-                
+
             case (XmlNodeType.Element, _):
                 // Payload of a known command
                 await EnterPayload(reader);

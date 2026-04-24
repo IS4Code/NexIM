@@ -8,8 +8,8 @@ using NexIM.Primitives.Xml;
 
 namespace NexIM.Xrd.Protocol.Grammar;
 
-using Xml = Primitives.Xml.Handlers;
 using Json = Primitives.Json.Handlers;
+using Xml = Primitives.Xml.Handlers;
 
 public abstract partial class Encoder : XmlEncoder, Xml.IPayloadHandler, Json.IPayloadHandler
 {

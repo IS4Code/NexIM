@@ -31,7 +31,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
                     return;
                 }
             }
-            
+
             if(session.CanCompress)
             {
                 await using var comp = await features.Compression();

@@ -20,7 +20,7 @@ public abstract partial class TemporaryFile : IDisposable
 
     string? _path;
     string? _originalPath;
-    
+
     public string FilePath => LazyInitializer.EnsureInitialized(ref _path, pathInitializer)!;
 
     protected TemporaryFile()

@@ -143,8 +143,7 @@ internal class ErrorPresence : Presence
         {
             throw XmppStanzaException.BadRequest();
         }
-        return new ErrorEvent
-        {
+        return new ErrorEvent {
             Origin = this.GetOrigin(),
             Processing = this.GetProcessing(),
             Data = errorParser.GetError(GetPresence())

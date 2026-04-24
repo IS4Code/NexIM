@@ -15,6 +15,7 @@ using NexIM.Xmpp.Server.Communication;
 
 namespace NexIM.Xmpp.Server.Handlers;
 
+[SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Used for extension methods")]
 internal static class CommandExtensions
 {
     public static ICommandContext GetContext(this ICommandHandler handler)
@@ -84,8 +85,7 @@ internal static class CommandExtensions
 
     public static THandler GetHandler<THandler>(this ICommandHandler handler) where THandler : ICommandHandler, new()
     {
-        return new THandler()
-        {
+        return new THandler() {
             Context = handler.Context
         };
     }

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using NexIM.Primitives;
-
-using Xml = NexIM.Primitives.Xml.Grammar;
-using XmlHandlers = NexIM.Primitives.Xml.Handlers;
 using Json = NexIM.Primitives.Json.Grammar;
 using JsonHandlers = NexIM.Primitives.Json.Handlers;
+using Xml = NexIM.Primitives.Xml.Grammar;
+using XmlHandlers = NexIM.Primitives.Xml.Handlers;
 
 namespace NexIM.Xrd.Protocol;
 
@@ -20,7 +19,7 @@ public interface IPropertyHandler : XmlHandlers.IPayloadHandler, JsonHandlers.IP
 {
     [Xml.Name("Property")]
     [Json.Name("properties"), Json.ValueKind(Json.ValueKind.Object)]
-    ValueTask Property([Xml.Name("type")] [Json.Key] Uri? type, string? value);
+    ValueTask Property([Xml.Name("type"), Json.Key] Uri? type, string? value);
 }
 
 [Xml.ComplexType, Xml.Namespace(XrdNs)]
@@ -41,7 +40,7 @@ public interface IResourceDescriptorHandler : IPropertyHandler
 
     [Xml.Name("Link")]
     [Json.Name("links"), Json.ValueKind(Json.ValueKind.Array)]
-    ValueTask<IResourceLinkHandler> Link([Xml.Name("rel")] [Json.Name("rel")] Token<LinkRelation>? relation, [Xml.Name("type")] [Json.Name("type")] string? type, [Xml.Name("href")] [Json.Name("href")] Uri? href, [Xml.Name("template")] [Json.Name("template")] string? template);
+    ValueTask<IResourceLinkHandler> Link([Xml.Name("rel"), Json.Name("rel")] Token<LinkRelation>? relation, [Xml.Name("type"), Json.Name("type")] string? type, [Xml.Name("href"), Json.Name("href")] Uri? href, [Xml.Name("template"), Json.Name("template")] string? template);
 }
 
 [Xml.ComplexType, Xml.Namespace(XrdNs)]

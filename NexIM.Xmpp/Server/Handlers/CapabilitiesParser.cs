@@ -80,8 +80,7 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
         if(hashAlgorithm.ToEnum() != CapabilitiesHash.Sha1)
         {
             // Unknown hash algorithm
-            return new()
-            {
+            return new() {
                 Verified = false,
                 Identities = identities,
                 Features = features,
@@ -104,8 +103,7 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
         )
         {
             // Hash matches when the alternate identities are used
-            return new()
-            {
+            return new() {
                 Verified = true,
                 Identities = alternate,
                 Features = features,
@@ -117,8 +115,7 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
             verified = false;
         }
 
-        return new()
-        {
+        return new() {
             Verified = verified,
             Identities = identities,
             Features = features,

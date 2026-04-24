@@ -43,9 +43,9 @@ public abstract partial class Vocabulary : XmlMemoryNameTable
         AddKey(Standard.XrdNs.Value);
         AddKey(Standard.Xrd.Value);
 
-        foreach(char c in Enumerable.Range('a', ('z' - 'a') + 1))
+        foreach(var c in Enumerable.Range('a', ('z' - 'a') + 1))
         {
-            AddKey(String.Intern(c.ToString()));
+            AddKey(String.Intern(((char)c).ToString()));
         }
 
         AddKey("xml");
@@ -55,7 +55,7 @@ public abstract partial class Vocabulary : XmlMemoryNameTable
 
     private partial void AddKey(string key)
     {
-        if (!ReferenceEquals(key, Add(key)))
+        if(!ReferenceEquals(key, Add(key)))
         {
             throw new NotSupportedException("The key reference is invalid.");
         }

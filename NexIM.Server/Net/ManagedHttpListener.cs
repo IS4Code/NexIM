@@ -11,8 +11,8 @@ namespace NexIM.Server.Net;
 
 using CookieCollection = System.Net.CookieCollection;
 using EndPoint = System.Net.EndPoint;
-using WebHeaderCollection = System.Net.WebHeaderCollection;
 using HttpStatusCode = System.Net.HttpStatusCode;
+using WebHeaderCollection = System.Net.WebHeaderCollection;
 
 public sealed class ManagedHttpListener : IHttpListener
 {

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using NexIM.Tools;
 
@@ -15,7 +13,7 @@ internal static class IdentifierHelper
     public static DateTimeOffset IdentifierTimeNow => GetPreciseDateTime();
 
     public static Guid CreateGuid() => CreateGuid(IdentifierTimeNow);
-    
+
     static readonly byte[] urlNamespace = { 0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8 };
 
     public static Guid CreateGuid(AccountName account)
@@ -67,7 +65,7 @@ internal static class IdentifierHelper
     static readonly int stopwatchBitsShift = 32 - Math.Clamp(
         // How many least significant bits can be trimmed to fit within TimeSpan precision
         (int)Math.Floor(Math.Log2(
-            Stopwatch.Frequency / (double) TimeSpan.TicksPerSecond
+            Stopwatch.Frequency / (double)TimeSpan.TicksPerSecond
         )), 0, 32
     );
 

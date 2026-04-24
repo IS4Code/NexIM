@@ -99,8 +99,7 @@ public abstract class XmppException<THandler> : XmppException where THandler : I
     {
         public override string DefaultNamespace => String.Empty;
 
-        static readonly XmlWriterSettings settings = new()
-        {
+        static readonly XmlWriterSettings settings = new() {
             Async = true,
             CheckCharacters = false,
             CloseOutput = true,

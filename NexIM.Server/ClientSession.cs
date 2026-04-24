@@ -147,7 +147,7 @@ public abstract class ClientSession : IAsyncDisposable
 
                 evnt = evnt.WithTo(to);
                 break;
-            
+
             case QueryEvent { Data: RosterQueryData }:
                 // Enables receiving roster events
                 SubscribeToRosterUpdates();
@@ -292,7 +292,7 @@ public abstract class ClientSession : IAsyncDisposable
 
         var date = DateTime.UtcNow;
         var unavailableEvent = new StatusUpdateEvent {
-            Origin = new() { 
+            Origin = new() {
                 From = Identifier,
                 To = to,
                 TransactionIdentifier = null,

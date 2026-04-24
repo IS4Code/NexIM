@@ -66,7 +66,7 @@ internal sealed class ConsoleDebuggingStream : NonSeekableStream
 
         while(reader.ReadLine() is { } line)
         {
-        reset:
+            reset:
             line = line.Trim(trimChars);
             if(stream.Position >= stream.Length)
             {

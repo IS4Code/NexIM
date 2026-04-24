@@ -157,7 +157,7 @@ public class XmppClientSession : ClientSession
             case GeneralQueryData:
                 await WriteExtensions(output, queryData.Extensions);
                 return StatusCode.Received;
-            
+
             case RosterQueryData data:
                 await using(var handler = await output.RosterQuery(version: data.Tag))
                 {
@@ -332,8 +332,7 @@ public class XmppClientSession : ClientSession
         var nodeToken = xmpp.GetToken<DiscoNode>(node + "#" + version);
 
         var identifier = xmpp.NewStanzaIdentifier();
-        xmpp.RegisterCallback(identifier, () => new(new CapabilitiesResultInfoQuery(nodeToken, hash, version, tcs)
-        {
+        xmpp.RegisterCallback(identifier, () => new(new CapabilitiesResultInfoQuery(nodeToken, hash, version, tcs) {
             Context = (ICommandContext)xmpp
         }));
 

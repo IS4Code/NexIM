@@ -129,7 +129,7 @@ public record struct EventProcessing
     /// This is the first value in the sequence <see cref="Accepted"/>,
     /// <see cref="Published"/>, <see cref="Received"/> that is set.
     /// </remarks>
-    public DateTimeOffset Created => Published ?? Received;
+    public readonly DateTimeOffset Created => Published ?? Received;
 
     /// <summary>
     /// Creates an <see cref="EventProcessing"/> instance for

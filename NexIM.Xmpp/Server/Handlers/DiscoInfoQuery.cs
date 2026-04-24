@@ -31,7 +31,9 @@ internal class GetServerDiscoInfoQuery : GetDiscoInfoQuery
     }
 }
 
+#pragma warning disable CS9113
 internal class GetAccountDiscoInfoQuery(XmppAddress address) : GetDiscoInfoQuery
+#pragma warning restore CS9113
 {
     public async override ValueTask DisposeAsync()
     {

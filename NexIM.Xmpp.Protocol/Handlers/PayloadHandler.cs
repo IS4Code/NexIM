@@ -94,7 +94,7 @@ public abstract class PayloadHandler<TContext> : BasePayloadHandler<TContext> wh
         }
     }
 
-    private protected struct ExitDisposable(PayloadHandler<TContext> instance) : IAsyncDisposable
+    private protected readonly struct ExitDisposable(PayloadHandler<TContext> instance) : IAsyncDisposable
     {
         public ValueTask DisposeAsync()
         {

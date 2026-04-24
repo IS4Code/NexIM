@@ -31,7 +31,7 @@ partial class GrammarGenerator
 
             // Check all implemented interfaces in the same namespace
             var interfaces = type.Interfaces.Where(t => t.Name == "IPayloadHandler" || t.ContainingNamespace.Equals(container, SymbolEqualityComparer.Default)).ToList();
-            
+
             var name = type.Name.Substring(1);
             writer.Write($"public abstract class {name}<TContext> : ");
 
@@ -86,7 +86,7 @@ partial class GrammarGenerator
 
                 writer.WriteLine("{");
                 writer.Indent++;
-                
+
                 writer.WriteLine("bool _exit = await this.OnEnter();");
                 writer.WriteLine("try");
                 writer.WriteLine("{");
@@ -103,7 +103,7 @@ partial class GrammarGenerator
 
                     // Use the implementation if provided
                     writer.WriteLine("if(!_task.Equals(DefaultImplementation.ValueTask)) { await _task; return; }");
-                    
+
                     // Ignore if called from Other
                     writer.WriteLine("if(this.Decoding) return;");
 

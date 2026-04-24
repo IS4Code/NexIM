@@ -79,8 +79,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             content[(MessageFormat.Plain, body.Language)] = body.Value;
         }
 
-        return new MessageData
-        {
+        return new MessageData {
             Subject = subject,
             Body = new(content.ToImmutable()),
             ThreadIdentifier = thread,
@@ -92,8 +91,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
 
     protected virtual Event GetEvent()
     {
-        return new MessageEvent
-        {
+        return new MessageEvent {
             Origin = this.GetOrigin(),
             Type = (this.GetStanza().Type?.ToEnum()).ToMessageType(),
             Processing = this.GetProcessing(),
@@ -129,8 +127,7 @@ internal class ErrorMessage : Message
         {
             throw XmppStanzaException.BadRequest();
         }
-        return new ErrorEvent
-        {
+        return new ErrorEvent {
             Origin = this.GetOrigin(),
             Processing = this.GetProcessing(),
             Data = errorParser.GetError(GetMessage())

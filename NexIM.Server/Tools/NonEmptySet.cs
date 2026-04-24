@@ -77,8 +77,7 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
 
     public NonEmptySet<T> Add(T value)
     {
-        return comparer.Compare(first, value) switch
-        {
+        return comparer.Compare(first, value) switch {
             0 => this, // Same first
             < 0 => new(first, rest.Add(value)), // Added into rest
             _ => new(value, rest.Add(first)), // Replaces first
@@ -87,8 +86,7 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
 
     public NonEmptySet<T> Add(NonEmptySet<T> values)
     {
-        return comparer.Compare(first, values.first) switch
-        {
+        return comparer.Compare(first, values.first) switch {
             0 => new(first, rest.Union(values.rest)), // Same first
             < 0 => new(first, rest.Union(values.rest).Add(values.first)), // Added into rest
             _ => new(values.first, rest.Union(values.rest).Add(first)) // Replaces first

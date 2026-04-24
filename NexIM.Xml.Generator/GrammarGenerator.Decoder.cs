@@ -266,8 +266,7 @@ partial class GrammarGenerator
                                 else if(typeName.StartsWith("System.", StringComparison.Ordinal) && !UseCustomEncodingForSystemType(paramType))
                                 {
                                     // Standard support
-                                    var readerMethod = $"ReadContentAs{paramType.Name switch
-                                    {
+                                    var readerMethod = $"ReadContentAs{paramType.Name switch {
                                         // XmlReader names
                                         "Int64" => "Long",
                                         "Single" => "Float",

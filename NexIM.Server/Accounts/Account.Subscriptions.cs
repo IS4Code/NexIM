@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using NexIM.Server.Events;
 
@@ -117,6 +118,7 @@ partial class Account
         // TODO Send unavailable? (Privacy)
     }
 
+    [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Consistency")]
     private void HandleOutgoingSubscriptionAcceptation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
@@ -191,6 +193,7 @@ partial class Account
         }
     }
 
+    [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Consistency")]
     private void HandleOutgoingSubscriptionRejection(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? unavailableList = null;
@@ -266,6 +269,7 @@ partial class Account
         OnContactUpdated(updated, contacts, tasks);
     }
 
+    [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Consistency")]
     private void HandleOutgoingSubscriptionCancellation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;

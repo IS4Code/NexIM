@@ -39,7 +39,7 @@ partial class Server
         {
             return RouteToSelf(evnt);
         }
-        
+
         if(!accountName.IsUser)
         {
             // TODO Recognize other entities

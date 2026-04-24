@@ -16,7 +16,7 @@ internal sealed class TimeParser<TContext> : BaseTimeHandler<TContext> where TCo
     DateTime? dateTime;
     TimeZoneOffset? timeZoneOffset;
 
-    public DateTimeOffset DateTime => new DateTimeOffset(
+    public DateTimeOffset DateTime => new(
         dateTime ?? throw XmppStanzaException.BadRequest(),
         (timeZoneOffset ?? throw XmppStanzaException.BadRequest()).Value
     );

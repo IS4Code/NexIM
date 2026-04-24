@@ -16,7 +16,7 @@ partial class GrammarGenerator
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Collections.Generic;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
-        
+
         writer.WriteLine("#nullable enable");
 
         writer.WriteLine($"public static class HandlerExtensions");
@@ -46,7 +46,7 @@ partial class GrammarGenerator
                     var returnType = FormatNullable(method.ReturnType);
                     var paramName = valueParam.Name;
                     var paramType = valueParam.Type;
-                    
+
                     // List parameter
                     if(paramType.IsValueType)
                     {

@@ -147,8 +147,7 @@ internal static partial class AdapterExtensions
 
     public static Token<StanzaType>? ToStanzaType(this MessageType type)
     {
-        return type switch
-        {
+        return type switch {
             MessageType.Normal => StanzaType.Normal.ToToken(),
             MessageType.Chat => StanzaType.Chat.ToToken(),
             MessageType.GroupChat => StanzaType.GroupChat.ToToken(),

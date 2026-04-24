@@ -26,8 +26,7 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
     {
         nametable = new();
 
-        ReaderSettings = new()
-        {
+        ReaderSettings = new() {
             Async = true,
             CheckCharacters = false,
             CloseInput = false,
@@ -41,8 +40,7 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
             XmlResolver = XmlResolver.ThrowingResolver
         };
 
-        WriterSettings = new()
-        {
+        WriterSettings = new() {
             Async = true,
             CheckCharacters = false,
             CloseOutput = false,

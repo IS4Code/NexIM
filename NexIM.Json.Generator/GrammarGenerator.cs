@@ -87,7 +87,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         var name = GetQualifiedName(type);
         return name == typeof(DateTime).FullName || name == typeof(DateTimeOffset).FullName || name == typeof(Uri).FullName;
     }
-    
+
     private static void AnalyzeMethod(IMethodSymbol method, out ITypeSymbol? handlerReturnType, out int cardinality, out IParameterSymbol? keyParam, out IParameterSymbol? valueParam, out Dictionary<string, IParameterSymbol> attributeParams)
     {
         var returnType = method.ReturnType;
@@ -192,8 +192,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
 
     private static string? GetLocalName(NameSyntax name)
     {
-        return name switch
-        {
+        return name switch {
             SimpleNameSyntax simpleName => simpleName.Identifier.Text,
             QualifiedNameSyntax qualifiedName => qualifiedName.Right.Identifier.Text,
             _ => name.ToString()

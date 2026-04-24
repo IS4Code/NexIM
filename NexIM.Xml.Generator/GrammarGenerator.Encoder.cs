@@ -142,7 +142,7 @@ partial class GrammarGenerator
                             writer.Indent--;
                             writer.WriteLine("}");
                         }
-                        
+
                         // Close or leave opened
                         if(handlerReturnType != null)
                         {

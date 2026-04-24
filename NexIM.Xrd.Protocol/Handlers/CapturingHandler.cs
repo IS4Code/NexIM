@@ -6,8 +6,8 @@ using NexIM.Primitives.Xml;
 
 namespace NexIM.Xrd.Protocol.Handlers;
 
-using Xml = Primitives.Xml.Handlers;
 using Json = Primitives.Json.Handlers;
+using Xml = Primitives.Xml.Handlers;
 
 /// <inheritdoc/>
 public partial class CapturingHandler<THandler> : Xml.BaseCapturingHandler<THandler>, Xml.IPayloadHandler, Json.IPayloadHandler where THandler : Xml.IPayloadHandler

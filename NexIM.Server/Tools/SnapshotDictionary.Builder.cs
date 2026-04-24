@@ -8,7 +8,7 @@ namespace NexIM.Server.Tools;
 
 partial struct SnapshotDictionary<TKey, TValue>
 {
-    public Builder ToBuilder()
+    public readonly Builder ToBuilder()
     {
         return new(storage);
     }

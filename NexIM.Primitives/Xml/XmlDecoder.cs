@@ -260,8 +260,7 @@ public abstract class XmlDecoder :
             reader.GetAttribute("lang", "http://www.w3.org/XML/1998/namespace") is { } lang
             ? (lang, true)
             : (reader.XmlLang, false);
-        return new(await reader.ReadContentAsStringAsync(), new(language))
-        {
+        return new(await reader.ReadContentAsStringAsync(), new(language)) {
             Explicit = isExplicit
         };
     }
@@ -301,7 +300,7 @@ public abstract class XmlDecoder :
         {
             uri = uri.Trim(whitespace);
         }
-        
+
         return new Uri(uri, UriKind.RelativeOrAbsolute);
     }
 

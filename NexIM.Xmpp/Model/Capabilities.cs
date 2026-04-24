@@ -34,8 +34,7 @@ public record Capabilities : ICapabilities
         return Convert.ToBase64String(stream.ComputeHash(result));
     }
 
-    static readonly XmlWriterSettings textWriterSettings = new()
-    {
+    static readonly XmlWriterSettings textWriterSettings = new() {
         Async = false,
         CheckCharacters = false,
         CloseOutput = true,

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -172,7 +173,7 @@ partial class GrammarGenerator
                                 writer.WriteLine("}");
                             }
                         }
-                        
+
                         // Enter contents
                         if(handlerReturnType != null)
                         {
@@ -209,6 +210,7 @@ partial class GrammarGenerator
         writer.Dispose();
         return sb.ToString();
 
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Consistency")]
         void ParamToString(string name, ITypeSymbol type)
         {
             writer.Write(name);

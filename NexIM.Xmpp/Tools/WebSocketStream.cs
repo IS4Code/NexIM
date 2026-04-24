@@ -27,11 +27,9 @@ internal abstract class WebSocketStream : NonSeekableStream
 
     public static WebSocketStream Create(WebSocket webSocket, WebSocketMessageType messageType, ArrayPool<byte>? bufferPool = null)
     {
-        return bufferPool != null ? new WebSocketBufferedStream(webSocket, bufferPool)
-        {
+        return bufferPool != null ? new WebSocketBufferedStream(webSocket, bufferPool) {
             SendingMessageType = messageType
-        } : new WebSocketUnbufferedStream(webSocket)
-        {
+        } : new WebSocketUnbufferedStream(webSocket) {
             SendingMessageType = messageType
         };
     }

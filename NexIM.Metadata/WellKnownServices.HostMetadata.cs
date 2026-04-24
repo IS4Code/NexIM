@@ -91,8 +91,7 @@ partial class WellKnownServices
         }
     }
 
-    static readonly XmlWriterSettings xrdWriterSettings = new()
-    {
+    static readonly XmlWriterSettings xrdWriterSettings = new() {
         Async = true,
         CheckCharacters = false,
         CloseOutput = true,
@@ -133,7 +132,7 @@ partial class WellKnownServices
         using var writer = new StreamWriter(stream);
         using var jsonWriter = new JsonTextWriter(writer);
 
-        await jsonWriter.WriteStartObjectAsync();
+        await jsonWriter.WriteStartObjectAsync(cancellationToken);
 
         var encoder = new JrdEncoder(jsonWriter, cancellationToken);
 

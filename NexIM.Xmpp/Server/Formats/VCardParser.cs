@@ -63,7 +63,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
     protected async override ValueTask<IVCardTelephoneHandler> OnTelephone()
     {
         var obj = new VCardTelephone();
-        (vcard.Telephones??= new()).Add(obj);
+        (vcard.Telephones ??= new()).Add(obj);
         return new TelephoneParser(obj) { Context = Context };
     }
 
@@ -487,7 +487,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        
+
         public async override ValueTask DisposeAsync()
         {
             this.AddList(ref vcard.GeographicalPositions, new() {
@@ -530,7 +530,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        
+
         public async override ValueTask DisposeAsync()
         {
             this.AddList(ref vcard.Organizations, new() {
@@ -550,7 +550,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        
+
         public async override ValueTask DisposeAsync()
         {
             this.AddList(ref vcard.CategoriesKeywords, keywords ?? throw XmppStanzaException.BadRequest("Category keywords are missing."));
@@ -614,7 +614,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
-        
+
         public async override ValueTask DisposeAsync()
         {
             this.AddList(ref vcard.Credentials, new() {
