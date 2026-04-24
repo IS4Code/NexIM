@@ -150,54 +150,65 @@ public class XmppClientSession : ClientSession
         await WriteExtensions(output, data.Extensions);
     }
 
-    private async ValueTask<StatusCode> WriteInfoQuery(IInfoQueryHandler output, QueryData? data)
+    private async ValueTask<StatusCode> WriteInfoQuery(IInfoQueryHandler output, QueryData? queryData)
     {
-        switch(data)
+        switch(queryData)
         {
             case GeneralQueryData:
-                await WriteExtensions(output, data.Extensions);
+                await WriteExtensions(output, queryData.Extensions);
                 return StatusCode.Received;
             
-            case RosterQueryData rosterData:
-                await using(var rosterHandler = await output.RosterQuery(version: rosterData.Tag))
+            case RosterQueryData data:
+                await using(var handler = await output.RosterQuery(version: data.Tag))
                 {
-                    switch(rosterData)
+                    switch(data)
                     {
                         case RosterUpdateData updateData:
-                            await RosterFormatter.WriteTo(updateData.Contact, rosterHandler, false);
+                            await RosterFormatter.WriteTo(updateData.Contact, handler, false);
                             break;
                         case RosterRemoveData removeData:
-                            await RosterFormatter.WriteTo(removeData.Contact, rosterHandler, true);
+                            await RosterFormatter.WriteTo(removeData.Contact, handler, true);
                             break;
                         default:
-                            foreach(var contact in rosterData.Roster ?? Enumerable.Empty<Contact>())
+                            foreach(var contact in data.Roster ?? Enumerable.Empty<Contact>())
                             {
-                                await RosterFormatter.WriteTo(contact, rosterHandler, false);
+                                await RosterFormatter.WriteTo(contact, handler, false);
                             }
                             break;
                     }
-                    await WriteExtensions(rosterHandler, rosterData.Extensions);
+                    await WriteExtensions(handler, data.Extensions);
                 }
                 return StatusCode.Received;
 
-            case PrivateData privateData:
-                await using(var privateStorageHandler = await output.PrivateQuery())
+            case PrivateData data:
+                await using(var handler = await output.PrivateQuery())
                 {
-                    await WriteExtensions(privateStorageHandler, privateData.Extensions);
+                    await WriteExtensions(handler, data.Extensions);
                 }
                 return StatusCode.Received;
 
-            case VCardQueryData vcardData:
-                await using(var vcardHandler = await output.VCard())
+            case VCardQueryData data:
+                await using(var handler = await output.VCard())
                 {
-                    if(vcardData.VCard is { } vcard)
+                    if(data.VCard is { } vcard)
                     {
-                        await VCardFormatter.WriteTo(vcard, vcardHandler);
+                        await VCardFormatter.WriteTo(vcard, handler);
                     }
-                    await WriteExtensions(vcardHandler, vcardData.Extensions);
+                    await WriteExtensions(handler, data.Extensions);
                 }
                 return StatusCode.Received;
-            
+
+            case TimeData data:
+                await using(var handler = await output.Time())
+                {
+                    if(data.DateTime is { } dateTime)
+                    {
+                        await TimeFormatter.WriteTo(dateTime, handler);
+                    }
+                    await WriteExtensions(handler, data.Extensions);
+                }
+                return StatusCode.Received;
+
             default:
                 return StatusCode.UnrecognizedRequest;
         }

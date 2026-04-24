@@ -68,7 +68,7 @@ partial class Server
 
     private async ValueTask<Account?> AuthenticateAccount(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
     {
-        if(!accountName.IsValid || password.Length == 0)
+        if(!accountName.IsUser || password.Length == 0)
         {
             return null;
         }

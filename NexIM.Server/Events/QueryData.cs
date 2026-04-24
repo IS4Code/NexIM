@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Xml.Linq;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
@@ -39,4 +40,9 @@ public sealed record RosterRemoveData : RosterQueryData
 public sealed record PrivateData : QueryData
 {
     public required XName Key { get; init; }
+}
+
+public sealed record TimeData : QueryData
+{
+    public required DateTimeOffset? DateTime { get; init; }
 }

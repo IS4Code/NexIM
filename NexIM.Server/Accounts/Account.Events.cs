@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading.Tasks;
+using NexIM.Server.Accounts.VCards;
 using NexIM.Server.Events;
 using NexIM.Server.Tools;
 
@@ -262,20 +263,15 @@ partial class Account : IEventHandler
         switch(evnt)
         {
             case RetrieveEvent { Data: VCardQueryData }:
+            {
                 // Retrieving a VCard
-                var vcard = VCard;
-                if(vcard == null)
+                if(VCard is not { } vcard)
                 {
                     return new(Report(StatusCode.NotFound));
                 }
-                if(vcard.PrivacyClassification is VCards.VCardPrivacyClassification.Private or VCards.VCardPrivacyClassification.Confidential)
+                if(!CanSeeVCard(vcard))
                 {
-                    // TODO Figure out what "confidential" means
-                    if(evnt.From.Account != Name)
-                    {
-                        // Only the owner can view
-                        return new(Report(StatusCode.Unauthorized));
-                    }
+                    return new(Report(StatusCode.Unauthorized));
                 }
                 return Post(new ResponseEvent {
                     Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
@@ -284,6 +280,34 @@ partial class Account : IEventHandler
                         VCard = vcard
                     }
                 });
+            }
+
+            case RetrieveEvent { Data: TimeData }:
+            {
+                // Retrieving the time requires VCard
+                if(VCard is not { } vcard)
+                {
+                    return new(Report(StatusCode.Unavailable));
+                }
+                if(!CanSeeVCard(vcard))
+                {
+                    return new(Report(StatusCode.Unauthorized));
+                }
+                if(vcard.TimeZones is not { Count: > 0 } timezones)
+                {
+                    return new(Report(StatusCode.Unavailable));
+                }
+                // Use first timezone
+                var offset = timezones[0].Value;
+                var processing = EventProcessing.Create();
+                return Post(new ResponseEvent {
+                    Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
+                    Processing = processing,
+                    Data = new TimeData {
+                        DateTime = processing.Created.ToOffset(offset)
+                    }
+                });
+            }
 
             case QueryEvent { Data: RosterQueryData or PrivateData or VCardQueryData }:
                 // Supported but must be owner
@@ -292,6 +316,22 @@ partial class Account : IEventHandler
             default:
                 // Can't process arbitrary event
                 return new(Report(StatusCode.UnrecognizedRequest));
+        }
+
+        bool CanSeeVCard(VCard vcard)
+        {
+            switch(vcard.PrivacyClassification)
+            {
+                case VCardPrivacyClassification.Private:
+                case VCardPrivacyClassification.Confidential:
+                    // TODO Figure out what "confidential" means
+                    // Only the owner can view
+                    return evnt.From.Account == Name;
+                case VCardPrivacyClassification.Public:
+                    return true;
+                default:
+                    return CanSharePresenceWith(evnt.From);
+            }
         }
     }
 

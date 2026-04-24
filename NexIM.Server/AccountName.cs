@@ -14,7 +14,7 @@ public readonly struct AccountName : IEquatable<AccountName>, IComparable<Accoun
     static readonly StringComparer comparer = StringComparer.OrdinalIgnoreCase;
 
     [MemberNotNullWhen(true, nameof(User))]
-    public bool IsValid => User != null;
+    public bool IsUser => User != null;
 
     public bool IsLocal => Host == "";
 

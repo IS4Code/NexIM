@@ -1,26 +1,95 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Xml;
-using NexIM.Primitives;
+﻿using System.Threading.Tasks;
+using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Events;
+using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Formats;
 
 namespace NexIM.Xmpp.Server.Handlers;
 
-internal class GetTime : TimeHandler<ICommandContext>
+internal sealed class GetTime : BaseDelegatingTimeHandler<CapturingHandler<ITimeHandler>, EmptyDisposable, ICommandContext>
 {
-    protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
+    protected sealed override CapturingHandler<ITimeHandler> InnerHandler { get; } = new();
+    protected sealed override EmptyDisposable Disposable => default;
+
+    private TimeData GetData()
     {
-        await this.Unrecognized(payloadReader);
+        return new TimeData {
+            DateTime = default,
+            Extensions = InnerHandler.ToExtensions()
+        };
     }
 
-    public async override ValueTask DisposeAsync()
+    private RetrieveEvent GetEvent()
     {
-        await using var iq = await this.CreateResponse();
-        await using var time = await iq.Time();
+        return new RetrieveEvent {
+            Origin = this.GetOrigin(),
+            Processing = this.GetProcessing(),
+            Data = GetData()
+        };
+    }
 
-        var dateTime = DateTimeOffset.Now;
+    public async sealed override ValueTask DisposeAsync()
+    {
+        try
+        {
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            this.Post(GetEvent());
+        }
+    }
+}
 
-        await time.TimeZoneOffset(TimeZoneOffset.FromDateTimeOffset(dateTime));
-        await time.UtcTime(dateTime.UtcDateTime);
+internal abstract class DataTime : BaseDelegatingTimeHandler<TimeParser<ICommandContext>, EmptyDisposable, ICommandContext>
+{
+    protected sealed override TimeParser<ICommandContext> InnerHandler { get; } = new();
+    protected sealed override EmptyDisposable Disposable => default;
+
+    protected TimeData GetData()
+    {
+        return new TimeData {
+            DateTime = InnerHandler.DateTime,
+            Extensions = InnerHandler.ExtensionsHandler.ToExtensions()
+        };
+    }
+
+    protected abstract QueryEvent GetEvent();
+
+    public async sealed override ValueTask DisposeAsync()
+    {
+        try
+        {
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            this.Post(GetEvent());
+        }
+    }
+}
+
+internal sealed class SetTime : DataTime
+{
+    protected override QueryEvent GetEvent()
+    {
+        return new UpdateEvent {
+            Origin = this.GetOrigin(),
+            Processing = this.GetProcessing(),
+            Data = GetData()
+        };
+    }
+}
+
+internal sealed class ResultTime : DataTime
+{
+    protected override QueryEvent GetEvent()
+    {
+        return new ResponseEvent {
+            Origin = this.GetOrigin(),
+            Processing = this.GetProcessing(),
+            Data = GetData()
+        };
     }
 }

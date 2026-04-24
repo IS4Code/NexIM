@@ -72,6 +72,12 @@ internal class ResultInfoQuery : InfoQuery
         return this.GetHandler<ResultVCardTemp>();
     }
 
+    protected async override ValueTask<ITimeHandler> OnTime()
+    {
+        SetHandled();
+        return this.GetHandler<ResultTime>();
+    }
+
     protected override Event GetEvent()
     {
         return new ResponseEvent {
@@ -114,6 +120,12 @@ internal class GetInfoQuery : GetSetInfoQuery
     {
         SetHandled();
         return this.GetHandler<GetVCardTemp>();
+    }
+
+    protected async override ValueTask<ITimeHandler> OnTime()
+    {
+        SetHandled();
+        return this.GetHandler<GetTime>();
     }
 
     protected override Event GetEvent()
@@ -232,12 +244,6 @@ internal class GetServerInfoQuery : GetInfoQuery, IInfoQueryHandler
 
         // Sent to the server
         await this.SendResponse();
-    }
-
-    protected async override ValueTask<ITimeHandler> OnTime()
-    {
-        SetHandled();
-        return this.GetHandler<GetTime>();
     }
 }
 
