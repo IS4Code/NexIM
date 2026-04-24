@@ -25,7 +25,7 @@ partial class Server
 
     private StatusReport Report(StatusCode code)
     {
-        return new(default, code);
+        return new(AccountName.Local.ToIdentifier(), code);
     }
 
     private bool IsServer(AccountName name)
@@ -68,6 +68,9 @@ partial class Server
                         DateTime = processing.Created.ToLocalTime()
                     }
                 });
+
+            case RetrieveEvent { Data: PingData }:
+                return new(Report(StatusCode.Success));
 
             default:
                 return new(Report(StatusCode.Unavailable));

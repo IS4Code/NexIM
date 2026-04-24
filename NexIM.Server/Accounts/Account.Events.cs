@@ -309,6 +309,9 @@ partial class Account : IEventHandler
                 });
             }
 
+            case RetrieveEvent { Data: PingData }:
+                return new(Report(StatusCode.Success));
+
             case QueryEvent { Data: RosterQueryData or PrivateData or VCardQueryData }:
                 // Supported but must be owner
                 return new(Report(StatusCode.Unauthorized));

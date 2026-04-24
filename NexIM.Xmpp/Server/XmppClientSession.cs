@@ -209,6 +209,10 @@ public class XmppClientSession : ClientSession
                 }
                 return StatusCode.Received;
 
+            case PingData:
+                await output.Ping();
+                return StatusCode.Received;
+
             default:
                 return StatusCode.UnrecognizedRequest;
         }

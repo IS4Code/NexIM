@@ -46,3 +46,8 @@ public sealed record TimeData : QueryData
 {
     public required DateTimeOffset? DateTime { get; init; }
 }
+
+public sealed record PingData : QueryData
+{
+    public static readonly PingData Empty = new();
+}

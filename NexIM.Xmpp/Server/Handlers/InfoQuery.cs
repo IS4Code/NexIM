@@ -32,20 +32,20 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
         await base.OnOther(payloadReader);
     }
 
-    protected GeneralQueryData GetQuery()
+    private GeneralQueryData GetData()
     {
         return new GeneralQueryData {
             Extensions = InnerHandler.ToExtensions()
         };
     }
 
-    protected abstract Event GetEvent();
+    protected abstract Event GetEvent(QueryData data);
 
     public async override ValueTask DisposeAsync()
     {
         if(!Recognized)
         {
-            this.Post(GetEvent());
+            this.Post(GetEvent(GetData()));
         }
     }
 }
@@ -78,18 +78,24 @@ internal class ResultInfoQuery : InfoQuery
         return this.GetHandler<ResultTime>();
     }
 
-    protected override Event GetEvent()
+    protected override Event GetEvent(QueryData data)
     {
         return new ResponseEvent {
             Origin = this.GetOrigin(),
             Processing = this.GetProcessing(),
-            Data = GetQuery()
+            Data = data
         };
     }
 }
 
 internal abstract class GetSetInfoQuery : InfoQuery
 {
+    protected async override ValueTask OnPing()
+    {
+        SetHandled();
+        this.Post(GetEvent(PingData.Empty));
+    }
+
     public async override ValueTask DisposeAsync()
     {
         if(!Handled)
@@ -128,12 +134,12 @@ internal class GetInfoQuery : GetSetInfoQuery
         return this.GetHandler<GetTime>();
     }
 
-    protected override Event GetEvent()
+    protected override Event GetEvent(QueryData data)
     {
         return new RetrieveEvent {
             Origin = this.GetOrigin(),
             Processing = this.GetProcessing(),
-            Data = GetQuery()
+            Data = data
         };
     }
 
@@ -167,12 +173,12 @@ internal class SetInfoQuery : GetSetInfoQuery
         return this.GetHandler<SetVCardTemp>();
     }
 
-    protected override Event GetEvent()
+    protected override Event GetEvent(QueryData data)
     {
         return new UpdateEvent {
             Origin = this.GetOrigin(),
             Processing = this.GetProcessing(),
-            Data = GetQuery()
+            Data = data
         };
     }
 
@@ -237,22 +243,11 @@ internal class GetServerInfoQuery : GetInfoQuery, IInfoQueryHandler
 
         return this.GetHandler<GetServerDiscoItemsQuery>();
     }
-
-    protected async override ValueTask OnPing()
-    {
-        SetHandled();
-
-        // Sent to the server
-        await this.SendResponse();
-    }
 }
 
 internal class SetServerInfoQuery : SetInfoQuery, IInfoQueryHandler
 {
-    protected async override ValueTask OnPing()
-    {
-        SetHandled();
-    }
+
 }
 
 internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
@@ -282,21 +277,6 @@ internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
 
         return new GetAccountDiscoItemsQuery(Address) { Context = Context };
     }
-
-    protected async override ValueTask OnPing()
-    {
-        SetHandled();
-
-        if(this.GetServer().GetAccount(Address.ToAccountName()) != null)
-        {
-            // Account exists
-            await this.SendResponse();
-        }
-        else
-        {
-            throw XmppStanzaException.ServiceUnavailable();
-        }
-    }
 }
 
 internal class SetAccountInfoQuery : SetInfoQuery, IInfoQueryHandler
@@ -313,7 +293,7 @@ internal class ErrorInfoQuery : InfoQuery
         return this.SetOnce(ref errorParser, new(type, code, by) { Context = Context });
     }
 
-    protected override Event GetEvent()
+    protected override Event GetEvent(QueryData data)
     {
         if(errorParser == null)
         {
@@ -322,12 +302,13 @@ internal class ErrorInfoQuery : InfoQuery
         return new ErrorEvent {
             Origin = this.GetOrigin(),
             Processing = this.GetProcessing(),
-            Data = errorParser.GetError(GetQuery())
+            Data = errorParser.GetError(data)
         };
     }
 
     public async override ValueTask DisposeAsync()
     {
-        this.Post(GetEvent());
+        SetHandled();
+        await base.DisposeAsync();
     }
 }
