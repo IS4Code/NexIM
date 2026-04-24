@@ -16,53 +16,62 @@ using Identifiers = NexIM.Server.Tools.NonEmptySet<Identifier>;
 
 internal static partial class AdapterExtensions
 {
-    public static Identifier ToIdentifier(this XmppResource resource)
+    public static AccountName ToAccountName(this XmppAddress address, IXmppSession? session = null)
     {
-        return new(ToAccountName(resource, out var id), id);
+        if(session != null && new XmppResource(address, null) == session.LocalResource)
+        {
+            // Targets the local party
+            return AccountName.Local;
+        }
+        return new(address.User, address.Host);
     }
 
-    public static Identifier ToIdentifier(this Token<StanzaIdentifier> identifier)
+    public static AccountName ToAccountName(this XmppResource resource, out string? resourceIdentifier, IXmppSession? session = null)
     {
-        return new(null, identifier.Value);
+        resourceIdentifier = resource.ResourceIdentifier;
+        return ToAccountName(resource.Address, session);
     }
 
-    public static XmppResource ToResource(this Identifier identifier)
+    public static Identifier ToIdentifier(this XmppResource resource, IXmppSession? session = null)
+    {
+        return new(ToAccountName(resource, out var id, session), id);
+    }
+
+    public static XmppAddress ToAddress(this AccountName accountName, IXmppSession? session = null)
+    {
+        if(accountName.IsLocal)
+        {
+            return new(accountName.User, session?.LocalResource?.Address.Host ?? accountName.Host);
+        }
+        return new(accountName.User, accountName.Host);
+    }
+
+    public static XmppResource ToResource(this AccountName accountName, string? resourceIdentifier, IXmppSession? session = null)
+    {
+        return new(ToAddress(accountName, session), resourceIdentifier);
+    }
+
+    public static XmppResource ToResource(this Identifier identifier, IXmppSession? session = null)
     {
         if(identifier is not (Account: { } account, Resource: var resource))
         {
             // TODO Adapt other identifier formats
             throw new NotImplementedException();
         }
-        return ToResource(account, resource);
+        return ToResource(account, resource, session);
     }
 
-    public static XmppResource? ToResource(this Identifiers identifiers)
+    public static XmppResource? ToResource(this Identifiers identifiers, IXmppSession? session = null)
     {
         return
             identifiers.TryGetSingle(out var identifier)
-            ? ToResource(identifier)
+            ? ToResource(identifier, session)
             : null;
     }
 
-    public static XmppAddress ToAddress(this AccountName accountName)
+    public static Identifier ToIdentifier(this Token<StanzaIdentifier> identifier)
     {
-        return new(accountName.User, accountName.Host);
-    }
-
-    public static XmppResource ToResource(this AccountName accountName, string? resourceIdentifier)
-    {
-        return new(ToAddress(accountName), resourceIdentifier);
-    }
-
-    public static AccountName ToAccountName(this XmppAddress address)
-    {
-        return new(address.User, address.Host);
-    }
-
-    public static AccountName ToAccountName(this XmppResource resource, out string? resourceIdentifier)
-    {
-        resourceIdentifier = resource.ResourceIdentifier;
-        return ToAccountName(resource.Address);
+        return new(null, identifier.Value);
     }
 
     public static Token<StanzaIdentifier> ToStanzaIdentifier(this Identifier identifier, IXmppSession session)
@@ -79,8 +88,8 @@ internal static partial class AdapterExtensions
     {
         return new(
             Type: evnt.Type.ToStanzaType(),
-            From: evnt.From.ToResource(),
-            To: evnt.To.ToResource(),
+            From: evnt.From.ToResource(session),
+            To: evnt.To.ToResource(session),
             Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
             Language: evnt.TransactionLanguage
         );
@@ -88,7 +97,7 @@ internal static partial class AdapterExtensions
 
     public static Stanza ToStanza(this PresenceEvent evnt, IXmppSession session)
     {
-        var to = evnt.To.ToResource();
+        var to = evnt.To.ToResource(session);
         if(to == session.RemoteResource?.Bare)
         {
             // Ignore if mirrored from the account
@@ -103,7 +112,7 @@ internal static partial class AdapterExtensions
                 SubscriptionRejectedEvent => StanzaType.Unsubscribed.ToToken(),
                 SubscriptionCancelledEvent => StanzaType.Unsubscribe.ToToken()
             },
-            From: evnt.From.ToResource(),
+            From: evnt.From.ToResource(session),
             To: to,
             Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
             Language: evnt.TransactionLanguage
@@ -118,8 +127,8 @@ internal static partial class AdapterExtensions
                 UpdateEvent => StanzaType.Set.ToToken(),
                 ResponseEvent => StanzaType.Result.ToToken()
             },
-            From: evnt.From.ToResource(),
-            To: evnt.To.ToResource(),
+            From: evnt.From.ToResource(session),
+            To: evnt.To.ToResource(session),
             Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
             Language: evnt.TransactionLanguage
         );
@@ -129,8 +138,8 @@ internal static partial class AdapterExtensions
     {
         return new(
             Type: StanzaType.Error.ToToken(),
-            From: evnt.From.ToResource(),
-            To: evnt.To.ToResource(),
+            From: evnt.From.ToResource(session),
+            To: evnt.To.ToResource(session),
             Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
             Language: evnt.TransactionLanguage
         );

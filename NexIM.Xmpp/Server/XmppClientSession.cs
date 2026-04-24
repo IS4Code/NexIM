@@ -255,7 +255,7 @@ public class XmppClientSession : ClientSession
 
         async ValueTask WriteErrorData(IStanzaHandler output)
         {
-            await using var error = await output.Error(data.RecommendedAction.ToErrorType().ToToken(), (int?)data.HttpStatusCode, data.Reporter?.ToResource());
+            await using var error = await output.Error(data.RecommendedAction.ToErrorType().ToToken(), (int?)data.HttpStatusCode, data.Reporter?.ToResource(xmpp));
 
             // Basic elements
 

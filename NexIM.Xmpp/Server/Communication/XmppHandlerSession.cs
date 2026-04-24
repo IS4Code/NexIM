@@ -336,7 +336,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             {
                 // Confirm
                 IStreamHandler handler = this;
-                await using var iq = await handler.InfoQuery(new Stanza(StanzaType.Result.ToToken(), report.Source.ToResource(), lastStanza.From, lastStanza.Identifier ?? default));
+                await using var iq = await handler.InfoQuery(new Stanza(StanzaType.Result.ToToken(), report.Source.ToResource(this), lastStanza.From, lastStanza.Identifier ?? default));
                 return;
             }
             
@@ -344,14 +344,14 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             {
                 // Report as "unsubscribed"
                 IStreamHandler handler = this;
-                await using var iq = await handler.Presence(new Stanza(StanzaType.Unsubscribed.ToToken(), report.Source.ToResource(), lastStanza.From));
+                await using var iq = await handler.Presence(new Stanza(StanzaType.Unsubscribed.ToToken(), report.Source.ToResource(this), lastStanza.From));
                 return;
             }
         }
 
         if(report.Code.ToStanzaException() is { } exception)
         {
-            await WriteException(exception, report.Source.ToResource(), stanzaKind);
+            await WriteException(exception, report.Source.ToResource(this), stanzaKind);
         }
     }
 
