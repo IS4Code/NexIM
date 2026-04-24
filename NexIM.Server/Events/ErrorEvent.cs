@@ -8,12 +8,12 @@ public sealed record ErrorEvent : Event<ErrorData>;
 
 public record ErrorData : EventData
 {
-    public required StatusCode ErrorCode { get; set; }
-    public required Identifier? Reporter { get; set; }
-    public required RecommendedErrorAction RecommendedAction { get; set; }
-    public required HttpStatusCode? HttpStatusCode { get; set; }
-    public required LocalizedString Description { get; set; }
-    public required EventData OriginalData { get; set; }
+    public required StatusCode ErrorCode { get; init; }
+    public required Identifier? Reporter { get; init; }
+    public required RecommendedErrorAction RecommendedAction { get; init; }
+    public required HttpStatusCode? HttpStatusCode { get; init; }
+    public required LocalizedString Description { get; init; }
+    public required EventData OriginalData { get; init; }
 }
 
 /// <summary>

@@ -15,9 +15,8 @@ public abstract record EventData
     /// <summary>
     /// Stores protocol-specific extensions.
     /// </summary>
-    public EventExtensions Extensions { get; set; }
+    public EventExtensions Extensions { get; init; }
 }
-
 
 [StructLayout(LayoutKind.Auto)]
 public readonly struct EventExtensions : IReadOnlyCollection<IEventExtension>, IEquatable<EventExtensions>
