@@ -37,12 +37,8 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
     bool ICollection<T>.IsReadOnly => false;
 
     public T this[int index] {
-        get {
-            return Data[index];
-        }
-        set {
-            Data[index] = value;
-        }
+        get => Data[index];
+        set => Data[index] = value;
     }
 
     public TemporaryArray(int capacity = 1, ITemporaryArraySource<T>? arraySource = null)

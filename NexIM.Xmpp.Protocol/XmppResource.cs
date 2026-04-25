@@ -8,7 +8,7 @@ namespace NexIM.Xmpp.Protocol;
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct XmppResource
 {
-    public const int MaxLength = XmppAddress.MaxComponentLength * 3 + 2;
+    public const int MaxLength = (XmppAddress.MaxComponentLength * 3) + 2;
 
     public XmppAddress Address { get; }
     public string? ResourceIdentifier { get; }

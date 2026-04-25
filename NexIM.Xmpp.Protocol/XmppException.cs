@@ -154,7 +154,7 @@ public class XmppStreamException : XmppException<IStreamErrorHandler>
 
     }
 
-    public override async ValueTask Output(IStreamErrorHandler handler)
+    public async override ValueTask Output(IStreamErrorHandler handler)
     {
         await base.Output(handler);
         foreach(var message in LocalizedMessage)
@@ -217,7 +217,7 @@ public class XmppStanzaException : XmppException<IStanzaErrorHandler>
         Code = code;
     }
 
-    public override async ValueTask Output(IStanzaErrorHandler handler)
+    public async override ValueTask Output(IStanzaErrorHandler handler)
     {
         await base.Output(handler);
         foreach(var message in LocalizedMessage)

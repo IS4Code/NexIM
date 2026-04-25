@@ -22,7 +22,11 @@ public readonly record struct TimeZoneOffset(TimeSpan Value)
 
     public static TimeZoneOffset Parse(string text)
     {
-        if(text == "Z") return Zero;
+        if(text == "Z")
+        {
+            return Zero;
+        }
+
         return new(XmlConvert.ToDateTimeOffset(text, "zzzzzzz").Offset);
     }
 

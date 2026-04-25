@@ -56,7 +56,7 @@ internal static class IdentifierHelper
         subMs = subMs * 1024 / (int)TimeSpan.TicksPerMillisecond;
 
         // Fill bits after ver
-        c = unchecked((ushort)(c & 0xF003 | (subMs << 2)));
+        c = unchecked((ushort)((c & 0xF003) | (subMs << 2)));
 
         return guid[0];
     }
@@ -148,7 +148,7 @@ internal static class IdentifierHelper
             elapsed = Stopwatch.GetElapsedTime(restoredTimestamp + adjustment, timestamp).Ticks;
 
             // Sanity check - can't drift too much
-            return -maxStopwatchAdjustment <= elapsed && elapsed <= maxStopwatchAdjustment;
+            return elapsed is >= (-maxStopwatchAdjustment) and <= maxStopwatchAdjustment;
         }
     }
 }

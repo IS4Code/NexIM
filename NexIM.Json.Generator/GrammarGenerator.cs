@@ -186,7 +186,11 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
 
     public static string? FormatLiteral(string? literal)
     {
-        if(literal == null) return "null";
+        if(literal == null)
+        {
+            return "null";
+        }
+
         return SymbolDisplay.FormatLiteral(literal, true);
     }
 

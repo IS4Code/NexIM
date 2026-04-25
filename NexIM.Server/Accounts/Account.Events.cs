@@ -193,7 +193,7 @@ partial class Account : IEventHandler
             case RetrieveEvent { Data: RosterQueryData data }:
                 // Retrieving the roster
                 var roster = contacts.Values;
-                if(data.Roster == roster || UInt32.TryParse(data.Tag, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var tag) && tag == GetRosterVersion(roster))
+                if(data.Roster == roster || (UInt32.TryParse(data.Tag, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var tag) && tag == GetRosterVersion(roster)))
                 {
                     // Same version
                     // TODO Incremental changes
