@@ -1,4 +1,4 @@
-﻿global using Identifiers = NexIM.Server.Tools.NonEmptySet<NexIM.Server.Accounts.Identifier>;
+﻿global using Identifiers = NexIM.Tools.NonEmptySet<NexIM.Server.Accounts.Identifier>;
 using System;
 using System.Collections.Generic;
 

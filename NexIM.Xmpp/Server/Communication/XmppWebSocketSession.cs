@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using NexIM.Tools;
 using NexIM.Xmpp.Tools;
 
 namespace NexIM.Xmpp.Server.Communication;

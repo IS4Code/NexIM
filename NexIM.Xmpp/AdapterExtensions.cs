@@ -10,7 +10,7 @@ using NexIM.Xmpp.Server.Communication;
 
 namespace NexIM.Xmpp;
 
-using Identifiers = NexIM.Server.Tools.NonEmptySet<Identifier>;
+using Identifiers = NexIM.Tools.NonEmptySet<Identifier>;
 
 #pragma warning disable 8509, 8524
 

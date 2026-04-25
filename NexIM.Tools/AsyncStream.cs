@@ -4,10 +4,10 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NexIM.Xmpp.Tools;
+namespace NexIM.Tools;
 
 [SuppressMessage("Performance", "CA1844:Provide memory-based overrides of async methods when subclassing 'Stream'", Justification = "Meant to be overridden in derived classes")]
-internal abstract class AsyncStream : Stream
+public abstract class AsyncStream : Stream
 {
     public abstract override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);
     public abstract override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);

@@ -1,4 +1,4 @@
-﻿global using StatusReports = NexIM.Server.Tools.NonEmptySet<NexIM.Server.Events.StatusReport>;
+﻿global using StatusReports = NexIM.Tools.NonEmptySet<NexIM.Server.Events.StatusReport>;
 using System;
 using System.Runtime.InteropServices;
 using NexIM.Server.Accounts;

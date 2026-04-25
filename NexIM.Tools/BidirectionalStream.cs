@@ -2,11 +2,10 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using NexIM.Tools;
 
-namespace NexIM.Xmpp.Tools;
+namespace NexIM.Tools;
 
-internal sealed class BidirectionalStream(Stream input, Stream output) : NonSeekableStream
+public sealed class BidirectionalStream(Stream input, Stream output) : NonSeekableStream
 {
     public override bool CanRead => input.CanRead;
     public override bool CanWrite => output.CanWrite;

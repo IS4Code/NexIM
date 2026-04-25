@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace NexIM.Server.Tools;
+namespace NexIM.Tools;
 
 /// <summary>
 /// Stores an ordered set of <typeparamref name="T"/> that has at least 1 element.

@@ -3,9 +3,9 @@ using System.Buffers;
 using System.ComponentModel;
 using System.IO;
 
-namespace NexIM.Server.Tools;
+namespace NexIM.Tools;
 
-internal sealed class ReadOnlySequenceStream(ReadOnlySequence<byte> source) : Stream
+public sealed class ReadOnlySequenceStream(ReadOnlySequence<byte> source) : Stream
 {
 #pragma warning disable CS9124 // Source is captured to provide length and seeking
     ReadOnlySequence<byte> remaining = source;

@@ -8,7 +8,7 @@ using System.Xml.Linq;
 using NexIM.Primitives.Events;
 using NexIM.Primitives.Xml;
 using NexIM.Primitives.Xml.Handlers;
-using NexIM.Server.Tools;
+using NexIM.Tools;
 
 namespace NexIM.Server.Database;
 

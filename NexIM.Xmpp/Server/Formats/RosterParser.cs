@@ -3,7 +3,7 @@ using System.Xml;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server.Accounts;
-using NexIM.Server.Tools;
+using NexIM.Tools;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
 using NexIM.Xmpp.Server.Handlers;

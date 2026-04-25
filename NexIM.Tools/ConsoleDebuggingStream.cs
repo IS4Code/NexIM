@@ -2,11 +2,10 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using NexIM.Tools;
 
-namespace NexIM.Xmpp.Tools;
+namespace NexIM.Tools;
 
-internal sealed class ConsoleDebuggingStream : NonSeekableStream
+public sealed class ConsoleDebuggingStream : NonSeekableStream
 {
     readonly Stream inner;
 
