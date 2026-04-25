@@ -15,4 +15,6 @@
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
   </ItemGroup>
 
+  <Import Project="..\NexIM.Shared\NexIM.Shared.projitems" Label="Shared" />
+
 </Project>

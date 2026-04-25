@@ -18,7 +18,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Metadata", "NexIM.Met
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Json.Generator", "NexIM.Json.Generator\NexIM.Json.Generator.csproj", "{040A8DCB-6C8C-453D-AD35-6250E229B56B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NexIM.Tools", "NexIM.Tools\NexIM.Tools.csproj", "{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Tools", "NexIM.Tools\NexIM.Tools.csproj", "{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "NexIM.Shared", "NexIM.Shared\NexIM.Shared.shproj", "{4C37D1D7-0E65-4714-829C-4D06ADD7C54D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -68,5 +70,11 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {520F1E4E-E31A-44A9-BDF3-86B3D157ED07}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		NexIM.Shared\NexIM.Shared.projitems*{310424af-ec44-4415-ac8c-2a4aa88257fd}*SharedItemsImports = 5
+		NexIM.Shared\NexIM.Shared.projitems*{4c37d1d7-0e65-4714-829c-4d06add7c54d}*SharedItemsImports = 13
+		NexIM.Shared\NexIM.Shared.projitems*{a3a96e77-82cd-411f-8070-632c705a0d50}*SharedItemsImports = 5
+		NexIM.Shared\NexIM.Shared.projitems*{af91cf4e-6de3-4e7c-a81b-d180749eb19e}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

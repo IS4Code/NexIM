@@ -18,4 +18,6 @@
     <ProjectReference Include="..\NexIM.Xml.Generator\NexIM.Xml.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>
 
+  <Import Project="..\NexIM.Shared\NexIM.Shared.projitems" Label="Shared" />
+
 </Project>
