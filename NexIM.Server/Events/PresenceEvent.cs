@@ -7,7 +7,12 @@
 public abstract record PresenceEvent : Event<PresenceData>;
 
 public abstract record StatusEvent : PresenceEvent;
-public sealed record StatusUpdateEvent : StatusEvent;
+
+public sealed record StatusUpdateEvent : StatusEvent
+{
+    public bool IsUnavailable => Data.Status.Availability == Accounts.Availability.Unavailable;
+}
+
 public sealed record StatusRequestEvent : StatusEvent;
 
 public abstract record SubscriptionEvent : PresenceEvent;

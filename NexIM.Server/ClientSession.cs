@@ -130,7 +130,7 @@ public abstract class ClientSession : IAsyncDisposable
 
     private StatusUpdateEvent? OnStatusUpdate(StatusUpdateEvent? statusEvent)
     {
-        if(!Configuration.PreserveUnavailableStatus && statusEvent?.Data.Status.Availability == Availability.Unavailable)
+        if(!Configuration.PreserveUnavailableStatus && statusEvent?.IsUnavailable == true)
         {
             statusEvent = null;
         }
@@ -155,7 +155,7 @@ public abstract class ClientSession : IAsyncDisposable
             }
 
             // Update current presence
-            if(!Configuration.PreserveUnavailableStatus && statusEvent.Data.Status.Availability == Availability.Unavailable)
+            if(!Configuration.PreserveUnavailableStatus && statusEvent.IsUnavailable)
             {
                 directedPresence.TryRemove(target, out _);
             }
@@ -183,7 +183,7 @@ public abstract class ClientSession : IAsyncDisposable
                 }
                 if(
                     statusUpdate is null ||
-                    (!Configuration.PreserveUnavailableStatus && statusUpdate.Data.Status.Availability == Availability.Unavailable)
+                    (!Configuration.PreserveUnavailableStatus && statusUpdate.IsUnavailable)
                 )
                 {
                     return Report(StatusCode.Unavailable);
@@ -229,13 +229,29 @@ public abstract class ClientSession : IAsyncDisposable
     {
         lastStatusUpdate = null;
 
-        // Report to the account
-        Identifiers to = Identifier.Bare;
+        var builder = Identifiers.Builder.Empty;
+
+        if(Presence.Status.Availability != Availability.Unavailable)
+        {
+            // Report to the account
+            builder.Add(Identifier.Bare);
+        }
 
         // Check entities to which directed presence is maintained
-        to = to.AddRange(directedPresence.Where(p => p.Value.Data.Status.Availability != Availability.Unavailable).Select(p => p.Key));
+        foreach(var pair in directedPresence)
+        {
+            if(!pair.Value.IsUnavailable)
+            {
+                builder.Add(pair.Key);
+            }
+        }
 
         directedPresence.Clear();
+
+        if(builder.TryToSet() is not { } to)
+        {
+            return;
+        }
 
         var unavailableEvent = new StatusUpdateEvent {
             Origin = EventOrigin.FromTo(Identifier, to),
