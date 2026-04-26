@@ -54,7 +54,7 @@ partial class Account
                 RouteToSessions(new SubscriptionAcceptedEvent {
                     Origin = EventOrigin.FromTo(targetAccountIdentifier, Name.ToIdentifier(), evnt.TransactionLanguage),
                     Processing = EventProcessing.Create(),
-                    Data = null
+                    Data = PresenceData.Empty
                 }, source, tasks);
                 continue;
             }

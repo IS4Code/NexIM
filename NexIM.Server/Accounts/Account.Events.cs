@@ -197,11 +197,7 @@ partial class Account : IEventHandler
                 {
                     // Same version
                     // TODO Incremental changes
-                    return Post(new ResponseEvent {
-                        Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
-                        Processing = EventProcessing.Create(),
-                        Data = null
-                    });
+                    return new(Report(StatusCode.Success));
                 }
                 return Post(new ResponseEvent {
                     Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
