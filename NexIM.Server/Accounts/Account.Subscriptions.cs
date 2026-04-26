@@ -374,12 +374,6 @@ partial class Account
             TransactionLanguage = null
         };
         var processing = EventProcessing.Create();
-        var data = new PresenceData {
-            Presentation = default,
-            Priority = null,
-            Status = new Status(Availability.Unavailable),
-            Capabilities = null
-        };
         foreach(var session in GetSessions(false))
         {
             if(session.Presence.Status.Availability == Availability.Unavailable)
@@ -394,7 +388,7 @@ partial class Account
                     From = session.Identifier
                 },
                 Processing = processing,
-                Data = data
+                Data = PresenceData.Empty
             }));
         }
     }

@@ -6,13 +6,15 @@ namespace NexIM.Server.Events;
 /// <summary>
 /// Stores data for a presence.
 /// </summary>
-public sealed record PresenceData : EventData
+public sealed record PresenceData : DeliveryData
 {
     public static readonly PresenceData Empty = new() {
         Presentation = default,
         Status = default,
         Priority = null,
-        Capabilities = null
+        Capabilities = null,
+        DelayedBy = null,
+        DelayReason = null
     };
 
     /// <summary>

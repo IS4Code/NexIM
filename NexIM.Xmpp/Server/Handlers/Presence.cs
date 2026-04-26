@@ -19,6 +19,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     string? nick;
     sbyte? priority;
     CapabilitiesHandle? caps;
+    (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
 
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -43,9 +44,13 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         this.SetOnce(ref priority, value);
     }
 
-    protected async override ValueTask OnDelay(DateTimeOffset? stamp, XmppResource? from, LanguageTaggedString? reason)
+    protected async override ValueTask OnDelay(DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)
     {
-        // Ignore
+        if(!this.VerifyOwnership(from))
+        {
+            return;
+        }
+        this.SetOnce(ref delay, (timestamp, from, reason));
     }
 
     protected async override ValueTask OnCapabilities(Token<CapabilitiesHash>? hash, string? node, string? version, string? extension)
@@ -71,6 +76,8 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             Presentation = new(Nickname: nick),
             Priority = priority,
             Capabilities = caps,
+            DelayedBy = delay?.from?.ToIdentifier(),
+            DelayReason = delay?.reason,
             Extensions = InnerHandler.ToExtensions()
         }.Deduplicate();
     }
@@ -78,7 +85,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     protected virtual Event GetEvent()
     {
         var origin = this.GetOrigin();
-        var processing = this.GetProcessing();
+        var processing = this.GetProcessing(delay?.timestamp);
         var data = GetPresence();
         return this.GetStanza().Type?.ToEnum() switch {
             null or StanzaType.Unavailable => new StatusUpdateEvent {

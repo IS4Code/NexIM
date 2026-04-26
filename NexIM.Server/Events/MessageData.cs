@@ -11,9 +11,25 @@ namespace NexIM.Server.Events;
 using MessageBodyCollectionData = ImmutableDictionary<(MessageFormat format, LanguageCode language), object>;
 
 /// <summary>
+/// Stores data for a delivered event.
+/// </summary>
+public abstract record DeliveryData : EventData
+{
+    /// <summary>
+    /// The identifier of the entity that delayed the event.
+    /// </summary>
+    public required Identifier? DelayedBy { get; init; }
+
+    /// <summary>
+    /// The reason for a delayed delivery of this event.
+    /// </summary>
+    public required LanguageTaggedString? DelayReason { get; init; }
+}
+
+/// <summary>
 /// Stores data for a message.
 /// </summary>
-public sealed record MessageData : EventData
+public sealed record MessageData : DeliveryData
 {
     /// <summary>
     /// The sender's presentation.

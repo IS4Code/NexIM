@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives;
@@ -36,13 +37,13 @@ public class XmppClientSession : ClientSession
             case MessageEvent msgEvent:
             {
                 await using var output = await xmpp.Message(msgEvent.ToStanza(xmpp));
-                await WriteMessage(output, msgEvent.Data);
+                await WriteMessage(output, msgEvent.Data, evnt);
                 return StatusCode.Received;
             }
             case PresenceEvent presEvent:
             {
                 await using var output = await xmpp.Presence(presEvent.ToStanza(xmpp));
-                await WritePresence(output, presEvent.Data);
+                await WritePresence(output, presEvent.Data, evnt);
                 return StatusCode.Received;
             }
             case QueryEvent queryEvent:
@@ -52,20 +53,15 @@ public class XmppClientSession : ClientSession
             }
             case ErrorEvent errorEvent:
             {
-                return await WriteError(errorEvent.ToStanza(xmpp), errorEvent.Data);
+                return await WriteError(errorEvent.ToStanza(xmpp), errorEvent.Data, evnt);
             }
             default:
                 return StatusCode.UnrecognizedRequest;
         }
     }
 
-    private async ValueTask WriteMessage(IMessageHandler output, MessageData? data)
+    private async ValueTask WriteMessage(IMessageHandler output, MessageData data, Event evnt)
     {
-        if(data is null)
-        {
-            return;
-        }
-
         // Basic elements
 
         foreach(var subject in data.Subject)
@@ -112,18 +108,15 @@ public class XmppClientSession : ClientSession
                 break;
         }
 
+        await WriteDelivery(output, data, evnt);
+
         // General extensions
 
         await WriteExtensions(output, data.Extensions);
     }
 
-    private async ValueTask WritePresence(IPresenceHandler output, PresenceData? data)
+    private async ValueTask WritePresence(IPresenceHandler output, PresenceData data, Event evnt)
     {
-        if(data is null)
-        {
-            return;
-        }
-
         // Basic elements
 
         if(data.Status.Availability.ToStatusType() is { } statusType)
@@ -145,9 +138,25 @@ public class XmppClientSession : ClientSession
 
         await WriteSender(data.Presentation, output);
 
+        await WriteDelivery(output, data, evnt);
+
         // General extensions
 
         await WriteExtensions(output, data.Extensions);
+    }
+
+    private async ValueTask WriteDelivery(IDeliveryHandler output, DeliveryData data, Event evnt)
+    {
+        if(data.DelayReason is { } reason && evnt.Created != evnt.Published)
+        {
+            // Delayed by sender
+            await output.Delay(evnt.Created.UtcDateTime, data.DelayedBy?.ToResource(xmpp), reason);
+        }
+        else if(DateTimeOffset.UtcNow - evnt.Created > Configuration.XmppMinDelayTime)
+        {
+            // Delayed by receiver
+            await output.Delay(evnt.Created.UtcDateTime, xmpp.LocalResource, null);
+        }
     }
 
     private async ValueTask<StatusCode> WriteInfoQuery(IInfoQueryHandler output, QueryData? queryData)
@@ -229,26 +238,26 @@ public class XmppClientSession : ClientSession
         }
     }
 
-    private async ValueTask<StatusCode> WriteError(Stanza stanza, ErrorData? data)
+    private async ValueTask<StatusCode> WriteError(Stanza stanza, ErrorData data, Event evnt)
     {
-        if(data?.ErrorCode.ToStanzaException() is not { } exception)
+        if(data.ErrorCode.ToStanzaException() is not { } exception)
         {
             return StatusCode.InvalidParameter;
         }
 
-        switch(data?.OriginalData)
+        switch(data.OriginalData)
         {
             case MessageData msgData:
             {
                 await using var output = await xmpp.Message(stanza);
-                await WriteMessage(output, msgData);
+                await WriteMessage(output, msgData, evnt);
                 await WriteErrorData(output);
                 return StatusCode.Received;
             }
             case PresenceData presData:
             {
                 await using var output = await xmpp.Presence(stanza);
-                await WritePresence(output, presData);
+                await WritePresence(output, presData, evnt);
                 await WriteErrorData(output);
                 return StatusCode.Received;
             }

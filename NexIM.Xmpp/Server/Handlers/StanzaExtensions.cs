@@ -1,4 +1,5 @@
-﻿using NexIM.Primitives;
+﻿using System;
+using NexIM.Primitives;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
 
@@ -22,6 +23,13 @@ internal static class StanzaExtensions
         {
             throw XmppStanzaException.Forbidden("The receiving entity must be the user's account or server.");
         }
+    }
+
+    public static bool VerifyOwnership(this ICommandHandler handler, XmppResource? resource)
+    {
+        var session = handler.GetSession();
+        // TODO Subdomains and other privileged hosts
+        return resource != session.LocalResource;
     }
 
     public static XmppResource GetSender(this ICommandHandler handler)
@@ -50,8 +58,8 @@ internal static class StanzaExtensions
         };
     }
 
-    public static EventProcessing GetProcessing(this ICommandHandler handler)
+    public static EventProcessing GetProcessing(this ICommandHandler handler, DateTimeOffset? created = null)
     {
-        return EventProcessing.Finish(handler.GetContext().LastStanzaReceived);
+        return EventProcessing.Finish(created ?? handler.GetContext().LastStanzaReceived);
     }
 }

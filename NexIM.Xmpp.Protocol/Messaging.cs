@@ -9,8 +9,8 @@ namespace NexIM.Xmpp.Protocol;
 [ComplexType]
 public interface IDeliveryHandler : IPayloadHandler
 {
-    [Name("delay", "urn:xmpp:delay")]
-    ValueTask Delay([Name("stamp")] DateTimeOffset? stamp, [Name("from")] XmppResource? from, LanguageTaggedString? reason);
+    [Name("delay", XmppDelay)]
+    ValueTask Delay([Name("stamp")] DateTime? timestamp, [Name("from")] XmppResource? from, LanguageTaggedString? reason);
 }
 
 [ComplexType]

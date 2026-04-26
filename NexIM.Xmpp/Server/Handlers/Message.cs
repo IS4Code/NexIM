@@ -16,6 +16,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     LocalizedString subject, body;
     string? nick, thread;
     ConversationState? state;
+    (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
 
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -40,9 +41,13 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         this.SetOnce(ref nick, text);
     }
 
-    protected async sealed override ValueTask OnDelay(DateTimeOffset? stamp, XmppResource? from, LanguageTaggedString? reason)
+    protected async sealed override ValueTask OnDelay(DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)
     {
-        // TODO Preserve
+        if(!this.VerifyOwnership(from))
+        {
+            return;
+        }
+        this.SetOnce(ref delay, (timestamp, from, reason));
     }
 
     protected async sealed override ValueTask OnActive()
@@ -85,6 +90,8 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             ThreadIdentifier = thread,
             Presentation = new(Nickname: nick),
             State = state ?? ConversationState.Unspecified,
+            DelayedBy = delay?.from?.ToIdentifier(this.GetSession()),
+            DelayReason = delay?.reason,
             Extensions = InnerHandler.ToExtensions()
         };
     }
@@ -94,7 +101,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         return new MessageEvent {
             Origin = this.GetOrigin(),
             Type = (this.GetStanza().Type?.ToEnum()).ToMessageType(),
-            Processing = this.GetProcessing(),
+            Processing = this.GetProcessing(delay?.timestamp),
             Data = GetMessage()
         };
     }

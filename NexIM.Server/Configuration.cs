@@ -8,6 +8,8 @@ public class Configuration
 {
     public static readonly bool PreserveUnavailableStatus = false;
 
+    public static readonly TimeSpan XmppMinDelayTime = TimeSpan.FromSeconds(1);
+
     public static bool OnUnexpectedException(Exception e)
     {
         lock(typeof(Console))

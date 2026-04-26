@@ -32,14 +32,11 @@ public abstract record Event
     /// <inheritdoc cref="EventOrigin.TransactionLanguage"/>
     public LanguageCode? TransactionLanguage => Origin.TransactionLanguage;
 
-    /// <inheritdoc cref="EventProcessing.Received"/>
-    public DateTimeOffset Received => Processing.Received;
-
-    /// <inheritdoc cref="EventProcessing.Published"/>
-    public DateTimeOffset? Published => Processing.Published;
-
     /// <inheritdoc cref="EventProcessing.Created"/>
     public DateTimeOffset Created => Processing.Created;
+
+    /// <inheritdoc cref="EventProcessing.Published"/>
+    public DateTimeOffset Published => Processing.Published;
 }
 
 /// <summary>
@@ -110,29 +107,20 @@ public record struct EventOrigin
 public record struct EventProcessing
 {
     /// <summary>
-    /// The date and time this event was received by the server.
+    /// The earliest date and time this event was acknowledged.
     /// </summary>
     /// <remarks>
-    /// Must not be greater than <see cref="Accepted"/> or <see cref="Published"/>.
+    /// Must not be greater than <see cref="Published"/>.
     /// </remarks>
-    public required DateTimeOffset Received { get; set; }
+    public required DateTimeOffset Created { get; set; }
 
     /// <summary>
-    /// The date and time this event was fully processed by the server.
+    /// The date and time this event was fully accepted by the server.
     /// </summary>
     /// <remarks>
-    /// Must not be less than <see cref="Received"/> or <see cref="Accepted"/>.
+    /// Must not be less than <see cref="Created"/>.
     /// </remarks>
-    public required DateTimeOffset? Published { get; set; }
-
-    /// <summary>
-    /// The canonical date and time of this event.
-    /// </summary>
-    /// <remarks>
-    /// This is the first value in the sequence <see cref="Accepted"/>,
-    /// <see cref="Published"/>, <see cref="Received"/> that is set.
-    /// </remarks>
-    public readonly DateTimeOffset Created => Published ?? Received;
+    public required DateTimeOffset Published { get; set; }
 
     /// <summary>
     /// Creates an <see cref="EventProcessing"/> instance for
@@ -140,9 +128,9 @@ public record struct EventProcessing
     /// </summary>
     public static EventProcessing Create()
     {
-        var date = DateTimeOffset.UtcNow;
+        var date = IdentifierHelper.IdentifierTimeNow;
         return new() {
-            Received = date,
+            Created = date,
             Published = date
         };
     }
@@ -151,11 +139,16 @@ public record struct EventProcessing
     /// Creates an <see cref="EventProcessing"/> instance for
     /// a finished event.
     /// </summary>
-    public static EventProcessing Finish(DateTimeOffset received)
+    public static EventProcessing Finish(DateTimeOffset created)
     {
-        var date = DateTimeOffset.UtcNow;
+        var date = IdentifierHelper.IdentifierTimeNow;
+        if(created > date)
+        {
+            // Must be kept ordered
+            created = date;
+        }
         return new() {
-            Received = received,
+            Created = created,
             Published = date
         };
     }
