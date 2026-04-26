@@ -229,17 +229,14 @@ public abstract class ClientSession : IAsyncDisposable
     {
         lastStatusUpdate = null;
 
+        // Report to the account
+        Identifiers to = Identifier.Bare;
+
         // Check entities to which directed presence is maintained
-        var availableTo = directedPresence.Where(p => p.Value.Data.Status.Availability != Availability.Unavailable).Select(p => p.Key);
-        if(!Identifiers.TryCreateRange(availableTo, out var to))
-        {
-            // No such entities
-            directedPresence.Clear();
-            return;
-        }
+        to = to.AddRange(directedPresence.Where(p => p.Value.Data.Status.Availability != Availability.Unavailable).Select(p => p.Key));
+
         directedPresence.Clear();
 
-        var date = DateTime.UtcNow;
         var unavailableEvent = new StatusUpdateEvent {
             Origin = EventOrigin.FromTo(Identifier, to),
             Processing = EventProcessing.Create(),
