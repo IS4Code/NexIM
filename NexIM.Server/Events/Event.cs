@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
 
@@ -50,12 +51,13 @@ public abstract record Event<TData> : Event where TData : EventData
     /// <summary>
     /// The data associated with the event, indicating the type and content of the event.
     /// </summary>
-    public required TData? Data { get; init; }
+    public required TData Data { get; init; }
 }
 
 /// <summary>
 /// Stores the origin information of an event.
 /// </summary>
+[StructLayout(LayoutKind.Auto)]
 public record struct EventOrigin
 {
     /// <summary>
@@ -104,6 +106,7 @@ public record struct EventOrigin
 /// <summary>
 /// Stores the processing information of an event.
 /// </summary>
+[StructLayout(LayoutKind.Auto)]
 public record struct EventProcessing
 {
     /// <summary>

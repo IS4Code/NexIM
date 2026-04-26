@@ -72,7 +72,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             Priority = priority,
             Capabilities = caps,
             Extensions = InnerHandler.ToExtensions()
-        };
+        }.Deduplicate();
     }
 
     protected virtual Event GetEvent()

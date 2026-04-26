@@ -6,6 +6,8 @@ namespace NexIM.Server;
 
 public class Configuration
 {
+    public static readonly bool PreserveUnavailableStatus = false;
+
     public static bool OnUnexpectedException(Exception e)
     {
         lock(typeof(Console))

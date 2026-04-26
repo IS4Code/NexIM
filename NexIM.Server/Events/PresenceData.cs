@@ -8,6 +8,13 @@ namespace NexIM.Server.Events;
 /// </summary>
 public sealed record PresenceData : EventData
 {
+    public static readonly PresenceData Empty = new() {
+        Presentation = default,
+        Status = default,
+        Priority = null,
+        Capabilities = null
+    };
+
     /// <summary>
     /// The sender's presentation.
     /// </summary>
@@ -27,6 +34,11 @@ public sealed record PresenceData : EventData
     /// The sender's capabilities.
     /// </summary>
     public required CapabilitiesHandle? Capabilities { get; init; }
+
+    public PresenceData Deduplicate()
+    {
+        return this == Empty ? Empty : this;
+    }
 }
 
 public record struct CapabilitiesIdentifier(string Application, string Version, string VersionType);

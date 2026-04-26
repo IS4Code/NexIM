@@ -340,6 +340,14 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
                 await using var iq = await handler.Presence(new Stanza(StanzaType.Unsubscribed.ToToken(), report.Source.ToResource(this), lastStanza.From));
                 return;
             }
+
+            case StatusCode.Unavailable when stanzaKind == StanzaKind.Presence:
+            {
+                // Report as "unavailable"
+                IStreamHandler handler = this;
+                await using var iq = await handler.Presence(new Stanza(StanzaType.Unavailable.ToToken(), report.Source.ToResource(this), lastStanza.From));
+                return;
+            }
         }
 
         if(report.Code.ToStanzaException() is { } exception)
