@@ -23,7 +23,7 @@ public interface IMessageHandler : IStanzaHandler, IPresentationHandler, IDelive
     ValueTask Body(LanguageTaggedString? text);
 
     [Name("thread")]
-    ValueTask Thread(string? identifier);
+    ValueTask Thread(string? identifier, [Name("parent")] string? parent);
 
     [Name("active", ChatStates)] ValueTask Active();
     [Name("inactive", ChatStates)] ValueTask Inactive();

@@ -80,7 +80,7 @@ public class XmppClientSession : ClientSession
 
         if(data.ThreadIdentifier is { } thread)
         {
-            await output.Thread(thread);
+            await output.Thread(thread, data.ParentThreadIdentifier);
         }
 
         // Supported extensions

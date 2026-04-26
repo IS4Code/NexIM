@@ -55,6 +55,11 @@ public sealed record MessageData : DeliveryData
     /// The identifier of the conversation.
     /// </summary>
     public required string? ThreadIdentifier { get; init; }
+
+    /// <summary>
+    /// The identifier of the parent conversation.
+    /// </summary>
+    public required string? ParentThreadIdentifier { get; init; }
 }
 
 /// <summary>

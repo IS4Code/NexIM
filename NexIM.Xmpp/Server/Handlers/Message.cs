@@ -14,7 +14,8 @@ namespace NexIM.Xmpp.Server.Handlers;
 internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     LocalizedString subject, body;
-    string? nick, thread;
+    string? nick;
+    (string? identifier, string? parent)? thread;
     ConversationState? state;
     (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
 
@@ -31,9 +32,9 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         subject = subject.Add(text);
     }
 
-    protected async sealed override ValueTask OnThread(string? identifier)
+    protected async sealed override ValueTask OnThread(string? identifier, string? parent)
     {
-        this.SetOnce(ref thread, identifier);
+        this.SetOnce(ref thread, (parent, identifier));
     }
 
     protected async sealed override ValueTask OnNickname(string? text)
@@ -87,7 +88,8 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         return new MessageData {
             Subject = subject,
             Body = new(content.ToImmutable()),
-            ThreadIdentifier = thread,
+            ThreadIdentifier = thread?.identifier,
+            ParentThreadIdentifier = thread?.parent,
             Presentation = new(Nickname: nick),
             State = state ?? ConversationState.Unspecified,
             DelayedBy = delay?.from?.ToIdentifier(this.GetSession()),
