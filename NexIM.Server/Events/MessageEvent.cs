@@ -18,7 +18,7 @@ public sealed record MessageEvent : Event<MessageData>
 public enum MessageType
 {
     /// <summary>
-    /// The type is the message is not defined.
+    /// The type of the message is not defined.
     /// </summary>
     Unspecified,
 
@@ -40,5 +40,5 @@ public enum MessageType
     /// <summary>
     /// A message that is a notification or alert that is temporal in nature.
     /// </summary>
-    Headline
+    Transient
 }

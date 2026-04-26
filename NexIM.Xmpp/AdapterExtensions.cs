@@ -151,7 +151,7 @@ internal static partial class AdapterExtensions
             MessageType.Normal => StanzaType.Normal.ToToken(),
             MessageType.Chat => StanzaType.Chat.ToToken(),
             MessageType.GroupChat => StanzaType.GroupChat.ToToken(),
-            MessageType.Headline => StanzaType.Headline.ToToken(),
+            MessageType.Transient => StanzaType.Headline.ToToken(),
             _ => null
         };
     }
@@ -162,7 +162,7 @@ internal static partial class AdapterExtensions
             StanzaType.Normal or null => MessageType.Normal,
             StanzaType.Chat => MessageType.Chat,
             StanzaType.GroupChat => MessageType.GroupChat,
-            StanzaType.Headline => MessageType.Headline,
+            StanzaType.Headline => MessageType.Transient,
             _ => throw XmppStanzaException.BadRequest("Invalid message type.")
         };
     }
