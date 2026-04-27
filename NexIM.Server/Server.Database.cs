@@ -17,11 +17,7 @@ partial class Server
             database.Database.EnsureCreated();
 
             // TODO Load only active ones
-            foreach(var _ in database.Identities)
-            {
-                // Constructor auto-registers it
-            }
-            foreach(var account in database.Accounts)
+            foreach(var account in database.FullAccounts)
             {
                 accounts[account.Identifier] = account;
             }

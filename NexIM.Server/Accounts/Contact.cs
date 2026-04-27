@@ -17,7 +17,16 @@ public record Contact : IComparable<Contact>
     public string? Nickname { get; init; }
     public NonEmptySet<string>? Groups { get; init; }
 
-    internal Identity Identity { get; init; } = null!;
+    // Obscure name to prevent EF from locating it
+    readonly Identity _id = null!;
+    internal Identity Identity {
+        get => _id;
+        init {
+            _id = value;
+            Account = value.Name;
+        }
+    }
+
     internal Guid Identifier { get; init; }
     internal Guid OwnerIdentifier { get; init; }
 

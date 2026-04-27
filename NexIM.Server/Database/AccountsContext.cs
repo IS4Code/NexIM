@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
@@ -18,6 +19,12 @@ internal class AccountsContext : DbContext
     public DbSet<Contact> Contacts { get; set; }
     public DbSet<PrivateStorageData> PrivateStorage { get; set; }
     public DbSet<UploadedFile> UploadedFiles { get; set; }
+
+    public IQueryable<Account> FullAccounts => Accounts
+        .Include(x => x.Identity)
+        .Include(x => x.ContactsBuilder)
+        .Include(x => x.PrivateStorageBuilder)
+        .Include(x => x.UploadedFilesBuilder);
 
     readonly VCardConverter vcardConverter;
     readonly EventExtensionsConverter eventExtensionsConverter;
