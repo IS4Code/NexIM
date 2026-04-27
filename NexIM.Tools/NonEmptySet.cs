@@ -14,7 +14,10 @@ namespace NexIM.Tools;
 [StructLayout(LayoutKind.Auto)]
 public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
 {
-    static readonly Comparer<T> comparer = Comparer<T>.Default;
+    static readonly IComparer<T> comparer =
+        typeof(string).Equals(typeof(T))
+        ? (IComparer<T>)(object)StringComparer.Ordinal
+        : Comparer<T>.Default;
 
     static readonly ImmutableSortedSet<T> emptySet = ImmutableSortedSet.Create<T>(comparer);
 

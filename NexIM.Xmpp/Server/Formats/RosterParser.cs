@@ -40,11 +40,14 @@ internal sealed class RosterParser<TContext> : BaseRosterQueryHandler<TContext> 
 
     class ItemParser(RosterParser<TContext> parent, XmppResource identifier, string? name, RosterSubscriptionDirection? subscription, RosterPendingAction? pending, bool? subscriptionApproved) : BaseRosterItemHandler<TContext>
     {
-        string? group;
+        NonEmptySet<string>.Builder groups;
 
         protected async override ValueTask OnGroup(string? name)
         {
-            this.SetOnce(ref group, name);
+            if(name is not null)
+            {
+                groups.Add(name);
+            }
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);
@@ -56,7 +59,7 @@ internal sealed class RosterParser<TContext> : BaseRosterQueryHandler<TContext> 
             contacts.Add(new Contact {
                 Account = identifier.ToAccountName(out _),
                 Nickname = name,
-                Group = group,
+                Groups = groups.TryToSet(),
                 SubscriptionState = new() {
                     Direction = subscription switch {
                         RosterSubscriptionDirection.From => SubscriptionDirection.From,

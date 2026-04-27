@@ -21,9 +21,12 @@ internal static class RosterFormatter
             _ => RosterSubscriptionDirection.None
         }).ToToken(), contact.SubscriptionState.PendingTo ? RosterPendingAction.Subscription.ToToken() : null, contact.SubscriptionState.ApprovedFrom);
 
-        if(contact.Group is { } group)
+        if(contact.Groups is { } groups)
         {
-            await item.Group(group);
+            foreach(var group in groups)
+            {
+                await item.Group(group);
+            }
         }
     }
 }

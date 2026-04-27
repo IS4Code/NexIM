@@ -21,6 +21,7 @@ internal class AccountsContext : DbContext
 
     readonly VCardConverter vcardConverter;
     readonly EventExtensionsConverter eventExtensionsConverter;
+    readonly NullableNonEmptySetConverter<string> stringSetConverter;
 
     static AccountsContext()
     {
@@ -33,6 +34,7 @@ internal class AccountsContext : DbContext
         var msgpackOptions = CreateOptions(MessagePackSerializerOptions.Standard);
         vcardConverter = new(msgpackOptions);
         eventExtensionsConverter = new(msgpackOptions);
+        stringSetConverter = new(msgpackOptions);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
@@ -82,6 +84,8 @@ internal class AccountsContext : DbContext
         modelBuilder.Entity<Contact>(e => {
             e.HasKey(x => new { x.OwnerIdentifier, x.Identifier });
             e.HasOne(x => x.Identity).WithMany().HasForeignKey(x => x.Identifier);
+
+            e.Property(x => x.Groups).HasConversion(stringSetConverter);
         });
 
         modelBuilder.Entity<PrivateStorageData>(e => {

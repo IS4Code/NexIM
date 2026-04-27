@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.InteropServices;
+using NexIM.Tools;
 
 namespace NexIM.Server.Accounts;
 
@@ -14,7 +15,7 @@ public record Contact : IComparable<Contact>
 
     public SubscriptionState SubscriptionState { get; init; }
     public string? Nickname { get; init; }
-    public string? Group { get; init; }
+    public NonEmptySet<string>? Groups { get; init; }
 
     internal Identity Identity { get; init; } = null!;
     internal Guid Identifier { get; init; }
