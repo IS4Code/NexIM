@@ -63,4 +63,9 @@ partial class Server
             createdIdentity = null;
         }
     }
+
+    private Identity? TryGetIdentity(AccountName name)
+    {
+        return identityByAccount.TryGetValue(name, out var identity) ? identity : null;
+    }
 }

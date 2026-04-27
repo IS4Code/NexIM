@@ -10,23 +10,19 @@ using static SubscriptionLevel;
 
 public record Contact : IComparable<Contact>
 {
+    readonly AccountName? _account;
+
     [NotMapped]
-    public required AccountName Account { get; init; }
+    public required AccountName Account {
+        get => _account ?? Identity?.Name ?? throw new InvalidOperationException("Account name was not properly initialized.");
+        init => _account = value;
+    }
 
     public SubscriptionState SubscriptionState { get; init; }
     public string? Nickname { get; init; }
     public NonEmptySet<string>? Groups { get; init; }
 
-    // Obscure name to prevent EF from locating it
-    readonly Identity _id = null!;
-    internal Identity Identity {
-        get => _id;
-        init {
-            _id = value;
-            Account = value.Name;
-        }
-    }
-
+    internal Identity Identity { get; init; } = null!;
     internal Guid Identifier { get; init; }
     internal Guid OwnerIdentifier { get; init; }
 

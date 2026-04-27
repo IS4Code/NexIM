@@ -54,6 +54,11 @@ partial class Server
         return GetIdentity(name, createOwnedIdentity, out created);
     }
 
+    internal Identity? TryGetAccountIdentity(AccountName name)
+    {
+        return TryGetIdentity(name);
+    }
+
     public Account? GetAccount(AccountName name)
     {
         // Does not create identity if non-existent

@@ -24,7 +24,7 @@ public partial class Account
 
     public VCard? VCard { get; set; }
 
-    SnapshotDictionary<AccountName, Contact> contacts = default;
+    SnapshotDictionary<Guid, Contact> contacts = default;
     SnapshotDictionary<XName, PrivateStorageData> privateStorage = default;
     SnapshotDictionary<Guid, UploadedFile> uploadedFiles = default;
 
@@ -68,10 +68,25 @@ public partial class Account
 
     public Contact? GetContact(AccountName name)
     {
-        return contacts.TryGetValue(name, out var contact) ? contact : null;
+        if(Server.TryGetAccountIdentity(name) is not { } id)
+        {
+            return null;
+        }
+        return contacts.TryGetValue(id.Identifier, out var contact) ? contact : null;
     }
 
-    private bool AddOrUpdateContact<TArgs>(AccountName name, Func<AccountName, TArgs, Contact?> addFactory, Func<AccountName, Contact, TArgs, Contact?> updateFactory, TArgs args, out Contact? previous, out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
+    static class Storage<TArgs>
+    {
+        public static readonly Func<Guid, (Identity identity, Func<Identity, TArgs, Contact?> addFactory, Func<Identity, Contact, TArgs, Contact?> updateFactory, TArgs args), Contact?> Add = (_, info) => {
+            return info.addFactory(info.identity, info.args);
+        };
+
+        public static readonly Func<Guid, Contact, (Identity identity, Func<Identity, TArgs, Contact?> addFactory, Func<Identity, Contact, TArgs, Contact?> updateFactory, TArgs args), Contact?> Update = (_, previous, info) => {
+            return info.updateFactory(info.identity, previous, info.args);
+        };
+    }
+
+    private bool AddOrUpdateContact<TArgs>(AccountName name, Func<Identity, TArgs, Contact?> addFactory, Func<Identity, Contact, TArgs, Contact?> updateFactory, TArgs args, out Contact? previous, out Contact? updated, out IReadOnlyCollection<Contact> finalContacts)
     {
         if(IsProhibitedContact(name))
         {
@@ -80,7 +95,8 @@ public partial class Account
             finalContacts = contacts.Values;
             return false;
         }
-        var success = contacts.AddOrUpdate(name, addFactory, updateFactory, out previous, out updated, out var snapshot, args);
+        var identity = Server.GetAccountIdentity(name, out _);
+        var success = contacts.AddOrUpdate(identity.Identifier, Storage<TArgs>.Add, Storage<TArgs>.Update, out previous, out updated, out var snapshot, (identity, addFactory, updateFactory, args));
         finalContacts = snapshot.Values;
         return success;
     }
@@ -91,13 +107,12 @@ public partial class Account
         return name == Name;
     }
 
-    static readonly Func<AccountName, (Account, Contact), Contact> addContact = (name, info) => {
+    static readonly Func<Identity, (Account, Contact), Contact> addContact = (identity, info) => {
         var (self, added) = info;
-        var identity = self.Server.GetAccountIdentity(added.Account, out _);
         return Contact.Create(identity, added, self);
     };
 
-    static readonly Func<AccountName, Contact, (Account, Contact), Contact> updateContact = (name, existing, info) => {
+    static readonly Func<Identity, Contact, (Account, Contact), Contact> updateContact = (identity, existing, info) => {
         var (self, added) = info;
         return existing.Update(added);
     };
@@ -109,13 +124,19 @@ public partial class Account
 
     public bool RemoveContact(AccountName name, [MaybeNullWhen(false)] out Contact result, out IReadOnlyCollection<Contact> finalContacts)
     {
-        var success = contacts.TryRemove(name, out var resultValue, out var snapshot);
+        if(Server.TryGetAccountIdentity(name) is not { } id)
+        {
+            result = null;
+            finalContacts = contacts.Values;
+            return false;
+        }
+        var success = contacts.TryRemove(id.Identifier, out var resultValue, out var snapshot);
         result = resultValue;
         finalContacts = snapshot.Values;
         return success;
     }
 
-    static readonly Func<AccountName, (Account, Func<SubscriptionState, SubscriptionState>), Contact?> addContactWithSubscriptionState = (name, info) => {
+    static readonly Func<Identity, (Account, Func<SubscriptionState, SubscriptionState>), Contact?> addContactWithSubscriptionState = (identity, info) => {
         var (self, update) = info;
         var state = update(default);
         if(state.IsEmpty)
@@ -123,11 +144,10 @@ public partial class Account
             // No reason to add
             return null;
         }
-        var identity = self.Server.GetAccountIdentity(name, out _);
         return Contact.Create(identity, state, self);
     };
 
-    static readonly Func<AccountName, Contact, (Account, Func<SubscriptionState, SubscriptionState>), Contact?> updateContactWithSubscriptionState = (name, existing, info) => {
+    static readonly Func<Identity, Contact, (Account, Func<SubscriptionState, SubscriptionState>), Contact?> updateContactWithSubscriptionState = (name, existing, info) => {
         var (_, update) = info;
         var state = update(existing.SubscriptionState);
         if(state.IsEmpty)

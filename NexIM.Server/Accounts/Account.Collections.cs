@@ -7,7 +7,7 @@ using NexIM.Server.Tools;
 
 namespace NexIM.Server.Accounts;
 
-using ContactsBuilder = Account.SnapshotCollectionBuilder<AccountName, Contact>;
+using ContactsBuilder = Account.SnapshotCollectionBuilder<Guid, Contact>;
 using PrivateStorageBuilder = Account.SnapshotCollectionBuilder<XName, PrivateStorageData>;
 using UploadedFilesBuilder = Account.SnapshotCollectionBuilder<Guid, UploadedFile>;
 
@@ -18,7 +18,7 @@ partial class Account
         [MemberNotNull(nameof(PrivateStorageBuilder))]
         [MemberNotNull(nameof(UploadedFilesBuilder))]
         init {
-            ContactsBuilder = new(() => ref contacts, x => x.Account);
+            ContactsBuilder = new(() => ref contacts, x => x.Identifier);
             PrivateStorageBuilder = new(() => ref privateStorage, x => x.EventData.Key);
             UploadedFilesBuilder = new(() => ref uploadedFiles, x => x.Identifier);
         }
