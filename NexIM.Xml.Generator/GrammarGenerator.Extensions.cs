@@ -15,6 +15,7 @@ partial class GrammarGenerator
 
         writer.WriteLine("using System;");
         writer.WriteLine("using System.Collections.Generic;");
+        writer.WriteLine("using NexIM.Primitives;");
         writer.WriteLine($"namespace {FormatNonGlobal(container)}.Handlers;");
 
         writer.WriteLine("#nullable enable");
@@ -75,13 +76,13 @@ partial class GrammarGenerator
                         writer.WriteLine("{");
                         writer.Indent++;
 
-                        writer.WriteLine($"if({paramName}Range is {{ }} range)");
+                        writer.WriteLine($"if({paramName}Range is {{ }} _range)");
                         writer.WriteLine("{");
                         writer.Indent++;
-                        writer.WriteLine($"foreach(var rangeItem in range)");
+                        writer.WriteLine($"foreach(var _item in _range)");
                         writer.WriteLine("{");
                         writer.Indent++;
-                        writer.WriteLine($"await handler.{method.Name}(rangeItem);");
+                        writer.WriteLine($"await handler.{method.Name}(_item);");
                         writer.Indent--;
                         writer.WriteLine("}");
                         writer.Indent--;
@@ -101,14 +102,39 @@ partial class GrammarGenerator
                         writer.WriteLine("{");
                         writer.Indent++;
 
-                        writer.WriteLine($"if({paramName} is not {{ }} val)");
+                        writer.WriteLine($"if({paramName} is not {{ }} _val)");
                         writer.WriteLine("{");
                         writer.Indent++;
                         writer.WriteLine("return default;");
                         writer.Indent--;
                         writer.WriteLine("}");
 
-                        writer.WriteLine($"return handler.{method.Name}(val);");
+                        writer.WriteLine($"return handler.{method.Name}(_val);");
+
+                        writer.Indent--;
+                        writer.WriteLine("}");
+                    }
+
+                    if((paramType.IsValueType && IsNullable(paramType, out var innerType) ? innerType : paramType).Name == "LanguageTaggedString")
+                    {
+                        // Localized string
+                        writer.WriteLine($"public static async {returnType} {name}Localized(this {handlerType} handler, LocalizedString? {paramName})");
+                        writer.WriteLine("{");
+                        writer.Indent++;
+
+                        writer.WriteLine($"if({paramName} is not {{ }} _val)");
+                        writer.WriteLine("{");
+                        writer.Indent++;
+                        writer.WriteLine("return;");
+                        writer.Indent--;
+                        writer.WriteLine("}");
+
+                        writer.WriteLine($"foreach(var _str in _val)");
+                        writer.WriteLine("{");
+                        writer.Indent++;
+                        writer.WriteLine($"await handler.{method.Name}(_str);");
+                        writer.Indent--;
+                        writer.WriteLine("}");
 
                         writer.Indent--;
                         writer.WriteLine("}");

@@ -14,7 +14,7 @@ namespace NexIM.Xmpp.Server.Handlers;
 /// </summary>
 internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
-    LocalizedString subject, body;
+    LocalizedString.Builder subjectBuilder, bodyBuilder;
     string? nick, receiptFor;
     (string? identifier, string? parent)? thread;
     ConversationState? state;
@@ -26,12 +26,12 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
 
     protected async sealed override ValueTask OnBody(LanguageTaggedString? text)
     {
-        body = body.Add(text);
+        bodyBuilder.Add(text);
     }
 
     protected async sealed override ValueTask OnSubject(LanguageTaggedString? text)
     {
-        subject = subject.Add(text);
+        subjectBuilder.Add(text);
     }
 
     protected async sealed override ValueTask OnThread(string? identifier, string? parent)
@@ -106,14 +106,17 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         }
 
         var content = MessageBodyCollection.Empty.Data.ToBuilder();
-        foreach(var body in this.body)
+        if(this.bodyBuilder.TryToString() is { } bodyString)
         {
-            // TODO XHTML
-            content[(MessageFormat.Plain, body.Language)] = body.Value;
+            foreach(var body in bodyString)
+            {
+                // TODO XHTML
+                content[(MessageFormat.Plain, body.Language)] = body.Value;
+            }
         }
 
         return new MessageData {
-            Subject = subject,
+            Subject = subjectBuilder.TryToString(),
             Body = new(content.ToImmutable()),
             ThreadIdentifier = thread?.identifier,
             ParentThreadIdentifier = thread?.parent,

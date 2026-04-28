@@ -4,7 +4,7 @@ namespace NexIM.Server.Accounts;
 
 public record struct Status(
     Availability Availability,
-    LocalizedString Description = default
+    LocalizedString? Description = null
 );
 
 public enum Availability

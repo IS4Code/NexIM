@@ -51,7 +51,7 @@ public sealed record MessageData : DeliveryData
     /// <summary>
     /// The subject of the message.
     /// </summary>
-    public required LocalizedString Subject { get; init; }
+    public required LocalizedString? Subject { get; init; }
 
     /// <summary>
     /// The collection of message bodies in differing formats and languages.

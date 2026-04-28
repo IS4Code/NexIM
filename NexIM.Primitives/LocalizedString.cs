@@ -1,36 +1,29 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
+using System.Runtime.InteropServices;
+using NexIM.Tools;
 
 namespace NexIM.Primitives;
 
-public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerable<LanguageTaggedString>
+[StructLayout(LayoutKind.Auto)]
+public readonly partial struct LocalizedString : IEquatable<LocalizedString>, IEnumerable<LanguageTaggedString>
 {
-    static readonly ImmutableSortedDictionary<LanguageCode, string> empty = ImmutableSortedDictionary<LanguageCode, string>.Empty;
+    readonly NonEmptyDictionary<LanguageCode, string> data;
 
-    // Sorted to allow sequential equality check
-    readonly ImmutableSortedDictionary<LanguageCode, string>? _data;
-    ImmutableSortedDictionary<LanguageCode, string> data => _data ?? empty;
-
-    public IReadOnlyDictionary<LanguageCode, string> Data => data;
-
-    public bool Empty => data.Count == 0;
-
-    private LocalizedString(ImmutableSortedDictionary<LanguageCode, string> data)
+    private LocalizedString(NonEmptyDictionary<LanguageCode, string> data)
     {
-        _data = data;
+        this.data = data;
     }
 
     public LocalizedString(LanguageTaggedString initial)
     {
-        _data = empty.SetItem(initial.Language, initial.Value);
+        this.data = new(new(initial.Language, initial.Value));
     }
 
     public LocalizedString Add(LanguageTaggedString other)
     {
-        return new(data.Add(other.Language, other.Value));
+        return new(data.Add(new(other.Language, other.Value)));
     }
 
     public LocalizedString Add(LanguageTaggedString? other)
@@ -55,25 +48,22 @@ public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerabl
 
     public bool Equals(LocalizedString other)
     {
-        return data.Count == other.data.Count && data.SequenceEqual(other.data, EqualityComparer.Instance);
+        return data.Equals(other.data);
     }
 
     public override int GetHashCode()
     {
-        var hashCode = new HashCode();
-        foreach(var pair in data)
-        {
-            hashCode.Add(pair, EqualityComparer.Instance);
-        }
-        return hashCode.ToHashCode();
+        return data.GetHashCode();
     }
 
-    public IEnumerator<LanguageTaggedString> GetEnumerator()
+    public Enumerator GetEnumerator()
     {
-        foreach(var pair in data)
-        {
-            yield return new(pair.Value, pair.Key);
-        }
+        return new(data.GetEnumerator());
+    }
+
+    IEnumerator<LanguageTaggedString> IEnumerable<LanguageTaggedString>.GetEnumerator()
+    {
+        return GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -83,21 +73,41 @@ public readonly struct LocalizedString : IEquatable<LocalizedString>, IEnumerabl
 
     public override string ToString()
     {
-        return String.Join(", ", data.Values);
+        return data.ToString();
     }
 
-    sealed class EqualityComparer : IEqualityComparer<KeyValuePair<LanguageCode, string>>
+    [StructLayout(LayoutKind.Auto)]
+    public struct Enumerator : IEnumerator<LanguageTaggedString>
     {
-        public static readonly EqualityComparer Instance = new();
+        NonEmptyDictionary<LanguageCode, string>.Enumerator enumerator;
 
-        public bool Equals(KeyValuePair<LanguageCode, string> x, KeyValuePair<LanguageCode, string> y)
+        internal Enumerator(NonEmptyDictionary<LanguageCode, string>.Enumerator enumerator)
         {
-            return new LanguageTaggedString(x.Value, x.Key) == new LanguageTaggedString(y.Value, y.Key);
+            this.enumerator = enumerator;
         }
 
-        public int GetHashCode(KeyValuePair<LanguageCode, string> obj)
+        public readonly LanguageTaggedString Current {
+            get {
+                var current = enumerator.Current;
+                return new(current.Value, current.Key);
+            }
+        }
+
+        readonly object IEnumerator.Current => Current;
+
+        public bool MoveNext()
         {
-            return new LanguageTaggedString(obj.Value, obj.Key).GetHashCode();
+            return enumerator.MoveNext();
+        }
+
+        public void Reset()
+        {
+            enumerator.Reset();
+        }
+
+        public void Dispose()
+        {
+            enumerator.Dispose();
         }
     }
 }

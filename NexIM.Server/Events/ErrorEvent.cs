@@ -12,7 +12,7 @@ public record ErrorData : EventData
     public required Identifier? Reporter { get; init; }
     public required RecommendedErrorAction RecommendedAction { get; init; }
     public required HttpStatusCode? HttpStatusCode { get; init; }
-    public required LocalizedString Description { get; init; }
+    public required LocalizedString? Description { get; init; }
     public required EventData OriginalData { get; init; }
 }
 

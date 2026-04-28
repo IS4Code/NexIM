@@ -66,10 +66,7 @@ public class XmppClientSession : ClientSession
     {
         // Basic elements
 
-        foreach(var subject in data.Subject)
-        {
-            await output.Subject(subject);
-        }
+        await output.SubjectLocalized(data.Subject);
 
         foreach(var ((format, language), body) in data.Body.Data)
         {
@@ -126,10 +123,7 @@ public class XmppClientSession : ClientSession
             await output.Show(statusType.ToToken());
         }
 
-        foreach(var description in data.Status.Description)
-        {
-            await output.Status(description);
-        }
+        await output.StatusLocalized(data.Status.Description);
 
         if(data.Priority is { } priority)
         {
@@ -322,10 +316,7 @@ public class XmppClientSession : ClientSession
 
             await exception.Output(error);
 
-            foreach(var text in data.Description)
-            {
-                await error.Text(text);
-            }
+            await error.TextLocalized(data.Description);
 
             // General extensions
 

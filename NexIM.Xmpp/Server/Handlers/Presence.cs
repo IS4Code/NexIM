@@ -16,7 +16,7 @@ namespace NexIM.Xmpp.Server.Handlers;
 internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresenceHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     StatusType? show;
-    LocalizedString statusText;
+    LocalizedString.Builder statusTextBuilder;
     string? nick;
     sbyte? priority;
     CapabilitiesHandle? caps;
@@ -33,7 +33,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
 
     protected async override ValueTask OnStatus(LanguageTaggedString? text)
     {
-        statusText = statusText.Add(text);
+        statusTextBuilder.Add(text);
     }
 
     protected async override ValueTask OnNickname(string? text)
@@ -78,7 +78,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             Status = new(
                 show?.ToAvailability()
                 ?? (this.GetStanza().Type?.ToEnum() == StanzaType.Unavailable ? Availability.Unavailable : Availability.Available),
-                statusText
+                statusTextBuilder.TryToString()
             ),
             Presentation = new(Nickname: nick),
             Priority = priority,

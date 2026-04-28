@@ -12,13 +12,13 @@ public abstract class XmppExceptionHandler<TException, THandler> : CapturingHand
 
 public class XmppStreamExceptionHandler : XmppExceptionHandler<XmppStreamException, IStreamErrorHandler>, IStreamErrorTextHandler
 {
-    LocalizedString message;
+    LocalizedString.Builder messageBuilder;
 
-    public sealed override XmppStreamException Exception => new(message, Replay);
+    public sealed override XmppStreamException Exception => new(messageBuilder.TryToString(), Replay);
 
     ValueTask IStreamErrorTextHandler.Text(LanguageTaggedString? text)
     {
-        message = message.Add(text);
+        messageBuilder.Add(text);
         return default;
     }
 
@@ -33,13 +33,13 @@ public class XmppStanzaExceptionHandler : XmppExceptionHandler<XmppStanzaExcepti
     public ErrorType? Type { get; }
     public int? Code { get; }
 
-    LocalizedString message;
+    LocalizedString.Builder messageBuilder;
 
-    public sealed override XmppStanzaException Exception => new(Type, Code, message, Replay);
+    public sealed override XmppStanzaException Exception => new(Type, Code, messageBuilder.TryToString(), Replay);
 
     ValueTask IStanzaErrorTextHandler.Text(LanguageTaggedString? text)
     {
-        message = message.Add(text);
+        messageBuilder.Add(text);
         return default;
     }
 

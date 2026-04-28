@@ -19,7 +19,7 @@ internal class ErrorParser : BaseDelegatingStanzaErrorHandler<XmppStanzaExceptio
     readonly ErrorType? type;
     readonly int? code;
     readonly XmppResource? by;
-    LocalizedString description;
+    LocalizedString.Builder descriptionBuilder;
 
     public ErrorParser(Token<ErrorType>? type, int? code, XmppResource? by)
     {
@@ -30,7 +30,7 @@ internal class ErrorParser : BaseDelegatingStanzaErrorHandler<XmppStanzaExceptio
 
     protected async override ValueTask OnText(LanguageTaggedString? text)
     {
-        description = description.Add(text);
+        descriptionBuilder.Add(text);
     }
 
     protected override ValueTask OnOther(XmlReader payloadReader)
@@ -56,7 +56,7 @@ internal class ErrorParser : BaseDelegatingStanzaErrorHandler<XmppStanzaExceptio
     {
         return new() {
             ErrorCode = InnerHandler.Exception.ToErrorCode(),
-            Description = description,
+            Description = descriptionBuilder.TryToString(),
             RecommendedAction = type?.ToRecommendedAction() ?? RecommendedErrorAction.Proceed,
             Reporter = by?.ToIdentifier(),
             HttpStatusCode = (HttpStatusCode?)code,
