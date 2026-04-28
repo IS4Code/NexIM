@@ -24,7 +24,7 @@ partial class Account
             tasks.Add(Post(new SubscriptionCancelledEvent {
                 Origin = EventOrigin.FromTo(Name.ToIdentifier(), target.ToIdentifier()),
                 Processing = EventProcessing.Create(),
-                Data = null
+                Data = PresenceData.Empty
             }));
         }
         if(contact.SubscriptionState.AcceptedFrom)
@@ -33,7 +33,7 @@ partial class Account
             tasks.Add(Post(new SubscriptionRejectedEvent {
                 Origin = EventOrigin.FromTo(Name.ToIdentifier(), target.ToIdentifier()),
                 Processing = EventProcessing.Create(),
-                Data = null
+                Data = PresenceData.Empty
             }));
         }
 
