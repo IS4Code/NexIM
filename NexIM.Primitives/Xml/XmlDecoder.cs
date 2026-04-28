@@ -20,7 +20,7 @@ public abstract class XmlDecoder :
     IValueXmlDecoder<DateTimeOffset>,
     IValueXmlDecoder<DateComponents>,
     IValueXmlDecoder<TimeZoneOffset>,
-    IValueXmlDecoder<Uri>
+    IValueXmlDecoder<ValueUri>
 {
     protected abstract void ThrowElementNotEmpty();
     protected abstract void ThrowElementNotSimple();
@@ -292,7 +292,7 @@ public abstract class XmlDecoder :
 
     static readonly char[] whitespace = { ' ', '\t', '\n', '\r' };
 
-    async ValueTask<Uri> IValueXmlDecoder<Uri>.Decode(XmlReader reader)
+    async ValueTask<ValueUri> IValueXmlDecoder<ValueUri>.Decode(XmlReader reader)
     {
         var uri = await reader.ReadContentAsStringAsync();
 
@@ -301,7 +301,7 @@ public abstract class XmlDecoder :
             uri = uri.Trim(whitespace);
         }
 
-        return new Uri(uri, UriKind.RelativeOrAbsolute);
+        return ValueUri.Parse(uri);
     }
 
     static class ArrayPool<T>

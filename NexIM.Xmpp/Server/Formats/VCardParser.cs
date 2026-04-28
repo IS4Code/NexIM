@@ -154,7 +154,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
         this.SetOnce(ref vcard.UniqueIdentifier, value);
     }
 
-    protected async override ValueTask OnAssociatedUrl(Uri? value)
+    protected async override ValueTask OnAssociatedUrl(ValueUri? value)
     {
         this.AddList(ref vcard.AssociatedUrls, value);
     }
@@ -221,7 +221,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
             this.SetOnce(ref media.FormatType, type);
         }
 
-        protected async override ValueTask OnExternalValue(Uri? uri)
+        protected async override ValueTask OnExternalValue(ValueUri? uri)
         {
             this.SetOnce(ref media.ExternalValue, uri);
         }
@@ -499,7 +499,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     sealed class PersonParser(VCardPerson person) : BaseVCardPersonHandler<TContext>
     {
-        protected async override ValueTask OnExternalValue(Uri? uri)
+        protected async override ValueTask OnExternalValue(ValueUri? uri)
         {
             this.SetOnce(ref person.ExternalValue, uri);
         }
@@ -559,7 +559,7 @@ internal class VCardParser<TContext>(VCard vcard) : BaseVCardHandler<TContext> w
 
     sealed class PronunciationParser(VCardPronunciation pronunciation) : BaseVCardPronunciationHandler<TContext>
     {
-        protected async override ValueTask OnExternalValue(Uri? uri)
+        protected async override ValueTask OnExternalValue(ValueUri? uri)
         {
             this.SetOnce(ref pronunciation.ExternalValue, uri);
         }

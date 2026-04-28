@@ -18,7 +18,7 @@ public abstract class JsonEncoder :
     IValueJsonEncoder<DateTimeOffset>,
     IValueJsonEncoder<DateComponents>,
     IValueJsonEncoder<TimeZoneOffset>,
-    IValueJsonEncoder<Uri>,
+    IValueJsonEncoder<ValueUri>,
     IValueJsonEncoder<(LanguageCode language, string text)>,
     IValueJsonEncoder<LanguageTaggedString>,
     IValueJsonEncoder<LocalizedString>
@@ -64,9 +64,9 @@ public abstract class JsonEncoder :
         return new(writer.WriteValueAsync(value.ToString()));
     }
 
-    ValueTask IValueJsonEncoder<Uri>.Encode(JsonWriter writer, Uri value)
+    ValueTask IValueJsonEncoder<ValueUri>.Encode(JsonWriter writer, ValueUri value)
     {
-        return new(writer.WriteValueAsync(value.OriginalString));
+        return new(writer.WriteValueAsync(value.ToString()));
     }
 
     async ValueTask IValueJsonEncoder<(LanguageCode language, string text)>.Encode(JsonWriter writer, (LanguageCode, string) value)

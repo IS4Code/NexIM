@@ -19,7 +19,7 @@ public interface IPropertyHandler : XmlHandlers.IPayloadHandler, JsonHandlers.IP
 {
     [Xml.Name("Property")]
     [Json.Name("properties"), Json.ValueKind(Json.ValueKind.Object)]
-    ValueTask Property([Xml.Name("type"), Json.Key] Uri? type, string? value);
+    ValueTask Property([Xml.Name("type"), Json.Key] ValueUri? type, string? value);
 }
 
 [Xml.ComplexType, Xml.Namespace(XrdNs)]
@@ -28,11 +28,11 @@ public interface IResourceDescriptorHandler : IPropertyHandler
 {
     [Xml.Name("Subject")]
     [Json.Name("subject")]
-    ValueTask Subject(Uri? identifier);
+    ValueTask Subject(ValueUri? identifier);
 
     [Xml.Name("Alias")]
     [Json.Name("aliases"), Json.ValueKind(Json.ValueKind.Array)]
-    ValueTask Alias(Uri? identifier);
+    ValueTask Alias(ValueUri? identifier);
 
     [Xml.Name("Expires")]
     [Json.Name("expires")]
@@ -40,7 +40,7 @@ public interface IResourceDescriptorHandler : IPropertyHandler
 
     [Xml.Name("Link")]
     [Json.Name("links"), Json.ValueKind(Json.ValueKind.Array)]
-    ValueTask<IResourceLinkHandler> Link([Xml.Name("rel"), Json.Name("rel")] Token<LinkRelation>? relation, [Xml.Name("type"), Json.Name("type")] string? type, [Xml.Name("href"), Json.Name("href")] Uri? href, [Xml.Name("template"), Json.Name("template")] string? template);
+    ValueTask<IResourceLinkHandler> Link([Xml.Name("rel"), Json.Name("rel")] Token<LinkRelation>? relation, [Xml.Name("type"), Json.Name("type")] string? type, [Xml.Name("href"), Json.Name("href")] ValueUri? href, [Xml.Name("template"), Json.Name("template")] string? template);
 }
 
 [Xml.ComplexType, Xml.Namespace(XrdNs)]

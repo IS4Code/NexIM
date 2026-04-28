@@ -20,7 +20,7 @@ public abstract class XmlEncoder :
     IValueXmlEncoder<DateTimeOffset>,
     IValueXmlEncoder<DateComponents>,
     IValueXmlEncoder<TimeZoneOffset>,
-    IValueXmlEncoder<Uri>
+    IValueXmlEncoder<ValueUri>
 {
     protected abstract XmlWriter Writer { get; }
 
@@ -134,9 +134,9 @@ public abstract class XmlEncoder :
         return new(writer.WriteStringAsync(value.ToString()));
     }
 
-    ValueTask IValueXmlEncoder<Uri>.Encode(XmlWriter writer, Uri value)
+    ValueTask IValueXmlEncoder<ValueUri>.Encode(XmlWriter writer, ValueUri value)
     {
-        return new(writer.WriteStringAsync(value.OriginalString));
+        return new(writer.WriteStringAsync(value.ToString()));
     }
 }
 

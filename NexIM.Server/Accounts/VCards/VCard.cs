@@ -77,7 +77,7 @@ public sealed class VCard
 
     [Key(28)] public List<VCardPronunciation>? Pronunciations;
     [Key(29)] public string? UniqueIdentifier;
-    [Key(30)] public List<Uri>? AssociatedUrls;
+    [Key(30)] public List<ValueUri>? AssociatedUrls;
 
     [Key(31)] public VCardPrivacyClassification? PrivacyClassification;
     [Key(32)] public List<VCardCredentials>? Credentials;
@@ -87,7 +87,7 @@ public sealed class VCard
 
 public abstract class VCardResource
 {
-    [Key(0)] public Uri? ExternalValue;
+    [Key(0)] public ValueUri? ExternalValue;
 }
 
 public abstract class VCardData : VCardResource

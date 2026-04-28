@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Metadata;
+using NexIM.Primitives;
 using NexIM.Server;
 using NexIM.Server.Net;
 using NexIM.Xrd.Protocol;
@@ -103,7 +104,7 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
 
             var href = $"ws{match.Groups[1].Value}://{host}{match.Groups[3].Value}";
 
-            await using var link = await handler.Link(LinkRelation.WebSocketConnection.ToToken(), null, new(href), null);
+            await using var link = await handler.Link(LinkRelation.WebSocketConnection.ToToken(), null, ValueUri.Parse(href), null);
         }
     }
 

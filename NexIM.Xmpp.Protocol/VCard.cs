@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Grammar;
 using NexIM.Primitives.Xml.Handlers;
@@ -88,7 +87,7 @@ public interface IVCardHandler : IPayloadHandler
     ValueTask UniqueIdentifier(string? value);
 
     [Name("URL")]
-    ValueTask AssociatedUrl(Uri? value);
+    ValueTask AssociatedUrl(ValueUri? value);
 
     [Name("CLASS")]
     ValueTask<IVCardPrivacyClassificationHandler> PrivacyClassification();
@@ -123,7 +122,7 @@ public interface IVCardNameHandler : IPayloadHandler
 public interface IVCardResourceHandler : IPayloadHandler
 {
     [Name("EXTVAL")]
-    ValueTask ExternalValue(Uri? uri);
+    ValueTask ExternalValue(ValueUri? uri);
 }
 
 [ComplexType, Namespace(VCardTemp)]

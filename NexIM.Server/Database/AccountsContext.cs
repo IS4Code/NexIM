@@ -122,11 +122,13 @@ internal class AccountsContext : DbContext
     sealed class Resolver(IFormatterResolver standardResolver, Server server) : IFormatterResolver,
         IResolver<TimeZoneOffset>,
         IResolver<DateComponents>,
-        IResolver<TemporaryFile?>
+        IResolver<TemporaryFile?>,
+        IResolver<ValueUri>
     {
         readonly TimeZoneOffsetFormatter timeZoneOffsetFormatter = new(standardResolver);
         readonly DateFormatter dateFormatter = new(standardResolver);
         readonly TemporaryFileFormatter temporaryFileFormatter = new(standardResolver, server);
+        readonly ValueUriFormatter valueUriFormatter = new(standardResolver);
 
         public IMessagePackFormatter<T>? GetFormatter<T>()
         {
@@ -146,6 +148,11 @@ internal class AccountsContext : DbContext
         IMessagePackFormatter<TemporaryFile?>? IResolver<TemporaryFile?>.GetFormatter()
         {
             return temporaryFileFormatter;
+        }
+
+        IMessagePackFormatter<ValueUri>? IResolver<ValueUri>.GetFormatter()
+        {
+            return valueUriFormatter;
         }
     }
 
