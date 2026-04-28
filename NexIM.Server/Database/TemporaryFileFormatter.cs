@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 using MessagePack.Formatters;
 using NexIM.Primitives;
@@ -7,7 +6,7 @@ using NexIM.Server.Accounts;
 
 namespace NexIM.Server.Database;
 
-[SuppressMessage("Usage", "MsgPack013:Inaccessible formatter", Justification = "Explicit resolver")]
+[ExcludeFormatterFromSourceGeneratedResolver]
 internal sealed class TemporaryFileFormatter(IFormatterResolver standardResolver, Server server) : IMessagePackFormatter<TemporaryFile?>
 {
     readonly IMessagePackFormatter<Guid> guidFormatter = standardResolver.GetFormatterWithVerify<Guid>();

@@ -7,6 +7,7 @@ using NexIM.Server.Events;
 
 namespace NexIM.Server.Database;
 
+[ExcludeFormatterFromSourceGeneratedResolver]
 internal sealed partial class EventExtensionsFormatter : IMessagePackFormatter<EventExtensions>
 {
     public static readonly EventExtensionsFormatter Instance = new();
