@@ -62,44 +62,44 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
         rest = builder.ToImmutable();
     }
 
-    public NonEmptySet(T element)
+    public NonEmptySet(T item)
     {
-        first = element;
+        first = item;
     }
 
-    public bool Contains(T value)
+    public bool Contains(T item)
     {
-        return comparer.Compare(first, value) == 0 || rest.Contains(value);
+        return comparer.Compare(first, item) == 0 || rest.Contains(item);
     }
 
-    public bool TryGetSingle(out T value)
+    public bool TryGetSingle(out T item)
     {
-        value = first;
+        item = first;
         return rest.IsEmpty;
     }
 
-    public NonEmptySet<T> Add(T value)
+    public NonEmptySet<T> Add(T item)
     {
-        return comparer.Compare(first, value) switch {
+        return comparer.Compare(first, item) switch {
             0 => this, // Same first
-            < 0 => new(first, rest.Add(value)), // Added into rest
-            _ => new(value, rest.Add(first)), // Replaces first
+            < 0 => new(first, rest.Add(item)), // Added into rest
+            _ => new(item, rest.Add(first)), // Replaces first
         };
     }
 
-    public NonEmptySet<T> Add(NonEmptySet<T> values)
+    public NonEmptySet<T> Add(NonEmptySet<T> items)
     {
-        return comparer.Compare(first, values.first) switch {
-            0 => new(first, rest.Union(values.rest)), // Same first
-            < 0 => new(first, rest.Union(values.rest).Add(values.first)), // Added into rest
-            _ => new(values.first, rest.Union(values.rest).Add(first)) // Replaces first
+        return comparer.Compare(first, items.first) switch {
+            0 => new(first, rest.Union(items.rest)), // Same first
+            < 0 => new(first, rest.Union(items.rest).Add(items.first)), // Added into rest
+            _ => new(items.first, rest.Union(items.rest).Add(first)) // Replaces first
         };
     }
 
-    public NonEmptySet<T> AddRange(IEnumerable<T> values)
+    public NonEmptySet<T> AddRange(IEnumerable<T> items)
     {
         var builder = rest.ToBuilder();
-        builder.UnionWith(values);
+        builder.UnionWith(items);
         if(builder.Count <= rest.Count)
         {
             // No difference
@@ -108,36 +108,36 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
         return new(first, builder);
     }
 
-    public bool TryRemove(T value, out NonEmptySet<T> result)
+    public bool TryRemove(T item, out NonEmptySet<T> result)
     {
-        if(comparer.Compare(first, value) != 0)
+        if(comparer.Compare(first, item) != 0)
         {
             // Not removing first
-            result = rest.IsEmpty ? this : new(first, rest.Remove(value));
+            result = rest.IsEmpty ? this : new(first, rest.Remove(item));
             return true;
         }
         return TryCreateFrom(rest, out result);
     }
 
-    public bool TryRemove(NonEmptySet<T> values, out NonEmptySet<T> result)
+    public bool TryRemove(NonEmptySet<T> items, out NonEmptySet<T> result)
     {
-        if(!values.Contains(first))
+        if(!items.Contains(first))
         {
             // Not removing first
-            result = rest.IsEmpty ? this : new(first, rest.Except(values));
+            result = rest.IsEmpty ? this : new(first, rest.Except(items));
             return true;
         }
         var builder = rest.ToBuilder();
-        builder.ExceptWith(values.rest);
-        builder.Remove(values.first);
+        builder.ExceptWith(items.rest);
+        builder.Remove(items.first);
         return TryCreateFrom(builder, out result);
     }
 
-    public bool TryRemoveRange(IEnumerable<T> values, out NonEmptySet<T> result)
+    public bool TryRemoveRange(IEnumerable<T> items, out NonEmptySet<T> result)
     {
         var builder = rest.ToBuilder();
         builder.Add(first);
-        builder.ExceptWith(values);
+        builder.ExceptWith(items);
         return TryCreateFrom(builder, out result);
     }
 
@@ -168,10 +168,10 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
         return true;
     }
 
-    public static bool TryCreateRange(IEnumerable<T> range, out NonEmptySet<T> result)
+    public static bool TryCreateRange(IEnumerable<T> items, out NonEmptySet<T> result)
     {
         var builder = emptySet.ToBuilder();
-        builder.UnionWith(range);
+        builder.UnionWith(items);
         return default(NonEmptySet<T>).TryCreateFrom(builder, out result);
     }
 
@@ -180,9 +180,9 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
         return new(this, keyFactory);
     }
 
-    public static implicit operator NonEmptySet<T>(T element)
+    public static implicit operator NonEmptySet<T>(T item)
     {
-        return new(element);
+        return new(item);
     }
 
     public bool Equals(NonEmptySet<T> other)
@@ -199,9 +199,9 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
     {
         var hashCode = new HashCode();
         hashCode.Add(first);
-        foreach(var value in rest)
+        foreach(var item in rest)
         {
-            hashCode.Add(value);
+            hashCode.Add(item);
         }
         return hashCode.ToHashCode();
     }
@@ -392,7 +392,7 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
                     var next = enumerator.Current;
 
                     var newKey = keyFactory(next);
-                    if(!keyComparer.Equals(key, newKey))
+                    if(!keyComparer.Equals(key!, newKey))
                     {
                         // A new partition - stop
                         nextKey = newKey;

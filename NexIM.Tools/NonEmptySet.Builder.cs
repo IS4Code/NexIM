@@ -66,46 +66,46 @@ partial struct NonEmptySet<T>
             }
         }
 
-        public void Add(NonEmptySet<T> values)
+        public void Add(NonEmptySet<T> items)
         {
             if(!firstTaken)
             {
-                first = values.first;
+                first = items.first;
                 firstTaken = true;
-                rest = values.rest.ToBuilder();
+                rest = items.rest.ToBuilder();
                 return;
             }
 
-            switch(comparer.Compare(first, values.first))
+            switch(comparer.Compare(first, items.first))
             {
                 case 0:
                     // Same first
                     if(rest != null)
                     {
-                        rest.UnionWith(values.rest);
+                        rest.UnionWith(items.rest);
                     }
                     else
                     {
-                        rest = values.rest.ToBuilder();
+                        rest = items.rest.ToBuilder();
                     }
                     break;
                 case < 0:
                     // Added into rest
-                    (rest ??= emptySet.ToBuilder()).Add(values.first);
-                    rest.UnionWith(values.rest);
+                    (rest ??= emptySet.ToBuilder()).Add(items.first);
+                    rest.UnionWith(items.rest);
                     break;
                 default:
                     // Replaces first
                     (rest ??= emptySet.ToBuilder()).Add(first);
-                    first = values.first;
-                    rest.UnionWith(values.rest);
+                    first = items.first;
+                    rest.UnionWith(items.rest);
                     break;
             };
         }
 
-        public void AddRange(IEnumerable<T> values)
+        public void AddRange(IEnumerable<T> items)
         {
-            foreach(var item in values)
+            foreach(var item in items)
             {
                 Add(item);
             }
