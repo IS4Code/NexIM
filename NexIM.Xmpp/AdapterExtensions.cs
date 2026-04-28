@@ -189,6 +189,32 @@ internal static partial class AdapterExtensions
         };
     }
 
+    public static DeliveryAddressType? ToDeliveryAddressType(this AddressType type)
+    {
+        return type switch {
+            AddressType.To => DeliveryAddressType.Primary,
+            AddressType.CarbonCopy => DeliveryAddressType.Secondary,
+            AddressType.BlindCarbonCopy => DeliveryAddressType.Hidden,
+            AddressType.ReplyTo => DeliveryAddressType.Reply,
+            AddressType.ReplyRoom => DeliveryAddressType.ReplyRoom,
+            AddressType.OriginalFrom => DeliveryAddressType.Origin,
+            _ => null
+        };
+    }
+
+    public static AddressType? ToAddressType(this DeliveryAddressType type)
+    {
+        return type switch {
+            DeliveryAddressType.Primary => AddressType.To,
+            DeliveryAddressType.Secondary => AddressType.CarbonCopy,
+            DeliveryAddressType.Hidden => AddressType.BlindCarbonCopy,
+            DeliveryAddressType.Reply => AddressType.ReplyTo,
+            DeliveryAddressType.ReplyRoom => AddressType.ReplyRoom,
+            DeliveryAddressType.Origin => AddressType.OriginalFrom,
+            _ => null
+        };
+    }
+
     public static EventExtensions ToExtensions<THandler>(this CapturingHandler<THandler>? handler) where THandler : IPayloadHandler
     {
         return new(handler?.Calls.Count > 0 ? handler : null);

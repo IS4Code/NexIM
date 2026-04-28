@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
+using NexIM.Tools;
 
 namespace NexIM.Server.Events;
 
@@ -24,6 +26,16 @@ public abstract record DeliveryData : EventData
     /// The reason for a delayed delivery of this event.
     /// </summary>
     public required LanguageTaggedString? DelayReason { get; init; }
+
+    /// <summary>
+    /// Stores information about the additional addresses of this event.
+    /// </summary>
+    public required NonEmptySet<DeliveryAddress>? Addresses { get; init; }
+
+    /// <summary>
+    /// Stores the transaction identifier for a previous message that requested the receipt.
+    /// </summary>
+    public required string? ReceiptIdentifier { get; init; }
 }
 
 /// <summary>
@@ -164,4 +176,41 @@ public readonly struct MessageBodyCollection(MessageBodyCollectionData data) : I
         }
         return hashCode.ToHashCode();
     }
+}
+
+[StructLayout(LayoutKind.Auto)]
+public readonly record struct DeliveryAddress(DeliveryAddressType Type, Identifier? Recipient, LanguageTaggedString? Description) : IComparable<DeliveryAddress>
+{
+    static readonly Comparer<Identifier?> recipientComparer = Comparer<Identifier?>.Default;
+    static readonly Comparer<LanguageTaggedString?> descComparer = Comparer<LanguageTaggedString?>.Default;
+
+    public static readonly DeliveryAddress DispositionNotification = new(DeliveryAddressType.DispositionNotify, null, null);
+
+    public int CompareTo(DeliveryAddress other)
+    {
+        int cmp = ((int)Type).CompareTo((int)other.Type);
+        if(cmp != 0)
+        {
+            return cmp;
+        }
+        cmp = recipientComparer.Compare(Recipient, other.Recipient);
+        if(cmp != 0)
+        {
+            return cmp;
+        }
+        // TODO Should be a LocalizedString
+        return descComparer.Compare(Description, other.Description);
+    }
+}
+
+public enum DeliveryAddressType
+{
+    Primary,
+    Secondary,
+    Hidden,
+    Reply,
+    ReplyRoom,
+    NoReply,
+    Origin,
+    DispositionNotify
 }

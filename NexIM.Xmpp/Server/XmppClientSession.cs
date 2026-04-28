@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
@@ -7,6 +8,7 @@ using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server;
 using NexIM.Server.Accounts;
 using NexIM.Server.Events;
+using NexIM.Tools;
 using NexIM.Xmpp.Model;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
@@ -156,6 +158,41 @@ public class XmppClientSession : ClientSession
         {
             // Delayed by receiver
             await output.Delay(evnt.Created.UtcDateTime, xmpp.LocalResource, null);
+        }
+
+        if(data.ReceiptIdentifier is { } receiptFor)
+        {
+            if(output is IMessageHandler messageHandler)
+            {
+                await messageHandler.ReceiptResponse(receiptFor);
+            }
+        }
+
+        if(data.Addresses is { } addresses)
+        {
+            if(output is IMessageHandler messageHandler && addresses.Contains(DeliveryAddress.DispositionNotification))
+            {
+                // TODO Notification to a different identifier
+                await messageHandler.ReceiptRequest();
+            }
+
+            var remoteAddress = xmpp.RemoteResource;
+            IAddressesHandler? addressesHandler = null;
+            try
+            {
+                foreach(var address in addresses)
+                {
+                    // Delivering only those that are the direct recipients of this event
+                    bool delivered = address.Recipient is { } recipient && !evnt.To.Contains(recipient);
+
+                    // Will be initialized if required
+                    addressesHandler = await AddressesFormatter.WriteTo(address, output, addressesHandler, remoteAddress, delivered);
+                }
+            }
+            finally
+            {
+                await addressesHandler.DisposeNotNullAsync();
+            }
         }
     }
 

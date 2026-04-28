@@ -1,7 +1,10 @@
 ﻿using System;
 using NexIM.Primitives;
+using NexIM.Server.Accounts;
 using NexIM.Server.Events;
+using NexIM.Tools;
 using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Server.Formats;
 
 namespace NexIM.Xmpp.Server.Handlers;
 
@@ -47,12 +50,26 @@ internal static class StanzaExtensions
         return handler.GetStanza().Identifier;
     }
 
-    public static EventOrigin GetOrigin(this ICommandHandler handler)
+    public static EventOrigin GetOrigin(this ICommandHandler handler, NonEmptySet<Identifier>? recipients = null)
     {
         var session = handler.GetSession();
+        var recipient = handler.GetRecipient();
+        if(recipients is { } to)
+        {
+            // Multicast request
+            if(recipient != handler.TryGetLocalResource())
+            {
+                // Only the local server is supported
+                throw XmppStanzaException.NotAllowed("Multicast requests can be sent only through the local multicast service.");
+            }
+        }
+        else
+        {
+            to = (recipient ?? handler.GetRemoteResource().Bare).ToIdentifier(session);
+        }
         return new() {
             From = handler.GetSender().ToIdentifier(session),
-            To = (handler.GetRecipient() ?? handler.GetRemoteResource().Bare).ToIdentifier(session),
+            To = to,
             TransactionIdentifier = handler.GetIdentifier()?.ToIdentifier(),
             TransactionLanguage = handler.GetStanza().Language
         };

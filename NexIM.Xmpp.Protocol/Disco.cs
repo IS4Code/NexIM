@@ -38,7 +38,8 @@ public enum DiscoFeature
     [Name(AmpCondition + "expire-at")] AmpConditionExpireAt,
     [Name(AmpCondition + "match-resource")] AmpConditionMatchResource,
     [Name(Caps)] EntityCapabilities,
-    [Name(Caps + "#optimize")] OptimizedCapabilities
+    [Name(Caps + "#optimize")] OptimizedCapabilities,
+    [Name(Addresses)] Multicast
 }
 
 [SimpleType]

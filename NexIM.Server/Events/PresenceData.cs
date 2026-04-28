@@ -14,7 +14,9 @@ public sealed record PresenceData : DeliveryData
         Priority = null,
         Capabilities = null,
         DelayedBy = null,
-        DelayReason = null
+        DelayReason = null,
+        Addresses = null,
+        ReceiptIdentifier = null
     };
 
     /// <summary>

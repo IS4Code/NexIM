@@ -71,6 +71,8 @@ partial class Account : IEventHandler
 
             default:
                 // Deliver to all sessions with top priority
+                msgEvent = msgEvent.WithTo(Name.ToIdentifier());
+
                 // TODO Different receiving strategy
                 tasks = new();
                 sbyte? priority = null;

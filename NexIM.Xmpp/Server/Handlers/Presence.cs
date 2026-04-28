@@ -6,6 +6,7 @@ using NexIM.Server.Accounts;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Formats;
 
 namespace NexIM.Xmpp.Server.Handlers;
 
@@ -20,6 +21,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     sbyte? priority;
     CapabilitiesHandle? caps;
     (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
+    AddressesParser<ICommandContext>? addressesParser;
 
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -53,6 +55,11 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         this.SetOnce(ref delay, (timestamp, from, reason));
     }
 
+    protected async override ValueTask<IAddressesHandler> OnAddresses()
+    {
+        return this.SetOnce(ref addressesParser, this.GetHandler<AddressesParser<ICommandContext>>());
+    }
+
     protected async override ValueTask OnCapabilities(Token<CapabilitiesHash>? hash, string? node, string? version, string? extension)
     {
         if(node is null || version is null || hash is not { } hashValue || extension is not null)
@@ -78,13 +85,15 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             Capabilities = caps,
             DelayedBy = delay?.from?.ToIdentifier(),
             DelayReason = delay?.reason,
+            Addresses = addressesParser?.Addresses,
+            ReceiptIdentifier = null,
             Extensions = InnerHandler.ToExtensions()
         }.Deduplicate();
     }
 
     protected virtual Event GetEvent()
     {
-        var origin = this.GetOrigin();
+        var origin = this.GetOrigin(addressesParser?.Recipients);
         var processing = this.GetProcessing(delay?.timestamp);
         var data = GetPresence();
         return this.GetStanza().Type?.ToEnum() switch {

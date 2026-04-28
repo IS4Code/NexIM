@@ -5,6 +5,7 @@ using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Formats;
 
 namespace NexIM.Xmpp.Server.Handlers;
 
@@ -14,10 +15,11 @@ namespace NexIM.Xmpp.Server.Handlers;
 internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     LocalizedString subject, body;
-    string? nick;
+    string? nick, receiptFor;
     (string? identifier, string? parent)? thread;
     ConversationState? state;
     (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
+    AddressesParser<ICommandContext>? addressesParser;
 
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -51,6 +53,22 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         this.SetOnce(ref delay, (timestamp, from, reason));
     }
 
+    protected async override ValueTask<IAddressesHandler> OnAddresses()
+    {
+        return addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
+    }
+
+    protected async override ValueTask OnReceiptRequest()
+    {
+        var parser = addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
+        parser.Add(DeliveryAddress.DispositionNotification);
+    }
+
+    protected async override ValueTask OnReceiptResponse(string? id)
+    {
+        this.SetOnce(ref receiptFor, id);
+    }
+
     protected async sealed override ValueTask OnActive()
     {
         this.SetOnce(ref state, ConversationState.Active);
@@ -78,6 +96,15 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
 
     protected virtual MessageData GetMessage()
     {
+        var addresses = addressesParser?.Addresses;
+        if(receiptFor != null && addresses.HasValue)
+        {
+            if(addresses.GetValueOrDefault().Contains(DeliveryAddress.DispositionNotification))
+            {
+                throw XmppStanzaException.BadRequest("A receipt cannot be requested for a message acknowledgment.");
+            }
+        }
+
         var content = MessageBodyCollection.Empty.Data.ToBuilder();
         foreach(var body in this.body)
         {
@@ -94,6 +121,8 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             State = state ?? ConversationState.Unspecified,
             DelayedBy = delay?.from?.ToIdentifier(this.GetSession()),
             DelayReason = delay?.reason,
+            Addresses = addresses,
+            ReceiptIdentifier = receiptFor,
             Extensions = InnerHandler.ToExtensions()
         };
     }
@@ -101,7 +130,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected virtual Event GetEvent()
     {
         return new MessageEvent {
-            Origin = this.GetOrigin(),
+            Origin = this.GetOrigin(addressesParser?.Recipients),
             Type = (this.GetStanza().Type?.ToEnum()).ToMessageType(),
             Processing = this.GetProcessing(delay?.timestamp),
             Data = GetMessage()

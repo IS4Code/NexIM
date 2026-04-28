@@ -26,4 +26,6 @@ static class Constants
     public const string Caps = "http://jabber.org/protocol/caps";
     public const string VCardTemp = "vcard-temp";
     public const string XmppDelay = "urn:xmpp:delay";
+    public const string XmppReceipts = "urn:xmpp:receipts";
+    public const string Addresses = "http://jabber.org/protocol/address";
 }
