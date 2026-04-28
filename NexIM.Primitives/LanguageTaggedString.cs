@@ -1,13 +1,28 @@
 ﻿using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using NexIM.Tools;
 
 namespace NexIM.Primitives;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly record struct LanguageTaggedString(string Value, LanguageCode Language) : IComparable<LanguageTaggedString>
+public readonly record struct LanguageTaggedString : IComparable<LanguageTaggedString>
 {
+    readonly ValueString value;
+
+    public string Value {
+        get => value.Value;
+        init => this.value = new(value);
+    }
+
+    public LanguageCode Language { get; init; }
     public bool Explicit { get; init; }
+
+    public LanguageTaggedString(string value, LanguageCode language)
+    {
+        Value = value;
+        Language = language;
+    }
 
     public static string DefaultLanguage {
         get {
@@ -37,6 +52,6 @@ public readonly record struct LanguageTaggedString(string Value, LanguageCode La
         {
             return cmp;
         }
-        return StringComparer.Ordinal.Compare(Value, other.Value);
+        return value.CompareTo(other.value);
     }
 }

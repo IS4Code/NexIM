@@ -9,21 +9,21 @@ namespace NexIM.Primitives;
 [StructLayout(LayoutKind.Auto)]
 public readonly partial struct LocalizedString : IEquatable<LocalizedString>, IEnumerable<LanguageTaggedString>
 {
-    readonly NonEmptyDictionary<LanguageCode, string> data;
+    readonly NonEmptyDictionary<LanguageCode, ValueString> data;
 
-    private LocalizedString(NonEmptyDictionary<LanguageCode, string> data)
+    private LocalizedString(NonEmptyDictionary<LanguageCode, ValueString> data)
     {
         this.data = data;
     }
 
     public LocalizedString(LanguageTaggedString initial)
     {
-        this.data = new(new(initial.Language, initial.Value));
+        this.data = new(new(initial.Language, new(initial.Value)));
     }
 
     public LocalizedString Add(LanguageTaggedString other)
     {
-        return new(data.Add(new(other.Language, other.Value)));
+        return new(data.Add(new(other.Language, new(other.Value))));
     }
 
     public LocalizedString Add(LanguageTaggedString? other)
@@ -49,6 +49,16 @@ public readonly partial struct LocalizedString : IEquatable<LocalizedString>, IE
     public bool Equals(LocalizedString other)
     {
         return data.Equals(other.data);
+    }
+
+    public static bool operator ==(LanguageCode a, LocalizedString b)
+    {
+        return a.Equals(b);
+    }
+
+    public static bool operator !=(LanguageCode a, LocalizedString b)
+    {
+        return !a.Equals(b);
     }
 
     public override int GetHashCode()
@@ -79,9 +89,9 @@ public readonly partial struct LocalizedString : IEquatable<LocalizedString>, IE
     [StructLayout(LayoutKind.Auto)]
     public struct Enumerator : IEnumerator<LanguageTaggedString>
     {
-        NonEmptyDictionary<LanguageCode, string>.Enumerator enumerator;
+        NonEmptyDictionary<LanguageCode, ValueString>.Enumerator enumerator;
 
-        internal Enumerator(NonEmptyDictionary<LanguageCode, string>.Enumerator enumerator)
+        internal Enumerator(NonEmptyDictionary<LanguageCode, ValueString>.Enumerator enumerator)
         {
             this.enumerator = enumerator;
         }
@@ -89,7 +99,7 @@ public readonly partial struct LocalizedString : IEquatable<LocalizedString>, IE
         public readonly LanguageTaggedString Current {
             get {
                 var current = enumerator.Current;
-                return new(current.Value, current.Key);
+                return new(current.Value.Value, current.Key);
             }
         }
 

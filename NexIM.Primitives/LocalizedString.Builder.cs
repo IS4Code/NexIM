@@ -13,16 +13,16 @@ partial struct LocalizedString
     [StructLayout(LayoutKind.Auto)]
     public struct Builder
     {
-        NonEmptyDictionary<LanguageCode, string>.Builder builder;
+        NonEmptyDictionary<LanguageCode, ValueString>.Builder builder;
 
-        internal Builder(NonEmptyDictionary<LanguageCode, string>.Builder builder)
+        internal Builder(NonEmptyDictionary<LanguageCode, ValueString>.Builder builder)
         {
             this.builder = builder;
         }
 
         public void Add(LanguageTaggedString str)
         {
-            builder.Add(str.Language, str.Value);
+            builder.Add(str.Language, new(str.Value));
         }
 
         public void Add(LanguageTaggedString? str)
