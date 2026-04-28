@@ -32,18 +32,22 @@ internal class GetServerDiscoInfoQuery : GetDiscoInfoQuery
     }
 }
 
-#pragma warning disable CS9113
-internal class GetAccountDiscoInfoQuery(XmppAddress address) : GetDiscoInfoQuery
-#pragma warning restore CS9113
+internal class GetAccountDiscoInfoQuery : GetDiscoInfoQuery
 {
     public async override ValueTask DisposeAsync()
     {
-        // TODO Distinguish existing account?
+        // TODO Only for local accounts
 
         await using var iq = await this.CreateResponse();
         await using var info = await iq.DiscoInfoQuery(null);
 
         // Identify the account
         await info.Identity(null, DiscoCategory.Account.ToToken(), DiscoType.Registered.ToToken());
+
+        // Supported features
+        await info.Feature(DiscoFeature.DiscoInfo.ToToken());
+        await info.Feature(DiscoFeature.DiscoItems.ToToken());
+        await info.Feature(DiscoFeature.Ping.ToToken());
+        await info.Feature(DiscoFeature.Time.ToToken());
     }
 }

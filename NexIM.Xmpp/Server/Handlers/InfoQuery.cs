@@ -263,7 +263,7 @@ internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
             throw XmppStanzaException.ServiceUnavailable();
         }
 
-        return new GetAccountDiscoInfoQuery(Address) { Context = Context };
+        return this.GetHandler<GetAccountDiscoInfoQuery>();
     }
 
     protected async override ValueTask<IDiscoItemsQueryHandler> OnDiscoItemsQuery(Token<DiscoNode>? node)
@@ -275,7 +275,7 @@ internal class GetAccountInfoQuery : GetInfoQuery, IInfoQueryHandler
             throw XmppStanzaException.ServiceUnavailable();
         }
 
-        return new GetAccountDiscoItemsQuery(Address) { Context = Context };
+        return this.GetHandler<GetAccountDiscoItemsQuery>();
     }
 }
 
