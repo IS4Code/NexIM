@@ -62,6 +62,7 @@ partial struct NonEmptySet<T>
                 default:
                     // Replace first
                     (rest ??= emptySet.ToBuilder()).Add(first);
+                    first = item;
                     break;
             }
         }
@@ -70,9 +71,7 @@ partial struct NonEmptySet<T>
         {
             if(!firstTaken)
             {
-                first = items.first;
-                firstTaken = true;
-                rest = items.rest.ToBuilder();
+                this = items.ToBuilder();
                 return;
             }
 
@@ -135,7 +134,7 @@ partial struct NonEmptySet<T>
                     return true;
                 case < 0:
                     // Remove in rest
-                    return (rest?.Remove(first)).GetValueOrDefault();
+                    return rest?.Remove(item) ?? false;
                 default:
                     // Not present
                     return false;
@@ -150,9 +149,23 @@ partial struct NonEmptySet<T>
 
         public readonly bool Contains(T item)
         {
-            return
-                (firstTaken && comparer.Compare(first, item) == 0) ||
-                (rest != null && rest.Contains(item));
+            if(!firstTaken)
+            {
+                return false;
+            }
+
+            switch(comparer.Compare(first, item))
+            {
+                case 0:
+                    // First
+                    return true;
+                case < 0:
+                    // Check in rest
+                    return rest?.Contains(item) ?? false;
+                default:
+                    // Not present
+                    return false;
+            }
         }
 
         public readonly void CopyTo(T[] array, int arrayIndex)
