@@ -144,6 +144,11 @@ partial class Account : IEventHandler
                 foreach(var session in GetSessions(false))
                 {
                     // Also includes the originating session (echo)
+                    if(session.Identifier == presEvent.From && presEvent is StatusUpdateEvent)
+                    {
+                        // Unless probing
+                        continue;
+                    }
                     tasks.Add(session.Outbound(presEvent));
                 }
 
