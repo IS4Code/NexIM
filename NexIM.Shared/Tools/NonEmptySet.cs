@@ -7,12 +7,17 @@ using System.Runtime.InteropServices;
 
 namespace NexIM.Tools;
 
+#if DEFINE_TOOLS
+
 /// <summary>
 /// Stores an ordered set of <typeparamref name="T"/> that has at least 1 element.
 /// </summary>
 /// <typeparam name="T">The type of the elements in the set.</typeparam>
 [StructLayout(LayoutKind.Auto)]
-public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
+#if TOOLS_PUBLIC
+public
+#endif
+readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollection<T>, IEquatable<NonEmptySet<T>> where T : IComparable<T>
 {
     static readonly IComparer<T> comparer =
         typeof(string).Equals(typeof(T))
@@ -429,3 +434,5 @@ public readonly partial struct NonEmptySet<T> : IReadOnlyCollection<T>, ICollect
         }
     }
 }
+
+#endif

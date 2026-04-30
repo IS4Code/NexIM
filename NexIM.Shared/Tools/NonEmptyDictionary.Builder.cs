@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 
 namespace NexIM.Tools;
 
+#if DEFINE_TOOLS
+
 partial struct NonEmptyDictionary<TKey, TValue>
 {
     public Builder ToBuilder()
@@ -396,3 +398,5 @@ partial struct NonEmptyDictionary<TKey, TValue>
         readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
+
+#endif

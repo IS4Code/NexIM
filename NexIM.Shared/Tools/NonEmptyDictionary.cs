@@ -8,13 +8,18 @@ using System.Runtime.InteropServices;
 
 namespace NexIM.Tools;
 
+#if DEFINE_TOOLS
+
 /// <summary>
 /// Stores an ordered dictionary of <typeparamref name="TKey"/>-<typeparamref name="TValue"/> pairs that has at least 1 pair.
 /// </summary>
 /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
 /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
 [StructLayout(LayoutKind.Auto)]
-internal readonly partial struct NonEmptyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>, IReadOnlyCollection<KeyValuePair<TKey, TValue>>, ICollection<KeyValuePair<TKey, TValue>>, IEquatable<NonEmptyDictionary<TKey, TValue>> where TKey : IComparable<TKey>
+#if TOOLS_PUBLIC
+public
+#endif
+readonly partial struct NonEmptyDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>, IReadOnlyCollection<KeyValuePair<TKey, TValue>>, ICollection<KeyValuePair<TKey, TValue>>, IEquatable<NonEmptyDictionary<TKey, TValue>> where TKey : IComparable<TKey>
 {
     static readonly IComparer<TKey> keyComparer =
         typeof(string).Equals(typeof(TKey))
@@ -435,3 +440,5 @@ internal readonly partial struct NonEmptyDictionary<TKey, TValue> : IReadOnlyDic
         }
     }
 }
+
+#endif

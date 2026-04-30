@@ -13,5 +13,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Attributes\IsExternalInit.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Attributes\NullableAttributes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Attributes\RequiredMemberAttribute.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Tools\NonEmptyDictionary.Builder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Tools\NonEmptyDictionary.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Tools\NonEmptySet.Builder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Tools\NonEmptySet.cs" />
   </ItemGroup>
 </Project>
