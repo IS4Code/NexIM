@@ -19,7 +19,7 @@ using NexIM.Xmpp.Tools;
 
 namespace NexIM.Xmpp.Server;
 
-using CapabilitiesCache = FallbackCache<CapabilitiesIdentifier, ICapabilities>;
+using CapabilitiesCache = FallbackCache<CapabilitiesIdentifier, XmppCapabilities>;
 
 public class XmppClientSession : ClientSession
 {
@@ -332,12 +332,12 @@ public class XmppClientSession : ClientSession
         }
     }
 
-    internal CapabilitiesHandle GetCapabilities(Token<CapabilitiesHash> hash, string node, string version)
+    internal Remote<XmppCapabilities> GetCapabilities(Token<CapabilitiesHash> hash, string node, string version)
     {
         var identifier = new CapabilitiesIdentifier(node, version, hash.Value);
         var task = capabilitiesCache.Get(identifier, async () => {
             // Not used locally yet
-            var tcs = new TaskCompletionSource<ICapabilities>();
+            var tcs = new TaskCompletionSource<XmppCapabilities>();
 
             if(!CapabilitiesParser<ICommandContext>.IsSupportedHashAlgorithm(hash))
             {
@@ -351,7 +351,7 @@ public class XmppClientSession : ClientSession
             return await await Task.WhenAny(tcs.Task, CapabilitiesCache.Global.Get(identifier, async () => {
                 await RequestCapabilities(hash, node, version, tcs);
                 var result = await tcs.Task;
-                if(result is Capabilities { Verified: false })
+                if(result is XmppCapabilities { Verified: false })
                 {
                     // Must not be stored globally
                     return null;
@@ -360,10 +360,10 @@ public class XmppClientSession : ClientSession
             }));
         });
 
-        return new(identifier, Cached<ICapabilities>.FromTask(task));
+        return new(new CapabilitiesProvider(identifier, task));
     }
 
-    private async ValueTask RequestCapabilities(Token<CapabilitiesHash> hash, string node, string version, TaskCompletionSource<ICapabilities> tcs)
+    private async ValueTask RequestCapabilities(Token<CapabilitiesHash> hash, string node, string version, TaskCompletionSource<XmppCapabilities> tcs)
     {
         // Atomize full node to verify quickly
         var nodeToken = xmpp.GetToken<DiscoNode>(node + "#" + version);
@@ -377,7 +377,7 @@ public class XmppClientSession : ClientSession
         await using var query = await iq.DiscoInfoQuery(nodeToken);
     }
 
-    class CapabilitiesResultInfoQuery(Token<DiscoNode> nodeToken, Token<CapabilitiesHash> hashAlgorithm, string expectedHash, TaskCompletionSource<ICapabilities> tcs) : InfoQueryHandler<ICommandContext>
+    class CapabilitiesResultInfoQuery(Token<DiscoNode> nodeToken, Token<CapabilitiesHash> hashAlgorithm, string expectedHash, TaskCompletionSource<XmppCapabilities> tcs) : InfoQueryHandler<ICommandContext>
     {
         CapabilitiesParser<ICommandContext>? handler;
 
@@ -406,7 +406,7 @@ public class XmppClientSession : ClientSession
             }
 
             // Store result
-            tcs.TrySetResult(handler.GetCapabilities(hashAlgorithm, expectedHash));
+            tcs.TrySetResult(handler.GetCapabilities(nodeToken, hashAlgorithm, expectedHash));
         }
     }
 }

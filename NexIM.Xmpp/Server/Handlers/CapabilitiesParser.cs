@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Events;
 using NexIM.Xmpp.Model;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
@@ -11,7 +12,7 @@ using NexIM.Xmpp.Tools;
 
 namespace NexIM.Xmpp.Server.Handlers;
 
-using static Capabilities;
+using static XmppCapabilities;
 
 internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext> where TContext : IPayloadHandlerContext
 {
@@ -75,12 +76,13 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
         return hashAlgorithm.ToEnum() is CapabilitiesHash.Sha1;
     }
 
-    public Capabilities GetCapabilities(Token<CapabilitiesHash> hashAlgorithm, string expectedHash)
+    public XmppCapabilities GetCapabilities(Token<DiscoNode> node, Token<CapabilitiesHash> hashAlgorithm, string expectedHash)
     {
+        var identifier = new CapabilitiesIdentifier(node.Value, expectedHash, hashAlgorithm.Value);
         if(hashAlgorithm.ToEnum() != CapabilitiesHash.Sha1)
         {
             // Unknown hash algorithm
-            return new() {
+            return new(identifier) {
                 Verified = false,
                 Identities = identities,
                 Features = features,
@@ -103,7 +105,7 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
         )
         {
             // Hash matches when the alternate identities are used
-            return new() {
+            return new(identifier) {
                 Verified = true,
                 Identities = alternate,
                 Features = features,
@@ -115,7 +117,7 @@ internal class CapabilitiesParser<TContext> : BaseDiscoInfoQueryHandler<TContext
             verified = false;
         }
 
-        return new() {
+        return new(identifier) {
             Verified = verified,
             Identities = identities,
             Features = features,

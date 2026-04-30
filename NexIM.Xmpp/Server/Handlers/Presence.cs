@@ -19,7 +19,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     LocalizedString.Builder statusTextBuilder;
     string? nick;
     sbyte? priority;
-    CapabilitiesHandle? caps;
+    Remote<Capabilities>? caps;
     (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
     AddressesParser<ICommandContext>? addressesParser;
 
@@ -69,7 +69,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             return;
         }
 
-        this.SetOnce(ref caps, this.GetClientSession().GetCapabilities(hashValue, node, version));
+        this.SetOnce(ref caps, this.GetClientSession().GetCapabilities(hashValue, node, version).TryCast<Capabilities>());
     }
 
     protected virtual PresenceData GetPresence()
@@ -82,7 +82,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             ),
             Presentation = new(Nickname: nick),
             Priority = priority,
-            Capabilities = caps,
+            Capabilities = caps ?? default,
             DelayedBy = delay?.from?.ToIdentifier(),
             DelayReason = delay?.reason,
             Addresses = addressesParser?.Addresses,

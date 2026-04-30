@@ -12,7 +12,7 @@ public sealed record PresenceData : DeliveryData
         Presentation = default,
         Status = default,
         Priority = null,
-        Capabilities = null,
+        Capabilities = default,
         DelayedBy = null,
         DelayReason = null,
         Addresses = null,
@@ -37,7 +37,7 @@ public sealed record PresenceData : DeliveryData
     /// <summary>
     /// The sender's capabilities.
     /// </summary>
-    public required CapabilitiesHandle? Capabilities { get; init; }
+    public required Remote<Capabilities> Capabilities { get; init; }
 
     public PresenceData Deduplicate()
     {
@@ -47,9 +47,4 @@ public sealed record PresenceData : DeliveryData
 
 public record struct CapabilitiesIdentifier(string Application, string Version, string VersionType);
 
-public record struct CapabilitiesHandle(CapabilitiesIdentifier Identifier, Cached<ICapabilities> Value);
-
-public interface ICapabilities
-{
-
-}
+public abstract record Capabilities(CapabilitiesIdentifier Identifier);

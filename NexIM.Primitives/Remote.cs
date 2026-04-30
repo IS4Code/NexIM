@@ -1,188 +1,240 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NexIM.Primitives;
 
 /// <summary>
-/// Stores a reference to a value that may be in the process of caching.
+/// Stores a reference to a value that may be accessible from a remote location.
 /// </summary>
 /// <typeparam name="T">
 /// The type of the stored value.
 /// </typeparam>
-[StructLayout(LayoutKind.Auto)]
-public readonly struct Cached<T> : IEquatable<Cached<T>>
+public readonly struct Remote<T> : IEquatable<Remote<T>> where T : notnull
 {
-    static readonly Task<T> defaultTask = default(ValueTask<T>).AsTask();
+    readonly object? _data;
 
-    readonly Task<T>? _task;
+    T? dataAsImmediate => IsEmpty ? default : (T)_data;
 
-    Task<T> ResultTask => _task switch {
-        ProxiedTask proxy => proxy.Start(),
-        null => defaultTask,
-        var task => task
-    };
+    [MemberNotNullWhen(false, nameof(_data), nameof(dataAsImmediate))]
+    public bool IsEmpty => _data is null;
 
-    Task<T> ComparisonTask => _task switch {
-        ProxiedTask proxy => proxy.RealTask,
-        null => defaultTask,
-        var task => task
-    };
-
-    public bool IsAvailable => ComparisonTask.Status == TaskStatus.RanToCompletion;
-
-    private Cached(Task<T> task)
+    /// <summary>
+    /// Creates a <see cref="Remote{T}"/> instance from an immediate value.
+    /// </summary>
+    public Remote(T? immediateValue)
     {
-        _task = task;
+        _data = immediateValue;
     }
 
-    public Task<T> GetValueAsync() => ResultTask;
-
-    public static Cached<T> FromTask(Task<T> task)
+    /// <summary>
+    /// Creates a <see cref="Remote{T}"/> instance from an <see cref="IRemoteProvider{T}"/> instance.
+    /// </summary>
+    public Remote(IRemoteProvider<T> provider)
     {
-        return new(task);
+        _data = provider;
     }
 
-    public static Cached<T> FromFactory(Func<Task<T>> factory)
+    /// <summary>
+    /// Retrieves a property of the remote value.
+    /// </summary>
+    public ValueTask<TResult> Get<TResult>(Expression<Func<T, TResult>> retrieveExpression, Func<TResult> defaultFactory, CancellationToken cancellationToken = default)
     {
-        return new(new ProxiedTask(factory));
+        cancellationToken.ThrowIfCancellationRequested();
+        if(_data is IRemoteProvider<T> dataProvider)
+        {
+            return dataProvider.Get(retrieveExpression, defaultFactory, cancellationToken);
+        }
+        if(IsEmpty)
+        {
+            // No value provided, use fallback
+            return new(defaultFactory());
+        }
+        return new(ExpressionCache<T, TResult>.Compile(retrieveExpression)(dataAsImmediate));
     }
 
-    public static Cached<T> FromValue(T value)
+    public Remote<TOther>? TryCast<TOther>() where TOther : notnull
     {
-        return new(Task.FromResult(value));
+        switch(_data)
+        {
+            case IRemoteProvider<TOther> dataProvider:
+                return new(dataProvider);
+            case TOther value:
+                return new(value);
+            default:
+                return null;
+        }
     }
 
-    public bool Equals(Cached<T> other)
+    public bool Equals(Remote<T> other)
     {
-        return TaskEqualityComparer.Equals(ComparisonTask, other.ComparisonTask);
+        if(_data == other._data)
+        {
+            return true;
+        }
+        if(_data is IRemoteProvider<T> dataProvider)
+        {
+            return dataProvider.Equals(other._data);
+        }
+        if(other._data is IRemoteProvider<T> otherProvider)
+        {
+            return otherProvider.Equals(_data);
+        }
+        return EqualityComparer<T?>.Default.Equals(dataAsImmediate, other.dataAsImmediate);
     }
 
     public override bool Equals(object obj)
     {
-        return obj is Cached<T> other && Equals(other);
+        return obj is Remote<T> other && Equals(other);
     }
 
-    public static bool operator ==(Cached<T> a, Cached<T> b)
+    public static bool operator ==(Remote<T> a, Remote<T> b)
     {
         return a.Equals(b);
     }
 
-    public static bool operator !=(Cached<T> a, Cached<T> b)
+    public static bool operator !=(Remote<T> a, Remote<T> b)
     {
         return !a.Equals(b);
     }
 
     public override int GetHashCode()
     {
-        return TaskEqualityComparer.GetHashCode(ComparisonTask);
+        if(_data is IRemoteProvider<T> dataProvider)
+        {
+            return dataProvider.GetHashCode();
+        }
+        return EqualityComparer<T?>.Default.GetHashCode(dataAsImmediate);
+    }
+}
+
+public interface IRemoteProvider<T> : IEquatable<IRemoteProvider<T>>, IEquatable<T?>
+{
+    ValueTask<TResult> Get<TResult>(Expression<Func<T, TResult>> retrieveExpression, Func<TResult> defaultFactory, CancellationToken cancellationToken);
+}
+
+public abstract class RemoteProvider<T> : IRemoteProvider<T>
+{
+    readonly SemaphoreSlim semaphore = new(1, 1);
+
+    Task<T?>? task;
+
+    protected virtual ValueTask<TResult>? TryGetImmediate<TResult>(Expression<Func<T, TResult>> retrieveExpression, CancellationToken cancellationToken)
+    {
+        if(this is IResultRemoteProvider<TResult> provider)
+        {
+            return provider.TryGetImmediate(retrieveExpression, cancellationToken);
+        }
+        return null;
     }
 
-    /// <summary>
-    /// Provides value equality for tasks.
-    /// </summary>
-    /// <remarks>
-    /// The comparer maintains the same results for tasks that were compared
-    /// prior to completion, so even if they result in the same value,
-    /// they will remain non-equal.
-    /// </remarks>
-    static class TaskEqualityComparer
+    protected abstract ValueTask<T?> Load(CancellationToken cancellationToken);
+
+    public ValueTask<TResult> Get<TResult>(Expression<Func<T, TResult>> retrieveExpression, Func<TResult> defaultFactory, CancellationToken cancellationToken)
     {
-        static readonly object observedAsCompleted = String.Empty;
-        static readonly ConditionalWeakTable<Task<T>, object?> observedTasks = new();
+        return TryGetImmediate(retrieveExpression, cancellationToken) ?? Inner();
 
-        // Most values will be null, since the sentinel object appears only when the status changes during creation
-        static readonly ConditionalWeakTable<Task<T>, object?>.CreateValueCallback observedCallback = task => task.IsCompleted ? observedAsCompleted : null;
-
-        public static bool Equals(Task<T> a, Task<T> b)
+        async ValueTask<TResult> Inner()
         {
-            if(a == b)
+            bool created = false;
+            var task = this.task;
+            if(task == null)
             {
-                // Same instance
-                return true;
-            }
-            if(IsIncomparable(a) || IsIncomparable(b))
-            {
-                // Observed as in progress
-                return false;
-            }
-            // Both are completed
-            var status = a.Status;
-            if(status != b.Status)
-            {
-                // Different outcome
-                return false;
-            }
-            if(status != TaskStatus.RanToCompletion)
-            {
-                // Exception
-                return a.Exception.Equals(b.Exception);
-            }
-            // Compare the results
-            return EqualityComparer<T>.Default.Equals(a.Result, b.Result);
-        }
-
-        public static int GetHashCode(Task<T> obj)
-        {
-            if(IsIncomparable(obj))
-            {
-                // Observed as in progress
-                return obj.GetHashCode();
-            }
-            // Completed
-            if(obj.Status != TaskStatus.RanToCompletion)
-            {
-                // Exception
-                return obj.Exception.GetHashCode();
-            }
-            // Hash its result
-            return EqualityComparer<T>.Default.GetHashCode(obj.Result);
-        }
-
-        private static bool IsIncomparable(Task<T> obj)
-        {
-            // Checks if task is in progress or was observed before as such
-            return
-                obj.IsCompleted
-                ? observedTasks.TryGetValue(obj, out var status) && status != observedAsCompleted
-                : observedTasks.GetValue(obj, observedCallback) != observedAsCompleted;
-        }
-    }
-
-    /// <summary>
-    /// An object deriving from <see cref="Task{TResult}"/>
-    /// that exists just to provide a marker.
-    /// Only the <see cref="Start"/>
-    /// and <see cref="RealTask"/> members may be used.
-    /// </summary>
-    sealed class ProxiedTask : Task<T>
-    {
-        readonly Task<Task<T>> task;
-        public Task<T> RealTask { get; }
-
-        public ProxiedTask(Func<Task<T>> function) : base(static () => throw new InvalidOperationException())
-        {
-            task = new(function);
-            RealTask = task.Unwrap();
-        }
-
-        public new Task<T> Start()
-        {
-            if(task.Status == TaskStatus.Created)
-            {
-                // Start first
+                await semaphore.WaitAsync();
                 try
                 {
-                    task.Start();
+                    task = this.task;
+                    if(task == null)
+                    {
+                        // Still null, start loading
+                        this.task = task = Load(cancellationToken).AsTask();
+                        created = true;
+                    }
                 }
-                catch(InvalidOperationException)
+                finally
                 {
-                    // Concurrently started
+                    semaphore.Release();
                 }
             }
-            return RealTask;
+
+            while(true)
+            {
+                T? instance;
+                try
+                {
+                    instance = await task;
+                }
+                catch(TaskCanceledException) when(!created && task.IsCanceled)
+                {
+                    // The previous task was cancelled, try again
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        var newTask = this.task;
+                        if(newTask != task && newTask != null)
+                        {
+                            // Another request in the meantime, use that one
+                            task = newTask;
+                            continue;
+                        }
+                        // Still the same task
+                        this.task = task = Load(cancellationToken).AsTask();
+                        created = true;
+                        continue;
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }
+
+                if(instance is null)
+                {
+                    // No value
+                    return defaultFactory();
+                }
+
+                var func = ExpressionCache<T, TResult>.Compile(retrieveExpression);
+                return func(instance);
+            }
         }
+    }
+
+    public abstract bool Equals(IRemoteProvider<T> other);
+    public abstract bool Equals(T? other);
+
+    public sealed override bool Equals(object obj)
+    {
+        switch(obj)
+        {
+            case IRemoteProvider<T> provider:
+                return Equals(provider);
+            case T other:
+                return Equals(other);
+            default:
+                return false;
+        }
+    }
+
+    public abstract override int GetHashCode();
+
+    public interface IResultRemoteProvider<TResult>
+    {
+        ValueTask<TResult>? TryGetImmediate(Expression<Func<T, TResult>> retrieveExpression, CancellationToken cancellationToken);
+    }
+}
+
+sealed file class ExpressionCache<TObject, TResult>
+{
+    static readonly ConditionalWeakTable<Expression<Func<TObject, TResult>>, Func<TObject, TResult>> cache = new();
+    static readonly ConditionalWeakTable<Expression<Func<TObject, TResult>>, Func<TObject, TResult>>.CreateValueCallback factory = expr => expr.Compile();
+
+    public static Func<TObject, TResult> Compile(Expression<Func<TObject, TResult>> expression)
+    {
+        return cache.GetValue(expression, factory);
     }
 }

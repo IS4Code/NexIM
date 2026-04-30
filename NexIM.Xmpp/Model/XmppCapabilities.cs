@@ -12,7 +12,7 @@ using NexIM.Xmpp.Protocol;
 
 namespace NexIM.Xmpp.Model;
 
-public record Capabilities : ICapabilities
+public record XmppCapabilities(CapabilitiesIdentifier identifier) : Capabilities(identifier)
 {
     public required bool Verified { get; init; }
 
@@ -92,10 +92,11 @@ public record Capabilities : ICapabilities
         }
     }
 
-    public virtual bool Equals(Capabilities? other)
+    public virtual bool Equals(XmppCapabilities? other)
     {
         return
             other is not null &&
+            Identifier == other.Identifier &&
             Identities.SetEquals(other.Identities) &&
             Features.SetEquals(other.Features) &&
             Forms.Count == other.Forms.Count &&
@@ -104,21 +105,7 @@ public record Capabilities : ICapabilities
 
     public override int GetHashCode()
     {
-        var hashCode = new HashCode();
-        foreach(var identity in Identities)
-        {
-            hashCode.Add(identity);
-        }
-        foreach(var feature in Features)
-        {
-            hashCode.Add(feature);
-        }
-        foreach(var pair in Forms)
-        {
-            hashCode.Add(pair.Key);
-            hashCode.Add(pair.Value);
-        }
-        return hashCode.ToHashCode();
+        return Identifier.GetHashCode();
     }
 
     public override string ToString()
