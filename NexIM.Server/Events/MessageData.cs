@@ -20,22 +20,22 @@ public abstract record DeliveryData : EventData
     /// <summary>
     /// The identifier of the entity that delayed the event.
     /// </summary>
-    public required Identifier? DelayedBy { get; init; }
+    public Identifier? DelayedBy { get; init; }
 
     /// <summary>
     /// The reason for a delayed delivery of this event.
     /// </summary>
-    public required LanguageTaggedString? DelayReason { get; init; }
+    public LanguageTaggedString? DelayReason { get; init; }
 
     /// <summary>
     /// Stores information about the additional addresses of this event.
     /// </summary>
-    public required NonEmptySet<DeliveryAddress>? Addresses { get; init; }
+    public NonEmptySet<DeliveryAddress>? Addresses { get; init; }
 
     /// <summary>
     /// Stores the transaction identifier for a previous message that requested the receipt.
     /// </summary>
-    public required string? ReceiptIdentifier { get; init; }
+    public string? ReceiptIdentifier { get; init; }
 }
 
 /// <summary>

@@ -12,11 +12,7 @@ public sealed record PresenceData : DeliveryData
         Presentation = default,
         Status = default,
         Priority = null,
-        Capabilities = default,
-        DelayedBy = null,
-        DelayReason = null,
-        Addresses = null,
-        ReceiptIdentifier = null
+        Capabilities = default
     };
 
     /// <summary>
