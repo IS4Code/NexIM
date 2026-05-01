@@ -8,7 +8,7 @@ using NexIM.Server.Events;
 
 namespace NexIM.Xmpp.Model;
 
-internal sealed class CapabilitiesProvider : RemoteProvider<XmppCapabilities>, RemoteProvider<XmppCapabilities>.IResultRemoteProvider<CapabilitiesIdentifier>, IRemoteProvider<Capabilities>
+internal sealed class CapabilitiesProvider : DerivedRemoteProvider<Capabilities, XmppCapabilities>, RemoteProvider<XmppCapabilities>.IResultRemoteProvider<CapabilitiesIdentifier>
 {
     readonly CapabilitiesIdentifier identifier;
     readonly Task<XmppCapabilities> task;
@@ -20,12 +20,12 @@ internal sealed class CapabilitiesProvider : RemoteProvider<XmppCapabilities>, R
         this.task = task;
     }
 
-    public override bool Equals(IRemoteProvider<XmppCapabilities> other)
+    public override bool Equals(IRemoteProvider other)
     {
         return other is CapabilitiesProvider provider && identifier == provider.identifier;
     }
 
-    public override bool Equals(XmppCapabilities? other)
+    public override bool References(XmppCapabilities? other)
     {
         return identifier == other?.Identifier;
     }
@@ -43,7 +43,7 @@ internal sealed class CapabilitiesProvider : RemoteProvider<XmppCapabilities>, R
     static readonly MemberInfo identifierMember =
         ((MemberExpression)((Expression<Func<XmppCapabilities, CapabilitiesIdentifier>>)(c => c.Identifier)).Body).Member;
 
-    ValueTask<CapabilitiesIdentifier>? IResultRemoteProvider<CapabilitiesIdentifier>.TryGetImmediate(Expression<Func<XmppCapabilities, CapabilitiesIdentifier>> retrieveExpression, CancellationToken cancellationToken)
+    ValueTask<CapabilitiesIdentifier>? IResultRemoteProvider<CapabilitiesIdentifier>.TryGetImmediate(LambdaExpression retrieveExpression, CancellationToken cancellationToken)
     {
         var argument = retrieveExpression.Parameters[0];
         switch(retrieveExpression.Body)
@@ -52,22 +52,5 @@ internal sealed class CapabilitiesProvider : RemoteProvider<XmppCapabilities>, R
                 return new(identifier);
         }
         return null;
-    }
-
-    ValueTask<TResult> IRemoteProvider<Capabilities>.Get<TResult>(Expression<Func<Capabilities, TResult>> retrieveExpression, Func<TResult> defaultFactory, CancellationToken cancellationToken)
-    {
-        var param = Expression.Parameter(typeof(XmppCapabilities));
-        var body = Expression.Invoke(retrieveExpression, param);
-        return Get(Expression.Lambda<Func<XmppCapabilities, TResult>>(body, param), defaultFactory, cancellationToken);
-    }
-
-    bool IEquatable<IRemoteProvider<Capabilities>>.Equals(IRemoteProvider<Capabilities>? other)
-    {
-        return other is IRemoteProvider<XmppCapabilities> xmpp ? Equals(xmpp) : false;
-    }
-
-    bool IEquatable<Capabilities?>.Equals(Capabilities? other)
-    {
-        return other is XmppCapabilities xmpp ? Equals(xmpp) : false;
     }
 }

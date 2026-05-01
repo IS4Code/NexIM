@@ -9,32 +9,36 @@ using System.Threading.Tasks;
 namespace NexIM.Primitives;
 
 /// <summary>
-/// Stores a reference to a value that may be accessible from a remote location.
+/// Provides access to a value that may be located in a remote location.
 /// </summary>
-/// <typeparam name="T">
+/// <typeparam name="TObject">
 /// The type of the stored value.
 /// </typeparam>
-public readonly struct Remote<T> : IEquatable<Remote<T>> where T : notnull
+public readonly struct Remote<TObject> : IEquatable<Remote<TObject>> where TObject : notnull
 {
     readonly object? _data;
 
-    T? dataAsImmediate => IsEmpty ? default : (T)_data;
+    TObject? dataAsImmediate => IsEmpty ? default : (TObject)_data;
 
     [MemberNotNullWhen(false, nameof(_data), nameof(dataAsImmediate))]
-    public bool IsEmpty => _data is null;
+    public bool IsEmpty => _data switch {
+        IRemoteProvider provider => !provider.References<TObject>(),
+        null => true,
+        _ => false
+    };
 
     /// <summary>
     /// Creates a <see cref="Remote{T}"/> instance from an immediate value.
     /// </summary>
-    public Remote(T? immediateValue)
+    public Remote(TObject? immediateValue)
     {
         _data = immediateValue;
     }
 
     /// <summary>
-    /// Creates a <see cref="Remote{T}"/> instance from an <see cref="IRemoteProvider{T}"/> instance.
+    /// Creates a <see cref="Remote{T}"/> instance from an <see cref="IRemoteProvider"/> instance.
     /// </summary>
-    public Remote(IRemoteProvider<T> provider)
+    public Remote(IRemoteProvider provider)
     {
         _data = provider;
     }
@@ -42,27 +46,31 @@ public readonly struct Remote<T> : IEquatable<Remote<T>> where T : notnull
     /// <summary>
     /// Retrieves a property of the remote value.
     /// </summary>
-    public ValueTask<TResult> Get<TResult>(Expression<Func<T, TResult>> retrieveExpression, Func<TResult> defaultFactory, CancellationToken cancellationToken = default)
+    public ValueTask<TResult> Get<TResult>(Expression<Func<TObject, TResult>> retrieveExpression, Func<ValueTask<TResult>> defaultFactory, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if(_data is IRemoteProvider<T> dataProvider)
+        if(_data is IRemoteProvider dataProvider)
         {
-            return dataProvider.Get(retrieveExpression, defaultFactory, cancellationToken);
+            return dataProvider.Evaluate(retrieveExpression, defaultFactory, cancellationToken);
         }
         if(IsEmpty)
         {
             // No value provided, use fallback
-            return new(defaultFactory());
+            return defaultFactory();
         }
-        return new(ExpressionCache<T, TResult>.Compile(retrieveExpression)(dataAsImmediate));
+        return new(ExpressionCache<TObject, TResult>.Compile(retrieveExpression)(dataAsImmediate));
     }
 
     public Remote<TOther>? TryCast<TOther>() where TOther : notnull
     {
         switch(_data)
         {
-            case IRemoteProvider<TOther> dataProvider:
-                return new(dataProvider);
+            case IRemoteProvider dataProvider:
+                if(dataProvider.References<TOther>())
+                {
+                    return new(dataProvider);
+                }
+                return null;
             case TOther value:
                 return new(value);
             default:
@@ -70,60 +78,69 @@ public readonly struct Remote<T> : IEquatable<Remote<T>> where T : notnull
         }
     }
 
-    public bool Equals(Remote<T> other)
+    public bool Equals(Remote<TObject> other)
     {
         if(_data == other._data)
         {
             return true;
         }
-        if(_data is IRemoteProvider<T> dataProvider)
+        if(_data is IRemoteProvider dataProvider)
         {
-            return dataProvider.Equals(other._data);
+            if(other._data is IRemoteProvider otherProvider)
+            {
+                return dataProvider.Equals(otherProvider);
+            }
+            return dataProvider.References(other.dataAsImmediate);
         }
-        if(other._data is IRemoteProvider<T> otherProvider)
+        else
         {
-            return otherProvider.Equals(_data);
+            if(other._data is IRemoteProvider otherProvider)
+            {
+                return otherProvider.References(dataAsImmediate);
+            }
         }
-        return EqualityComparer<T?>.Default.Equals(dataAsImmediate, other.dataAsImmediate);
+        return EqualityComparer<TObject?>.Default.Equals(dataAsImmediate, other.dataAsImmediate);
     }
 
     public override bool Equals(object obj)
     {
-        return obj is Remote<T> other && Equals(other);
+        return obj is Remote<TObject> other && Equals(other);
     }
 
-    public static bool operator ==(Remote<T> a, Remote<T> b)
+    public static bool operator ==(Remote<TObject> a, Remote<TObject> b)
     {
         return a.Equals(b);
     }
 
-    public static bool operator !=(Remote<T> a, Remote<T> b)
+    public static bool operator !=(Remote<TObject> a, Remote<TObject> b)
     {
         return !a.Equals(b);
     }
 
     public override int GetHashCode()
     {
-        if(_data is IRemoteProvider<T> dataProvider)
+        if(_data is IRemoteProvider dataProvider)
         {
             return dataProvider.GetHashCode();
         }
-        return EqualityComparer<T?>.Default.GetHashCode(dataAsImmediate);
+        return EqualityComparer<TObject?>.Default.GetHashCode(dataAsImmediate);
     }
 }
 
-public interface IRemoteProvider<T> : IEquatable<IRemoteProvider<T>>, IEquatable<T?>
+public interface IRemoteProvider : IEquatable<IRemoteProvider>
 {
-    ValueTask<TResult> Get<TResult>(Expression<Func<T, TResult>> retrieveExpression, Func<TResult> defaultFactory, CancellationToken cancellationToken);
+    ValueTask<TResult> Evaluate<TObject, TResult>(Expression<Func<TObject, TResult>> retrieveExpression, Func<ValueTask<TResult>> defaultFactory, CancellationToken cancellationToken) where TObject : notnull;
+    bool References<TObject>() where TObject : notnull;
+    bool References<TObject>(TObject? other) where TObject : notnull;
 }
 
-public abstract class RemoteProvider<T> : IRemoteProvider<T>
+public abstract class RemoteProvider<TObject> : IRemoteProvider, RemoteProvider<TObject>.IReferenceRemoteProvider<TObject> where TObject : notnull
 {
     readonly SemaphoreSlim semaphore = new(1, 1);
 
-    Task<T?>? task;
+    Task<TObject?>? task;
 
-    protected virtual ValueTask<TResult>? TryGetImmediate<TResult>(Expression<Func<T, TResult>> retrieveExpression, CancellationToken cancellationToken)
+    protected virtual ValueTask<TResult>? TryGetImmediate<TResult>(LambdaExpression retrieveExpression, CancellationToken cancellationToken)
     {
         if(this is IResultRemoteProvider<TResult> provider)
         {
@@ -132,11 +149,11 @@ public abstract class RemoteProvider<T> : IRemoteProvider<T>
         return null;
     }
 
-    protected abstract ValueTask<T?> Load(CancellationToken cancellationToken);
+    protected abstract ValueTask<TObject?> Load(CancellationToken cancellationToken);
 
-    public ValueTask<TResult> Get<TResult>(Expression<Func<T, TResult>> retrieveExpression, Func<TResult> defaultFactory, CancellationToken cancellationToken)
+    public ValueTask<TResult> Evaluate<TActual, TResult>(Expression<Func<TActual, TResult>> retrieveExpression, Func<ValueTask<TResult>> defaultFactory, CancellationToken cancellationToken) where TActual : notnull
     {
-        return TryGetImmediate(retrieveExpression, cancellationToken) ?? Inner();
+        return TryGetImmediate<TResult>(retrieveExpression, cancellationToken) ?? Inner();
 
         async ValueTask<TResult> Inner()
         {
@@ -163,7 +180,7 @@ public abstract class RemoteProvider<T> : IRemoteProvider<T>
 
             while(true)
             {
-                T? instance;
+                TObject? instance;
                 try
                 {
                     instance = await task;
@@ -192,39 +209,58 @@ public abstract class RemoteProvider<T> : IRemoteProvider<T>
                     }
                 }
 
-                if(instance is null)
+                if(instance is not TActual actual)
                 {
                     // No value
-                    return defaultFactory();
+                    return await defaultFactory();
                 }
 
-                var func = ExpressionCache<T, TResult>.Compile(retrieveExpression);
-                return func(instance);
+                var func = ExpressionCache<TActual, TResult>.Compile(retrieveExpression);
+                return func(actual);
             }
         }
     }
 
-    public abstract bool Equals(IRemoteProvider<T> other);
-    public abstract bool Equals(T? other);
+    public abstract bool Equals(IRemoteProvider other);
+    public abstract bool References(TObject? other);
+
+    public virtual bool References<TActual>() where TActual : notnull
+    {
+        return this is IReferenceRemoteProvider<TActual>;
+    }
+
+    public virtual bool References<TActual>(TActual? other) where TActual : notnull
+    {
+        if(this is IReferenceRemoteProvider<TActual> provider)
+        {
+            return provider.References(other);
+        }
+        return false;
+    }
 
     public sealed override bool Equals(object obj)
     {
-        switch(obj)
-        {
-            case IRemoteProvider<T> provider:
-                return Equals(provider);
-            case T other:
-                return Equals(other);
-            default:
-                return false;
-        }
+        return obj is IRemoteProvider other && Equals(other);
     }
 
     public abstract override int GetHashCode();
 
     public interface IResultRemoteProvider<TResult>
     {
-        ValueTask<TResult>? TryGetImmediate(Expression<Func<T, TResult>> retrieveExpression, CancellationToken cancellationToken);
+        ValueTask<TResult>? TryGetImmediate(LambdaExpression retrieveExpression, CancellationToken cancellationToken);
+    }
+
+    public interface IReferenceRemoteProvider<in TActual> where TActual : notnull
+    {
+        bool References(TActual? other);
+    }
+}
+
+public abstract class DerivedRemoteProvider<TBase, TDerived> : RemoteProvider<TDerived>, RemoteProvider<TDerived>.IReferenceRemoteProvider<TBase> where TDerived : notnull, TBase where TBase : notnull
+{
+    bool IReferenceRemoteProvider<TBase>.References(TBase? other)
+    {
+        return other is TDerived derived && References(derived);
     }
 }
 

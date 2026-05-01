@@ -132,6 +132,12 @@ public class XmppClientSession : ClientSession
 
         // Supported extensions
 
+        // TODO CancellationToken
+        if(await data.Capabilities.Get(static c => c.Identifier) is { } identifier)
+        {
+            await output.Capabilities(xmpp.GetToken<CapabilitiesHash>(identifier.VersionType), identifier.Application, identifier.Version, null);
+        }
+
         await WriteSender(data.Presentation, output);
 
         await WriteDelivery(output, data, evnt);

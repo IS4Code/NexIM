@@ -9,7 +9,7 @@ public static class ReferenceRemoteExtensions
 {
     public static ValueTask<TResult?> Get<TObject, TResult>(this Remote<TObject> remote, Expression<Func<TObject, TResult>> retrieveExpression, CancellationToken cancellationToken = default) where TObject : notnull where TResult : class
     {
-        return remote.Get(retrieveExpression, static () => null!, cancellationToken)!;
+        return remote.Get(retrieveExpression, static () => new(default(TResult)!), cancellationToken)!;
     }
 }
 
