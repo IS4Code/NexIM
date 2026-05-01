@@ -4,7 +4,6 @@ using NexIM.Server.Accounts;
 using NexIM.Server.Events;
 using NexIM.Tools;
 using NexIM.Xmpp.Protocol;
-using NexIM.Xmpp.Server.Formats;
 
 namespace NexIM.Xmpp.Server.Handlers;
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
@@ -330,7 +329,7 @@ public class XmppClientSession : ClientSession
         }
     }
 
-    async ValueTask WriteSender(SenderPresentation sender, IPresentationHandler presence)
+    async ValueTask WriteSender(Presentation sender, IPresentationHandler presence)
     {
         if(sender.Nickname is { } nick)
         {
