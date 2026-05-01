@@ -1,5 +1,5 @@
-﻿using NexIM.Primitives;
-using NexIM.Server.Accounts;
+﻿using System.Runtime.InteropServices;
+using NexIM.Primitives;
 
 namespace NexIM.Server.Events;
 
@@ -22,7 +22,7 @@ public sealed record PresenceData : DeliveryData
     /// <summary>
     /// The sender's presentation.
     /// </summary>
-    public required SenderPresentation Presentation { get; init; }
+    public required Presentation Presentation { get; init; }
 
     /// <summary>
     /// The sender's status.
@@ -45,6 +45,20 @@ public sealed record PresenceData : DeliveryData
     }
 }
 
+[StructLayout(LayoutKind.Auto)]
+public record struct Status(Availability Availability, LocalizedString? Description = null);
+
+public enum Availability
+{
+    Unavailable,
+    Available,
+    Chatting,
+    Away,
+    Gone,
+    Busy
+}
+
+[StructLayout(LayoutKind.Auto)]
 public record struct CapabilitiesIdentifier(string Application, string Version, string VersionType);
 
 public abstract record Capabilities(CapabilitiesIdentifier Identifier);

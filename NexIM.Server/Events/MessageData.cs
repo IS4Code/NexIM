@@ -46,7 +46,7 @@ public sealed record MessageData : DeliveryData
     /// <summary>
     /// The sender's presentation.
     /// </summary>
-    public required SenderPresentation Presentation { get; init; }
+    public required Presentation Presentation { get; init; }
 
     /// <summary>
     /// The subject of the message.
@@ -177,6 +177,9 @@ public readonly struct MessageBodyCollection(MessageBodyCollectionData data) : I
         return hashCode.ToHashCode();
     }
 }
+
+[StructLayout(LayoutKind.Auto)]
+public readonly record struct Presentation(string? Nickname);
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct DeliveryAddress(DeliveryAddressType Type, Identifier? Recipient, LanguageTaggedString? Description) : IComparable<DeliveryAddress>
