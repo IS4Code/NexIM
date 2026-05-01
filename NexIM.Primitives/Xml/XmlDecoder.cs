@@ -11,9 +11,9 @@ namespace NexIM.Primitives.Xml;
 public abstract class XmlDecoder :
     IValueXmlDecoder<TemporaryString>,
     IValueXmlDecoder<TemporaryUtf8String>,
-    IValueXmlDecoder<ArraySegment<byte>>,
-    IValueXmlDecoder<TemporaryArray<byte>>,
-    IValueXmlDecoder<TemporaryFile>,
+    IValueXmlDecoder<Base64<ArraySegment<byte>>>,
+    IValueXmlDecoder<Base64<TemporaryArray<byte>>>,
+    IValueXmlDecoder<Base64<TemporaryFile>>,
     IValueXmlDecoder<Token<Enum>>,
     IValueXmlDecoder<LanguageTaggedString>,
     IValueXmlDecoder<DateTime>,
@@ -90,7 +90,7 @@ public abstract class XmlDecoder :
         return decoder.Decode(reader);
     }
 
-    async ValueTask<ArraySegment<byte>> IValueXmlDecoder<ArraySegment<byte>>.Decode(XmlReader reader)
+    async ValueTask<Base64<ArraySegment<byte>>> IValueXmlDecoder<Base64<ArraySegment<byte>>>.Decode(XmlReader reader)
     {
         var pool = ArrayPool<byte>.Instance;
         var buffer = pool.Rent(1024);
@@ -163,7 +163,7 @@ public abstract class XmlDecoder :
         }
     }
 
-    async ValueTask<TemporaryArray<byte>> IValueXmlDecoder<TemporaryArray<byte>>.Decode(XmlReader reader)
+    async ValueTask<Base64<TemporaryArray<byte>>> IValueXmlDecoder<Base64<TemporaryArray<byte>>>.Decode(XmlReader reader)
     {
         var arr = new TemporaryArray<byte>(arraySource: ArraySource<byte>.Instance);
         try
@@ -184,9 +184,9 @@ public abstract class XmlDecoder :
         }
     }
 
-    ValueTask<TemporaryFile> IValueXmlDecoder<TemporaryFile>.Decode(XmlReader reader)
+    async ValueTask<Base64<TemporaryFile>> IValueXmlDecoder<Base64<TemporaryFile>>.Decode(XmlReader reader)
     {
-        return TemporaryFile.ReadFromAsync(StorageQuota.Local, xmlTemporaryByteReader, reader);
+        return await TemporaryFile.ReadFromAsync(StorageQuota.Local, xmlTemporaryByteReader, reader);
     }
 
     protected async ValueTask<string> DecodeTokenAsync(XmlReader reader)

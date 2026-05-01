@@ -129,7 +129,7 @@ public interface IVCardResourceHandler : IPayloadHandler
 public interface IVCardDataHandler : IVCardResourceHandler
 {
     [Name("BINVAL")]
-    ValueTask BinaryValue(TemporaryFile? data);
+    ValueTask BinaryValue(Base64<TemporaryFile>? data);
 }
 
 [ComplexType, Namespace(VCardTemp)]

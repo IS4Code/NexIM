@@ -383,7 +383,11 @@ partial class GrammarGenerator
 
         void UsingIfDisposable(ITypeSymbol type)
         {
-            if(GetQualifiedName(type).StartsWith("NexIM.Primitives.Temporary") || type.Interfaces.Any(i => GetQualifiedName(i) == typeof(IDisposable).FullName))
+            var typeName = GetQualifiedName(type);
+            if((
+                typeName.StartsWith("NexIM.Primitives.Temporary", StringComparison.Ordinal) ||
+                typeName is "NexIM.Primitives.Hex" or "NexIM.Primitives.Base64"
+            ) || type.Interfaces.Any(i => GetQualifiedName(i) == typeof(IDisposable).FullName))
             {
                 writer.Write("using ");
             }

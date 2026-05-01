@@ -11,7 +11,7 @@ namespace NexIM.Primitives;
 /// Provides a mutable array implementation whose contents can be determinstically
 /// cleared from memory.
 /// </summary>
-public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEquatable<T>
+public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T : unmanaged, IEquatable<T>
 {
     public delegate int SynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
     public delegate ValueTask<int> AsynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
@@ -34,6 +34,7 @@ public class TemporaryArray<T> : IList<T>, IDisposable where T : unmanaged, IEqu
     public ArraySegment<T> Value => new(storage, 0, Length);
 
     int ICollection<T>.Count => Length;
+    int IReadOnlyCollection<T>.Count => Length;
     bool ICollection<T>.IsReadOnly => false;
 
     public T this[int index] {

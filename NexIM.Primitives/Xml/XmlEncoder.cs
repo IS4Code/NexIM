@@ -11,9 +11,9 @@ namespace NexIM.Primitives.Xml;
 public abstract class XmlEncoder :
     IValueXmlEncoder<TemporaryString>,
     IValueXmlEncoder<TemporaryUtf8String>,
-    IValueXmlEncoder<ArraySegment<byte>>,
-    IValueXmlEncoder<TemporaryArray<byte>>,
-    IValueXmlEncoder<TemporaryFile>,
+    IValueXmlEncoder<Base64<ArraySegment<byte>>>,
+    IValueXmlEncoder<Base64<TemporaryArray<byte>>>,
+    IValueXmlEncoder<Base64<TemporaryFile>>,
     IValueXmlEncoder<Token<Enum>>,
     IValueXmlEncoder<LanguageTaggedString>,
     IValueXmlEncoder<DateTime>,
@@ -50,7 +50,7 @@ public abstract class XmlEncoder :
         return new(writer.WriteBase64Async(buffer.Array!, buffer.Offset, buffer.Count));
     };
 
-    ValueTask IValueXmlEncoder<ArraySegment<byte>>.Encode(XmlWriter writer, ArraySegment<byte> value)
+    ValueTask IValueXmlEncoder<Base64<ArraySegment<byte>>>.Encode(XmlWriter writer, Base64<ArraySegment<byte>> value)
     {
         return xmlTemporaryByteWriter(value, writer);
     }
@@ -65,14 +65,14 @@ public abstract class XmlEncoder :
         return value.WriteToAsync(xmlTemporaryByteWriter, writer);
     }
 
-    ValueTask IValueXmlEncoder<TemporaryArray<byte>>.Encode(XmlWriter writer, TemporaryArray<byte> value)
+    ValueTask IValueXmlEncoder<Base64<TemporaryArray<byte>>>.Encode(XmlWriter writer, Base64<TemporaryArray<byte>> value)
     {
-        return value.WriteToAsync(xmlTemporaryByteWriter, writer);
+        return value.Value.WriteToAsync(xmlTemporaryByteWriter, writer);
     }
 
-    ValueTask IValueXmlEncoder<TemporaryFile>.Encode(XmlWriter writer, TemporaryFile value)
+    ValueTask IValueXmlEncoder<Base64<TemporaryFile>>.Encode(XmlWriter writer, Base64<TemporaryFile> value)
     {
-        return value.WriteToAsync(xmlTemporaryByteWriter, writer);
+        return value.Value.WriteToAsync(xmlTemporaryByteWriter, writer);
     }
 
     protected async ValueTask EncodeTokenAsync(XmlWriter writer, string tokenValue)

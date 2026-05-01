@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +12,7 @@ namespace NexIM.Primitives;
 /// <summary>
 /// Represents a file reference with limited lifetime.
 /// </summary>
-public abstract partial class TemporaryFile : IDisposable
+public abstract partial class TemporaryFile : IDisposable, IReadOnlyList<byte>
 {
     static readonly ArrayPool<byte> pool = ArrayPool<byte>.Shared;
 
@@ -162,4 +164,32 @@ public abstract partial class TemporaryFile : IDisposable
             return false;
         }
     }
+
+    // Basic IReadOnlyList<byte> implementation
+
+    int IReadOnlyCollection<byte>.Count => checked((int)new FileInfo(FilePath).Length);
+    byte IReadOnlyList<byte>.this[int index] {
+        get {
+            using var file = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.RandomAccess);
+            file.Position = index;
+            var result = file.ReadByte();
+            if(result == -1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+            return (byte)result;
+        }
+    }
+
+    private IEnumerator<byte> GetEnumerator()
+    {
+        using var file = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+        while(file.ReadByte() is var b and not -1)
+        {
+            yield return (byte)b;
+        }
+    }
+
+    IEnumerator<byte> IEnumerable<byte>.GetEnumerator() => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
