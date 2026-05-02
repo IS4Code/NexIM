@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
@@ -7,9 +8,9 @@ namespace NexIM.Xmpp.Server.Formats;
 
 internal static class AddressesFormatter
 {
-    public static async ValueTask<IAddressesHandler?> WriteTo(this DeliveryAddress address, IDeliveryHandler deliveryHandler, IAddressesHandler? handler, XmppResource? remoteAddress, bool delivered)
+    public static async ValueTask<IAddressesHandler?> WriteTo(this KeyValuePair<AddressRelation, LocalizedString?> addressEntry, IDeliveryHandler deliveryHandler, IAddressesHandler? handler, XmppResource? remoteAddress, bool delivered)
     {
-        if(!CanWriteTo(address, remoteAddress, out var type, out var recipient))
+        if(!CanWriteTo(addressEntry.Key, remoteAddress, out var type, out var recipient))
         {
             return null;
         }
@@ -18,18 +19,39 @@ internal static class AddressesFormatter
         {
             handler = await deliveryHandler.Addresses();
         }
-        await handler.Address(
-            type.ToToken(),
-            recipient,
-            null,
-            null,
-            address.Description,
-            delivered ? new True() : null
-        );
+
+        var deliveredTrue = delivered ? new True() : default(True?);
+        if(addressEntry.Value is { } description)
+        {
+            // Flatten over all stored texts
+            foreach(var text in description)
+            {
+                await handler.Address(
+                    type.ToToken(),
+                    recipient,
+                    null,
+                    null,
+                    text,
+                    deliveredTrue
+                );
+            }
+        }
+        else
+        {
+            await handler.Address(
+                type.ToToken(),
+                recipient,
+                null,
+                null,
+                null,
+                deliveredTrue
+            );
+        }
+
         return handler;
     }
 
-    private static bool CanWriteTo(this DeliveryAddress address, XmppResource? remoteAddress, out AddressType type, out XmppResource? recipient)
+    private static bool CanWriteTo(this AddressRelation address, XmppResource? remoteAddress, out AddressType type, out XmppResource? recipient)
     {
         if(address.Type.ToAddressType() is not { } addressType)
         {

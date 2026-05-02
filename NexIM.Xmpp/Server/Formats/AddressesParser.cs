@@ -14,10 +14,10 @@ namespace NexIM.Xmpp.Server.Formats;
 internal sealed class AddressesParser<TContext> : BaseAddressesHandler<TContext> where TContext : IPayloadHandlerContext
 {
     NonEmptySet<Identifier>.Builder recipientBuilder;
-    NonEmptySet<DeliveryAddress>.Builder addressBuilder;
+    NonEmptyDictionary<AddressRelation, LocalizedString?>.Builder addressBuilder;
 
     public NonEmptySet<Identifier>? Recipients => recipientBuilder.TryToSet();
-    public NonEmptySet<DeliveryAddress>? Addresses => addressBuilder.TryToSet();
+    public NonEmptyDictionary<AddressRelation, LocalizedString?>? Addresses => addressBuilder.TryToDictionary();
 
     protected async override ValueTask OnAddress(Token<AddressType>? type, XmppResource? address, Token<DiscoNode>? node, ValueUri? uri, LanguageTaggedString? description, True? delivered)
     {
@@ -29,23 +29,22 @@ internal sealed class AddressesParser<TContext> : BaseAddressesHandler<TContext>
         // No need to pass the XMPP session because the server does not receive messages or presence
         var recipient = address?.ToIdentifier();
 
-        var delivery = new DeliveryAddress(
+        var delivery = new AddressRelation(
             type?.ToEnum()?.ToDeliveryAddressType() ?? throw XmppStanzaException.BadRequest(),
-            recipient,
-            description
+            recipient
         );
 
-        addressBuilder.Add(delivery);
-        if(delivered is null && recipient is { } identifier && delivery.Type is DeliveryAddressType.Primary or DeliveryAddressType.Secondary or DeliveryAddressType.Hidden)
+        addressBuilder.Add(delivery, description);
+        if(delivered is null && recipient is { } identifier && delivery.Type is DeliveryRelationType.Primary or DeliveryRelationType.Secondary or DeliveryRelationType.Hidden)
         {
             // Should also be delivered to this address
             recipientBuilder.Add(identifier);
         }
     }
 
-    public void Add(DeliveryAddress address)
+    public void Add(AddressRelation address, LanguageTaggedString? description = null)
     {
-        addressBuilder.Add(address);
+        addressBuilder.Add(address, description);
     }
 
     protected override ValueTask OnUnrecognized(XmlReader payloadReader) => this.Unrecognized(payloadReader);

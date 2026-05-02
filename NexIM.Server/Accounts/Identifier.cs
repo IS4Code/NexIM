@@ -11,6 +11,8 @@ public readonly record struct Identifier(AccountName? Account, string? Resource)
 
     public static readonly Identifier Null = default;
 
+    public static readonly IComparer<Identifier?> NullableComparer = Comparer<Identifier?>.Default;
+
     public Identifier Bare => new(Account, null);
 
     public int CompareTo(Identifier other)

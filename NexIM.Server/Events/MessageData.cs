@@ -1,42 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using NexIM.Primitives;
-using NexIM.Server.Accounts;
-using NexIM.Tools;
 
 namespace NexIM.Server.Events;
 
 using MessageBodyCollectionData = ImmutableDictionary<(MessageFormat format, LanguageCode language), object>;
-
-/// <summary>
-/// Stores data for a delivered event.
-/// </summary>
-public abstract record DeliveryData : EventData
-{
-    /// <summary>
-    /// The identifier of the entity that delayed the event.
-    /// </summary>
-    public Identifier? DelayedBy { get; init; }
-
-    /// <summary>
-    /// The reason for a delayed delivery of this event.
-    /// </summary>
-    public LanguageTaggedString? DelayReason { get; init; }
-
-    /// <summary>
-    /// Stores information about the additional addresses of this event.
-    /// </summary>
-    public NonEmptySet<DeliveryAddress>? Addresses { get; init; }
-
-    /// <summary>
-    /// Stores the transaction identifier for a previous message that requested the receipt.
-    /// </summary>
-    public string? ReceiptIdentifier { get; init; }
-}
 
 /// <summary>
 /// Stores data for a message.
@@ -180,40 +151,3 @@ public readonly struct MessageBodyCollection(MessageBodyCollectionData data) : I
 
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct Presentation(string? Nickname);
-
-[StructLayout(LayoutKind.Auto)]
-public readonly record struct DeliveryAddress(DeliveryAddressType Type, Identifier? Recipient, LanguageTaggedString? Description) : IComparable<DeliveryAddress>
-{
-    static readonly Comparer<Identifier?> recipientComparer = Comparer<Identifier?>.Default;
-    static readonly Comparer<LanguageTaggedString?> descComparer = Comparer<LanguageTaggedString?>.Default;
-
-    public static readonly DeliveryAddress DispositionNotification = new(DeliveryAddressType.DispositionNotify, null, null);
-
-    public int CompareTo(DeliveryAddress other)
-    {
-        int cmp = ((int)Type).CompareTo((int)other.Type);
-        if(cmp != 0)
-        {
-            return cmp;
-        }
-        cmp = recipientComparer.Compare(Recipient, other.Recipient);
-        if(cmp != 0)
-        {
-            return cmp;
-        }
-        // TODO Should be a LocalizedString
-        return descComparer.Compare(Description, other.Description);
-    }
-}
-
-public enum DeliveryAddressType
-{
-    Primary,
-    Secondary,
-    Hidden,
-    Reply,
-    ReplyRoom,
-    NoReply,
-    Origin,
-    DispositionNotify
-}

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server.Events;
+using NexIM.Tools;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
 using NexIM.Xmpp.Server.Formats;
@@ -15,11 +16,13 @@ namespace NexIM.Xmpp.Server.Handlers;
 internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     LocalizedString.Builder subjectBuilder, bodyBuilder;
-    string? nick, receiptFor;
+    string? nick;
     (string? identifier, string? parent)? thread;
     ConversationState? state;
-    (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
+    (DateTime? timestamp, DeliveryTiming timing)? delay;
     AddressesParser<ICommandContext>? addressesParser;
+    NonEmptySet<MessageRelation>.Builder messageRelationsBuilder;
+    bool isNotification;
 
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -50,7 +53,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         {
             return;
         }
-        this.SetOnce(ref delay, (timestamp, from, reason));
+        this.SetOnce(ref delay, (timestamp, new(from?.ToIdentifier(this.GetSession()), reason)));
     }
 
     protected async override ValueTask<IAddressesHandler> OnAddresses()
@@ -61,12 +64,17 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected async override ValueTask OnReceiptRequest()
     {
         var parser = addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
-        parser.Add(DeliveryAddress.DispositionNotification);
+        parser.Add(AddressRelation.DispositionNotification);
     }
 
     protected async override ValueTask OnReceiptResponse(string? id)
     {
-        this.SetOnce(ref receiptFor, id);
+        isNotification = true;
+        if(id == null)
+        {
+            return;
+        }
+        messageRelationsBuilder.Add(new MessageRelation(DeliveryRelationType.DispositionNotify, null, id));
     }
 
     protected async sealed override ValueTask OnActive()
@@ -97,11 +105,12 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected virtual MessageData GetMessage()
     {
         var addresses = addressesParser?.Addresses;
-        if(receiptFor != null && addresses.HasValue)
+
+        if(isNotification && addresses is { } addressesSet)
         {
-            if(addresses.GetValueOrDefault().Contains(DeliveryAddress.DispositionNotification))
+            if(addressesSet.ContainsKey(AddressRelation.DispositionNotification))
             {
-                throw XmppStanzaException.BadRequest("A receipt cannot be requested for a message acknowledgment.");
+                throw XmppStanzaException.BadRequest("A delivery notification cannot be requested for a message acknowledgment.");
             }
         }
 
@@ -122,10 +131,9 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             ParentThreadIdentifier = thread?.parent,
             Presentation = new(Nickname: nick),
             State = state ?? ConversationState.Unspecified,
-            DelayedBy = delay?.from?.ToIdentifier(this.GetSession()),
-            DelayReason = delay?.reason,
-            Addresses = addresses,
-            ReceiptIdentifier = receiptFor,
+            Timing = delay?.timing,
+            AddressRelations = addresses,
+            MessageRelations = messageRelationsBuilder.TryToSet(),
             Extensions = InnerHandler.ToExtensions()
         };
     }

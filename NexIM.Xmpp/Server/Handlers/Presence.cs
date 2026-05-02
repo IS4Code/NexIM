@@ -19,7 +19,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     string? nick;
     sbyte? priority;
     Remote<Capabilities>? caps;
-    (DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)? delay;
+    (DateTime? timestamp, DeliveryTiming timing)? delay;
     AddressesParser<ICommandContext>? addressesParser;
 
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
@@ -51,7 +51,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         {
             return;
         }
-        this.SetOnce(ref delay, (timestamp, from, reason));
+        this.SetOnce(ref delay, (timestamp, new(from?.ToIdentifier(this.GetSession()), reason)));
     }
 
     protected async override ValueTask<IAddressesHandler> OnAddresses()
@@ -82,10 +82,9 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             Presentation = new(Nickname: nick),
             Priority = priority,
             Capabilities = caps ?? default,
-            DelayedBy = delay?.from?.ToIdentifier(),
-            DelayReason = delay?.reason,
-            Addresses = addressesParser?.Addresses,
-            ReceiptIdentifier = null,
+            Timing = delay?.timing,
+            AddressRelations = addressesParser?.Addresses,
+            MessageRelations = null,
             Extensions = InnerHandler.ToExtensions()
         }.Deduplicate();
     }

@@ -4,6 +4,7 @@ using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server;
 using NexIM.Server.Accounts;
 using NexIM.Server.Events;
+using NexIM.Tools;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
 using NexIM.Xmpp.Server.Communication;
@@ -189,28 +190,28 @@ internal static partial class AdapterExtensions
         };
     }
 
-    public static DeliveryAddressType? ToDeliveryAddressType(this AddressType type)
+    public static DeliveryRelationType? ToDeliveryAddressType(this AddressType type)
     {
         return type switch {
-            AddressType.To => DeliveryAddressType.Primary,
-            AddressType.CarbonCopy => DeliveryAddressType.Secondary,
-            AddressType.BlindCarbonCopy => DeliveryAddressType.Hidden,
-            AddressType.ReplyTo => DeliveryAddressType.Reply,
-            AddressType.ReplyRoom => DeliveryAddressType.ReplyRoom,
-            AddressType.OriginalFrom => DeliveryAddressType.Origin,
+            AddressType.To => DeliveryRelationType.Primary,
+            AddressType.CarbonCopy => DeliveryRelationType.Secondary,
+            AddressType.BlindCarbonCopy => DeliveryRelationType.Hidden,
+            AddressType.ReplyTo => DeliveryRelationType.Reply,
+            AddressType.ReplyRoom => DeliveryRelationType.ReplyRoom,
+            AddressType.OriginalFrom => DeliveryRelationType.Origin,
             _ => null
         };
     }
 
-    public static AddressType? ToAddressType(this DeliveryAddressType type)
+    public static AddressType? ToAddressType(this DeliveryRelationType type)
     {
         return type switch {
-            DeliveryAddressType.Primary => AddressType.To,
-            DeliveryAddressType.Secondary => AddressType.CarbonCopy,
-            DeliveryAddressType.Hidden => AddressType.BlindCarbonCopy,
-            DeliveryAddressType.Reply => AddressType.ReplyTo,
-            DeliveryAddressType.ReplyRoom => AddressType.ReplyRoom,
-            DeliveryAddressType.Origin => AddressType.OriginalFrom,
+            DeliveryRelationType.Primary => AddressType.To,
+            DeliveryRelationType.Secondary => AddressType.CarbonCopy,
+            DeliveryRelationType.Hidden => AddressType.BlindCarbonCopy,
+            DeliveryRelationType.Reply => AddressType.ReplyTo,
+            DeliveryRelationType.ReplyRoom => AddressType.ReplyRoom,
+            DeliveryRelationType.Origin => AddressType.OriginalFrom,
             _ => null
         };
     }
@@ -218,5 +219,30 @@ internal static partial class AdapterExtensions
     public static EventExtensions ToExtensions<THandler>(this CapturingHandler<THandler>? handler) where THandler : IPayloadHandler
     {
         return new(handler?.Calls.Count > 0 ? handler : null);
+    }
+
+    public static void Add<TKey>(ref this NonEmptyDictionary<TKey, LocalizedString?>.Builder builder, TKey key, LanguageTaggedString? value) where TKey : IComparable<TKey>
+    {
+        if(value.HasValue)
+        {
+            Add(ref builder, key, value.GetValueOrDefault());
+        }
+    }
+
+    public static void Add<TKey>(ref this NonEmptyDictionary<TKey, LocalizedString?>.Builder builder, TKey key, LanguageTaggedString value) where TKey : IComparable<TKey>
+    {
+        if(!builder.TryGetValue(key, out var str))
+        {
+            str = null;
+        }
+        if(str is not { } strValue)
+        {
+            str = new(value);
+        }
+        else
+        {
+            str = strValue.Add(value);
+        }
+        builder[key] = str;
     }
 }

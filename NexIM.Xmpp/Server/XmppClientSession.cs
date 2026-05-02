@@ -148,10 +148,10 @@ public class XmppClientSession : ClientSession
 
     private async ValueTask WriteDelivery(IDeliveryHandler output, DeliveryData data, Event evnt)
     {
-        if(data.DelayReason is { } reason && evnt.Created != evnt.Published)
+        if(data.Timing is { } timing && evnt.Created != evnt.Published)
         {
             // Delayed by sender
-            await output.Delay(evnt.Created.UtcDateTime, data.DelayedBy?.ToResource(xmpp), reason);
+            await output.Delay(evnt.Created.UtcDateTime, timing.ObservedBy?.ToResource(xmpp), timing.Description);
         }
         else if(DateTimeOffset.UtcNow - evnt.Created > Configuration.XmppMinDelayTime)
         {
@@ -159,17 +159,26 @@ public class XmppClientSession : ClientSession
             await output.Delay(evnt.Created.UtcDateTime, xmpp.LocalResource, null);
         }
 
-        if(data.ReceiptIdentifier is { } receiptFor)
+        if(data.MessageRelations is { } messageRelations)
         {
-            if(output is IMessageHandler messageHandler)
+            foreach(var relation in messageRelations)
             {
-                await messageHandler.ReceiptResponse(receiptFor);
+                switch(relation.Type)
+                {
+                    case DeliveryRelationType.DispositionNotify:
+                        if(output is IMessageHandler messageHandler)
+                        {
+                            // TODO Check originator
+                            await messageHandler.ReceiptResponse(relation.MessageIdentifier);
+                        }
+                        break;
+                }
             }
         }
 
-        if(data.Addresses is { } addresses)
+        if(data.AddressRelations is { } addressRelations)
         {
-            if(output is IMessageHandler messageHandler && addresses.Contains(DeliveryAddress.DispositionNotification))
+            if(output is IMessageHandler messageHandler && addressRelations.ContainsKey(AddressRelation.DispositionNotification))
             {
                 // TODO Notification to a different identifier
                 await messageHandler.ReceiptRequest();
@@ -179,13 +188,13 @@ public class XmppClientSession : ClientSession
             IAddressesHandler? addressesHandler = null;
             try
             {
-                foreach(var address in addresses)
+                foreach(var entry in addressRelations)
                 {
                     // Delivering only those that are the direct recipients of this event
-                    bool delivered = address.Recipient is { } recipient && !evnt.To.Contains(recipient);
+                    bool delivered = entry.Key.Recipient is { } recipient && !evnt.To.Contains(recipient);
 
                     // Will be initialized if required
-                    addressesHandler = await AddressesFormatter.WriteTo(address, output, addressesHandler, remoteAddress, delivered);
+                    addressesHandler = await AddressesFormatter.WriteTo(entry, output, addressesHandler, remoteAddress, delivered);
                 }
             }
             finally
