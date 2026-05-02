@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
+using NexIM.Xmpp.Protocol.Handlers;
 
 namespace NexIM.Xmpp.Server.Formats;
 
@@ -21,32 +22,14 @@ internal static class AddressesFormatter
         }
 
         var deliveredTrue = delivered ? new True() : default(True?);
-        if(addressEntry.Value is { } description)
-        {
-            // Flatten over all stored texts
-            foreach(var text in description)
-            {
-                await handler.Address(
-                    type.ToToken(),
-                    recipient,
-                    null,
-                    null,
-                    text,
-                    deliveredTrue
-                );
-            }
-        }
-        else
-        {
-            await handler.Address(
-                type.ToToken(),
-                recipient,
-                null,
-                null,
-                null,
-                deliveredTrue
-            );
-        }
+        await handler.AddressLocalized(
+            type.ToToken(),
+            recipient,
+            null,
+            null,
+            addressEntry.Value,
+            deliveredTrue
+        );
 
         return handler;
     }

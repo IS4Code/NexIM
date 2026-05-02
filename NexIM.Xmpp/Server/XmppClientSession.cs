@@ -65,7 +65,7 @@ public class XmppClientSession : ClientSession
     {
         // Basic elements
 
-        await output.SubjectLocalized(data.Subject);
+        await output.SubjectLocalizedNotNull(data.Subject);
 
         foreach(var ((format, language), body) in data.Body.Data)
         {
@@ -122,7 +122,7 @@ public class XmppClientSession : ClientSession
             await output.Show(statusType.ToToken());
         }
 
-        await output.StatusLocalized(data.Status.Description);
+        await output.StatusLocalizedNotNull(data.Status.Description);
 
         if(data.Priority is { } priority)
         {
@@ -163,7 +163,7 @@ public class XmppClientSession : ClientSession
         {
             if(output is IMessageHandler messageHandler)
             {
-                foreach(var (relation, value) in messageRelations)
+                foreach(var (relation, text) in messageRelations)
                 {
                     switch(relation.Type)
                     {
@@ -181,18 +181,7 @@ public class XmppClientSession : ClientSession
                             break;
 
                         case DeliveryRelationType.DisplayNotify:
-                            if(value is { } description)
-                            {
-                                // Flatten
-                                foreach(var text in description)
-                                {
-                                    await messageHandler.DisplayedResponse(relation.MessageIdentifier, text);
-                                }
-                            }
-                            else
-                            {
-                                await messageHandler.DisplayedResponse(relation.MessageIdentifier, null);
-                            }
+                            await messageHandler.DisplayedResponseLocalized(relation.MessageIdentifier, text);
                             break;
                     }
                 }
@@ -212,18 +201,7 @@ public class XmppClientSession : ClientSession
                             await messageHandler.ReceiptRequest();
                             break;
                         case DeliveryRelationType.DisplayNotify:
-                            if(entry.Value is { } description)
-                            {
-                                // Flatten
-                                foreach(var text in description)
-                                {
-                                    await messageHandler.DisplayedRequest(text);
-                                }
-                            }
-                            else
-                            {
-                                await messageHandler.DisplayedRequest(null);
-                            }
+                            await messageHandler.DisplayedRequestLocalized(entry.Value);
                             break;
                         case DeliveryRelationType.NoStore:
                             await messageHandler.NoStore();
@@ -387,7 +365,7 @@ public class XmppClientSession : ClientSession
 
             await exception.Output(error);
 
-            await error.TextLocalized(data.Description);
+            await error.TextLocalizedNotNull(data.Description);
 
             // General extensions
 

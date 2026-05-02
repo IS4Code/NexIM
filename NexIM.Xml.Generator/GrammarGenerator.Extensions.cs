@@ -1,6 +1,7 @@
 ﻿using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
@@ -37,107 +38,190 @@ partial class GrammarGenerator
             var methods = type.GetMembers().OfType<IMethodSymbol>();
             foreach(var method in methods)
             {
-                AnalyzeMethod(method, out _, out var valueParam, out var otherParams);
+                AnalyzeMethod(method, out var handlerReturnType, out var valueParam, out var otherParams);
 
-                if(valueParam != null && otherParams is not { Count: > 0 })
+                var name = method.Name;
+                var returnType = FormatNullable(method.ReturnType);
+
+                if(valueParam != null)
                 {
-                    // Single value parameter
-
-                    var name = method.Name;
-                    var returnType = FormatNullable(method.ReturnType);
                     var paramName = valueParam.Name;
                     var paramType = valueParam.Type;
 
-                    // List parameter
-                    if(paramType.IsValueType)
+                    if(otherParams is not { Count: > 0 })
                     {
-                        if(IsNullable(paramType, out var elementType))
+                        // Single value parameter
+
+                        // List parameter
+                        if(paramType.IsValueType)
                         {
-                            // Nullable value type - add overload without
-                            writer.WriteLine($"public static async {returnType} {name}Range(this {handlerType} handler, List<{FormatNullable(elementType)}>? {paramName}Range)");
+                            if(IsNullable(paramType, out var elementType))
+                            {
+                                // Nullable value type - add overload without
+                                writer.WriteLine($"public static async {returnType} {name}Range(this {handlerType} handler, List<{FormatNullable(elementType)}>? {paramName}Range)");
+                                WriteListBody();
+                            }
+                            writer.WriteLine($"public static async {returnType} {name}Range(this {handlerType} handler, List<{FormatNullable(paramType)}>? {paramName}Range)");
                             WriteListBody();
                         }
-                        writer.WriteLine($"public static async {returnType} {name}Range(this {handlerType} handler, List<{FormatNullable(paramType)}>? {paramName}Range)");
-                        WriteListBody();
+                        else
+                        {
+                            // Ignore precise nullability
+                            writer.WriteLine($"public static async {returnType} {name}Range(this {handlerType} handler, List<");
+                            writer.WriteLine("#nullable disable");
+                            writer.WriteLine(Format(paramType));
+                            writer.WriteLine("#nullable restore");
+                            writer.WriteLine($">? {paramName}Range)");
+                            WriteListBody();
+                        }
+
+                        void WriteListBody()
+                        {
+                            writer.WriteLine("{");
+                            writer.Indent++;
+
+                            writer.WriteLine($"if({paramName}Range is {{ }} _range)");
+                            writer.WriteLine("{");
+                            writer.Indent++;
+                            writer.WriteLine($"foreach(var _item in _range)");
+                            writer.WriteLine("{");
+                            writer.Indent++;
+                            writer.WriteLine($"await handler.{method.Name}(_item);");
+                            writer.Indent--;
+                            writer.WriteLine("}");
+                            writer.Indent--;
+                            writer.WriteLine("}");
+
+                            writer.Indent--;
+                            writer.WriteLine("}");
+                        }
+
+                        if(
+                            (paramType.IsValueType && IsNullable(paramType, out _)) ||
+                            paramType.NullableAnnotation == NullableAnnotation.Annotated
+                        )
+                        {
+                            // Nullable type
+                            writer.WriteLine($"public static {returnType} {name}NotNull(this {handlerType} handler, {FormatNullable(paramType)} {paramName})");
+                            writer.WriteLine("{");
+                            writer.Indent++;
+
+                            writer.WriteLine($"if({paramName} is not {{ }} _val)");
+                            writer.WriteLine("{");
+                            writer.Indent++;
+                            writer.WriteLine("return default;");
+                            writer.Indent--;
+                            writer.WriteLine("}");
+
+                            writer.WriteLine($"return handler.{method.Name}(_val);");
+
+                            writer.Indent--;
+                            writer.WriteLine("}");
+                        }
+
+                        if((paramType.IsValueType && IsNullable(paramType, out var innerType) ? innerType : paramType).Name == "LanguageTaggedString")
+                        {
+                            // Localized string
+                            writer.WriteLine($"public static async {returnType} {name}LocalizedNotNull(this {handlerType} handler, LocalizedString? {paramName})");
+                            writer.WriteLine("{");
+                            writer.Indent++;
+
+                            writer.WriteLine($"if({paramName} is not {{ }} _val)");
+                            writer.WriteLine("{");
+                            writer.Indent++;
+                            writer.WriteLine("return;");
+                            writer.Indent--;
+                            writer.WriteLine("}");
+
+                            writer.WriteLine($"foreach(var _str in _val)");
+                            writer.WriteLine("{");
+                            writer.Indent++;
+                            writer.WriteLine($"await handler.{method.Name}(_str);");
+                            writer.Indent--;
+                            writer.WriteLine("}");
+
+                            writer.Indent--;
+                            writer.WriteLine("}");
+                        }
                     }
-                    else
+                }
+
+                if(handlerReturnType == null)
+                {
+                    if(method.Parameters.FirstOrDefault(p => (p.Type.IsValueType && IsNullable(p.Type, out var innerType) ? innerType : p.Type).Name == "LanguageTaggedString") is { } localizedParam)
                     {
-                        // Ignore precise nullability
-                        writer.WriteLine($"public static async {returnType} {name}Range(this {handlerType} handler, List<");
-                        writer.WriteLine("#nullable disable");
-                        writer.WriteLine(Format(paramType));
-                        writer.WriteLine("#nullable restore");
-                        writer.WriteLine($">? {paramName}Range)");
-                        WriteListBody();
-                    }
+                        // Localized string parameter
+                        var paramName = localizedParam.Name;
+                        var paramType = localizedParam.Type;
 
-                    void WriteListBody()
-                    {
+                        writer.Write($"public static async {returnType} {name}Localized(this {handlerType} handler");
+                        foreach(var param in method.Parameters)
+                        {
+                            writer.Write(", ");
+                            if(SymbolEqualityComparer.Default.Equals(param, localizedParam))
+                            {
+                                writer.Write($"LocalizedString? {paramName}");
+                            }
+                            else
+                            {
+                                writer.Write($"{FormatNullable(param.Type)} {param.Name}");
+                            }
+                        }
+                        writer.WriteLine(")");
                         writer.WriteLine("{");
                         writer.Indent++;
 
-                        writer.WriteLine($"if({paramName}Range is {{ }} _range)");
+                        writer.WriteLine($"if({paramName} is {{ }} _val)");
                         writer.WriteLine("{");
                         writer.Indent++;
-                        writer.WriteLine($"foreach(var _item in _range)");
-                        writer.WriteLine("{");
-                        writer.Indent++;
-                        writer.WriteLine($"await handler.{method.Name}(_item);");
-                        writer.Indent--;
-                        writer.WriteLine("}");
-                        writer.Indent--;
-                        writer.WriteLine("}");
-
-                        writer.Indent--;
-                        writer.WriteLine("}");
-                    }
-
-                    if(
-                        (paramType.IsValueType && IsNullable(paramType, out _)) ||
-                        paramType.NullableAnnotation == NullableAnnotation.Annotated
-                    )
-                    {
-                        // Nullable type
-                        writer.WriteLine($"public static {returnType} {name}NotNull(this {handlerType} handler, {FormatNullable(paramType)} {paramName})");
-                        writer.WriteLine("{");
-                        writer.Indent++;
-
-                        writer.WriteLine($"if({paramName} is not {{ }} _val)");
-                        writer.WriteLine("{");
-                        writer.Indent++;
-                        writer.WriteLine("return default;");
-                        writer.Indent--;
-                        writer.WriteLine("}");
-
-                        writer.WriteLine($"return handler.{method.Name}(_val);");
-
-                        writer.Indent--;
-                        writer.WriteLine("}");
-                    }
-
-                    if((paramType.IsValueType && IsNullable(paramType, out var innerType) ? innerType : paramType).Name == "LanguageTaggedString")
-                    {
-                        // Localized string
-                        writer.WriteLine($"public static async {returnType} {name}Localized(this {handlerType} handler, LocalizedString? {paramName})");
-                        writer.WriteLine("{");
-                        writer.Indent++;
-
-                        writer.WriteLine($"if({paramName} is not {{ }} _val)");
-                        writer.WriteLine("{");
-                        writer.Indent++;
-                        writer.WriteLine("return;");
-                        writer.Indent--;
-                        writer.WriteLine("}");
 
                         writer.WriteLine($"foreach(var _str in _val)");
                         writer.WriteLine("{");
                         writer.Indent++;
-                        writer.WriteLine($"await handler.{method.Name}(_str);");
+                        WriteCall("_str");
                         writer.Indent--;
                         writer.WriteLine("}");
 
                         writer.Indent--;
                         writer.WriteLine("}");
+                        writer.WriteLine("else");
+                        writer.WriteLine("{");
+                        writer.Indent++;
+
+                        WriteCall("null");
+
+                        writer.Indent--;
+                        writer.WriteLine("}");
+
+                        writer.Indent--;
+                        writer.WriteLine("}");
+
+                        void WriteCall(string textParam)
+                        {
+                            writer.Write($"await handler.{method.Name}(");
+                            bool first = true;
+                            foreach(var param in method.Parameters)
+                            {
+                                if(first)
+                                {
+                                    first = false;
+                                }
+                                else
+                                {
+                                    writer.Write(", ");
+                                }
+
+                                if(SymbolEqualityComparer.Default.Equals(param, localizedParam))
+                                {
+                                    writer.Write(textParam);
+                                }
+                                else
+                                {
+                                    writer.Write(param.Name);
+                                }
+                            }
+                            writer.WriteLine(");");
+                        }
                     }
                 }
             }
