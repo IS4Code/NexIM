@@ -161,27 +161,84 @@ public class XmppClientSession : ClientSession
 
         if(data.MessageRelations is { } messageRelations)
         {
-            foreach(var relation in messageRelations)
+            if(output is IMessageHandler messageHandler)
             {
-                switch(relation.Type)
+                foreach(var (relation, value) in messageRelations)
                 {
-                    case DeliveryRelationType.DispositionNotify:
-                        if(output is IMessageHandler messageHandler)
-                        {
-                            // TODO Check originator
+                    switch(relation.Type)
+                    {
+                        case DeliveryRelationType.Reply:
+                            await messageHandler.ReplyTo(relation.MessageIdentifier, relation.Originator?.ToResource(xmpp));
+                            break;
+
+                        case DeliveryRelationType.Refer:
+                            await messageHandler.Reference(relation.MessageIdentifier, relation.Originator?.ToResource(xmpp));
+                            break;
+
+                        // TODO Check originator
+                        case DeliveryRelationType.DispositionNotify:
                             await messageHandler.ReceiptResponse(relation.MessageIdentifier);
-                        }
-                        break;
+                            break;
+
+                        case DeliveryRelationType.DisplayNotify:
+                            if(value is { } description)
+                            {
+                                // Flatten
+                                foreach(var text in description)
+                                {
+                                    await messageHandler.DisplayedResponse(relation.MessageIdentifier, text);
+                                }
+                            }
+                            else
+                            {
+                                await messageHandler.DisplayedResponse(relation.MessageIdentifier, null);
+                            }
+                            break;
+                    }
                 }
             }
         }
 
         if(data.AddressRelations is { } addressRelations)
         {
-            if(output is IMessageHandler messageHandler && addressRelations.ContainsKey(AddressRelation.DispositionNotification))
+            if(output is IMessageHandler messageHandler)
             {
-                // TODO Notification to a different identifier
-                await messageHandler.ReceiptRequest();
+                foreach(var entry in addressRelations)
+                {
+                    switch(entry.Key.Type)
+                    {
+                        // TODO Notification to a different identifier
+                        case DeliveryRelationType.DispositionNotify:
+                            await messageHandler.ReceiptRequest();
+                            break;
+                        case DeliveryRelationType.DisplayNotify:
+                            if(entry.Value is { } description)
+                            {
+                                // Flatten
+                                foreach(var text in description)
+                                {
+                                    await messageHandler.DisplayedRequest(text);
+                                }
+                            }
+                            else
+                            {
+                                await messageHandler.DisplayedRequest(null);
+                            }
+                            break;
+                        case DeliveryRelationType.NoStore:
+                            await messageHandler.NoStore();
+                            break;
+                        case DeliveryRelationType.NoCopy:
+                            await messageHandler.NoCopy();
+                            break;
+                        case DeliveryRelationType.NoPermanentStore:
+                            await messageHandler.NoPermanentStore();
+                            break;
+                        case DeliveryRelationType.Store:
+                            await messageHandler.Store();
+                            break;
+                    }
+                }
             }
 
             var remoteAddress = xmpp.RemoteResource;

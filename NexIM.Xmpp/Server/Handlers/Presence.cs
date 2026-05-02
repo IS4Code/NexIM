@@ -20,7 +20,8 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     sbyte? priority;
     Remote<Capabilities>? caps;
     (DateTime? timestamp, DeliveryTiming timing)? delay;
-    AddressesParser<ICommandContext>? addressesParser;
+    AddressesParser<ICommandContext>? _addressesParser;
+    AddressesParser<ICommandContext> addressesParser => _addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
 
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
@@ -56,7 +57,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
 
     protected async override ValueTask<IAddressesHandler> OnAddresses()
     {
-        return this.SetOnce(ref addressesParser, this.GetHandler<AddressesParser<ICommandContext>>());
+        return addressesParser;
     }
 
     protected async override ValueTask OnCapabilities(Token<CapabilitiesHash>? hash, string? node, string? version, string? extension)
@@ -83,7 +84,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
             Priority = priority,
             Capabilities = caps ?? default,
             Timing = delay?.timing,
-            AddressRelations = addressesParser?.Addresses,
+            AddressRelations = _addressesParser?.Addresses,
             MessageRelations = null,
             Extensions = InnerHandler.ToExtensions()
         }.Deduplicate();
@@ -91,7 +92,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
 
     protected virtual Event GetEvent()
     {
-        var origin = this.GetOrigin(addressesParser?.Recipients);
+        var origin = this.GetOrigin(_addressesParser?.Recipients);
         var processing = this.GetProcessing(delay?.timestamp);
         var data = GetPresence();
         return this.GetStanza().Type?.ToEnum() switch {

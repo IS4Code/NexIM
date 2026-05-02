@@ -34,11 +34,28 @@ public interface IMessageHandler : IStanzaHandler, IPresentationHandler, IDelive
     [Name("paused", ChatStates)] ValueTask Paused();
     [Name("gone", ChatStates)] ValueTask Gone();
 
+    [Name("no-permanent-store", XmppHints)] ValueTask NoPermanentStore();
+    [Name("no-store", XmppHints)] ValueTask NoStore();
+    [Name("no-copy", XmppHints)] ValueTask NoCopy();
+    [Name("store", XmppHints)] ValueTask Store();
+
     [Name("request", XmppReceipts)]
     ValueTask ReceiptRequest();
 
     [Name("received", XmppReceipts)]
     ValueTask ReceiptResponse([Name("id")] string? id);
+
+    [Name("markable", XmppChatMarkers)]
+    ValueTask DisplayedRequest(LanguageTaggedString? text);
+
+    [Name("displayed, XmppChatMarkers")]
+    ValueTask DisplayedResponse([Name("id")] string? id, LanguageTaggedString? text);
+
+    [Name("reply", XmppReceipts)]
+    ValueTask ReplyTo([Name("id")] string? id, [Name("to")] XmppResource? to);
+
+    [Name("referenced-stanza", XmppSid)]
+    ValueTask Reference([Name("id")] string? id, [Name("by")] XmppResource? by);
 }
 
 [ComplexType, Namespace(Addresses)]

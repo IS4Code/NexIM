@@ -20,8 +20,9 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     (string? identifier, string? parent)? thread;
     ConversationState? state;
     (DateTime? timestamp, DeliveryTiming timing)? delay;
-    AddressesParser<ICommandContext>? addressesParser;
-    NonEmptySet<MessageRelation>.Builder messageRelationsBuilder;
+    AddressesParser<ICommandContext>? _addressesParser;
+    AddressesParser<ICommandContext> addressesParser => _addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
+    NonEmptyDictionary<MessageRelation, LocalizedString?>.Builder messageRelationsBuilder;
     bool isNotification;
 
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
@@ -58,13 +59,12 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
 
     protected async override ValueTask<IAddressesHandler> OnAddresses()
     {
-        return addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
+        return addressesParser;
     }
 
     protected async override ValueTask OnReceiptRequest()
     {
-        var parser = addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
-        parser.Add(AddressRelation.DispositionNotification);
+        addressesParser.Add(AddressRelation.DispositionNotification);
     }
 
     protected async override ValueTask OnReceiptResponse(string? id)
@@ -75,6 +75,39 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             return;
         }
         messageRelationsBuilder.Add(new MessageRelation(DeliveryRelationType.DispositionNotify, null, id));
+    }
+
+    protected async override ValueTask OnDisplayedRequest(LanguageTaggedString? text)
+    {
+        addressesParser.Add(AddressRelation.DisplayNotification, text);
+    }
+
+    protected async override ValueTask OnDisplayedResponse(string? id, LanguageTaggedString? text)
+    {
+        isNotification = true;
+        if(id == null)
+        {
+            return;
+        }
+        messageRelationsBuilder.Add(new MessageRelation(DeliveryRelationType.DisplayNotify, null, id), text);
+    }
+
+    protected async override ValueTask OnReplyTo(string? id, XmppResource? to)
+    {
+        if(id == null)
+        {
+            return;
+        }
+        messageRelationsBuilder.Add(new MessageRelation(DeliveryRelationType.Reply, to?.ToIdentifier(this.GetSession()), id));
+    }
+
+    protected async override ValueTask OnReference(string? id, XmppResource? by)
+    {
+        if(id == null)
+        {
+            return;
+        }
+        messageRelationsBuilder.Add(new MessageRelation(DeliveryRelationType.Refer, by?.ToIdentifier(this.GetSession()), id));
     }
 
     protected async sealed override ValueTask OnActive()
@@ -102,13 +135,33 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         this.SetOnce(ref state, ConversationState.Gone);
     }
 
+    protected async override ValueTask OnNoStore()
+    {
+        addressesParser.Add(AddressRelation.NoStore);
+    }
+
+    protected async override ValueTask OnNoCopy()
+    {
+        addressesParser.Add(AddressRelation.NoCopy);
+    }
+
+    protected async override ValueTask OnNoPermanentStore()
+    {
+        addressesParser.Add(AddressRelation.NoPermanentStore);
+    }
+
+    protected async override ValueTask OnStore()
+    {
+        addressesParser.Add(AddressRelation.Store);
+    }
+
     protected virtual MessageData GetMessage()
     {
-        var addresses = addressesParser?.Addresses;
+        var addresses = _addressesParser?.Addresses;
 
         if(isNotification && addresses is { } addressesSet)
         {
-            if(addressesSet.ContainsKey(AddressRelation.DispositionNotification))
+            if(addressesSet.ContainsKey(AddressRelation.DispositionNotification) || addressesSet.ContainsKey(AddressRelation.DisplayNotification))
             {
                 throw XmppStanzaException.BadRequest("A delivery notification cannot be requested for a message acknowledgment.");
             }
@@ -133,7 +186,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             State = state ?? ConversationState.Unspecified,
             Timing = delay?.timing,
             AddressRelations = addresses,
-            MessageRelations = messageRelationsBuilder.TryToSet(),
+            MessageRelations = messageRelationsBuilder.TryToDictionary(),
             Extensions = InnerHandler.ToExtensions()
         };
     }
@@ -141,7 +194,7 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected virtual Event GetEvent()
     {
         return new MessageEvent {
-            Origin = this.GetOrigin(addressesParser?.Recipients),
+            Origin = this.GetOrigin(_addressesParser?.Recipients),
             Type = (this.GetStanza().Type?.ToEnum()).ToMessageType(),
             Processing = this.GetProcessing(delay?.timestamp),
             Data = GetMessage()

@@ -221,11 +221,15 @@ internal static partial class AdapterExtensions
         return new(handler?.Calls.Count > 0 ? handler : null);
     }
 
-    public static void Add<TKey>(ref this NonEmptyDictionary<TKey, LocalizedString?>.Builder builder, TKey key, LanguageTaggedString? value) where TKey : IComparable<TKey>
+    public static void Add<TKey>(ref this NonEmptyDictionary<TKey, LocalizedString?>.Builder builder, TKey key, LanguageTaggedString? value = null) where TKey : IComparable<TKey>
     {
         if(value.HasValue)
         {
             Add(ref builder, key, value.GetValueOrDefault());
+        }
+        else if(!builder.ContainsKey(key))
+        {
+            builder[key] = null;
         }
     }
 

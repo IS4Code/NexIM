@@ -28,4 +28,8 @@ static class Constants
     public const string XmppDelay = "urn:xmpp:delay";
     public const string XmppReceipts = "urn:xmpp:receipts";
     public const string Addresses = "http://jabber.org/protocol/address";
+    public const string XmppChatMarkers = "urn:xmpp:chat-markers:0";
+    public const string XmppReply = "urn:xmpp:reply:0";
+    public const string XmppHints = "urn:xmpp:hints";
+    public const string XmppSid = "urn:xmpp:sid:0";
 }
