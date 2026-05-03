@@ -56,7 +56,7 @@ internal static class StanzaExtensions
         if(recipients is { } to)
         {
             // Multicast request
-            if(recipient != handler.TryGetLocalResource())
+            if(recipient != handler.TryGetLocalResource() && !(to.TryGetSingle(out var single) && single.ToResource(session) == recipient))
             {
                 // Only the local server is supported
                 throw XmppStanzaException.NotAllowed("Multicast requests can be sent only through the local multicast service.");
