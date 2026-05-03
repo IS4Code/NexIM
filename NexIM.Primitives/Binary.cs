@@ -74,3 +74,16 @@ public readonly record struct Base64<TValue>(TValue Value) : IDisposable where T
         (Value as IDisposable)?.Dispose();
     }
 }
+
+public static class BinaryExtensions
+{
+    public static Base64<TValue> ToBase64<TValue>(this TValue value) where TValue : IReadOnlyList<byte>
+    {
+        return value;
+    }
+
+    public static Hex<TValue> ToHex<TValue>(this TValue value) where TValue : IReadOnlyList<byte>
+    {
+        return value;
+    }
+}

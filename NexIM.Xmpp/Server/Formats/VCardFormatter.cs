@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using NexIM.Primitives;
 using NexIM.Server.Accounts.VCards;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
@@ -139,7 +140,7 @@ internal static class VCardFormatter
             {
                 await using var soundHandler = await handler.Pronunciation();
                 await soundHandler.PhoneticTranscriptionNotNull(pronunciation.PhoneticTranscription);
-                await soundHandler.BinaryValueNotNull(pronunciation.BinaryValue);
+                await soundHandler.BinaryValueNotNull(pronunciation.BinaryValue?.ToBase64());
                 await soundHandler.ExternalValueNotNull(pronunciation.ExternalValue);
             }
         }
@@ -176,7 +177,7 @@ internal static class VCardFormatter
     static async ValueTask WriteTo(VCardMedia media, IVCardMediaHandler handler)
     {
         await handler.FormatType(media.FormatType);
-        await handler.BinaryValueNotNull(media.BinaryValue);
+        await handler.BinaryValueNotNull(media.BinaryValue?.ToBase64());
         await handler.ExternalValueNotNull(media.ExternalValue);
     }
 
