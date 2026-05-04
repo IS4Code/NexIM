@@ -75,6 +75,11 @@ internal sealed class AccountsContext : DbContext
             // Explicitly mapped because they are passed through the constructor
             e.Property(x => x.User);
             e.Property(x => x.Host);
+
+            // Reflects the UUID version, which must be unique together with the account name
+            // (a non-owned identity may coexist with owned one when someone registers it)
+            e.Property(x => x.Owned);
+            e.HasIndex(x => new { x.Owned, x.User, x.Host }).IsUnique();
         });
 
         modelBuilder.Entity<Account>(e => {

@@ -9,6 +9,21 @@ internal sealed class Identity : IEquatable<Identity>
     public string? User { get; }
     public string Host { get; }
 
+    public bool Owned {
+        get => Identifier.Version switch {
+            5 => false,
+            7 => true,
+            _ => throw new InvalidOperationException("Only version 5 or 7 UUIDs are expected.")
+        };
+        private set {
+            // Set from DB
+            if(value != Owned)
+            {
+                throw new ArgumentException("The property value must correspond to the version of the UUID.", nameof(value));
+            }
+        }
+    }
+
     public AccountName Name => new(User, Host);
 
     public Identity(Guid identifier, AccountName name)
