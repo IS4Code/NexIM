@@ -11,7 +11,7 @@ using NexIM.Server.Accounts;
 
 namespace NexIM.Server.Database;
 
-internal class AccountsContext : DbContext
+internal sealed class AccountsContext : DbContext
 {
     public Server Server { get; }
 

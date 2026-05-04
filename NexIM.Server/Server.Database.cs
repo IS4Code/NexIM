@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Mail;
+using System.Threading;
 using System.Threading.Tasks;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
@@ -10,6 +11,7 @@ namespace NexIM.Server;
 
 partial class Server
 {
+    readonly SemaphoreSlim databaseSemaphore = new(1, 1);
     readonly AccountsContext database;
 
     private ValueTuple Database {
@@ -28,7 +30,15 @@ partial class Server
 
     internal async Task SaveDatabase()
     {
-        await database.SaveChangesAsync();
+        await databaseSemaphore.WaitAsync();
+        try
+        {
+            await database.SaveChangesAsync();
+        }
+        finally
+        {
+            databaseSemaphore.Release();
+        }
     }
 
     internal void AddUploadedFile(UploadedFile file)
