@@ -1,23 +1,25 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
+using NexIM.Server.Accounts.VCards;
 
 namespace NexIM.Server;
 
 partial class Server
 {
-    readonly Func<Guid, (Identity, byte[]), Account> accountFactory;
+    readonly Func<Guid, (Identity, byte[], MailAddress, VCard), Account> accountFactory;
 
     private ValueTuple Authentication {
         [MemberNotNull(nameof(accountFactory))]
         init {
             accountFactory = (_, info) => {
-                var (id, hash) = info;
-                return CreateAccount(id, hash);
+                var (id, hash, email, vcard) = info;
+                return CreateAccount(id, hash, email, vcard);
             };
         }
     }
@@ -74,7 +76,7 @@ partial class Server
         }
 
         // TODO Normal password hashing algorithm
-        var hash = GetHash();
+        var hash = GetHash(accountName, password, memoryHandle);
 
         var identity = NewAccountIdentity(accountName, out var created);
         Account? account;
@@ -90,8 +92,8 @@ partial class Server
         }
         else
         {
-            // TODO Registration
-            account = accounts.GetOrAdd(identity.Identifier, accountFactory, (identity, hash));
+            // TODO Debug mode
+            account = accounts.GetOrAdd(identity.Identifier, accountFactory, (identity, hash, new MailAddress("placeholder@example.org"), new VCard()));
             if(account.PasswordHash == hash)
             {
                 // Just added
@@ -108,26 +110,57 @@ partial class Server
         }
         // Authenticated
         return account;
+    }
 
-        byte[] GetHash()
+    byte[] GetHash(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
+    {
+        try
         {
-            try
-            {
-                var buffer = new byte[SHA256.HashSizeInBytes];
+            var buffer = new byte[SHA256.HashSizeInBytes];
 
-                Span<byte> data = stackalloc byte[SHA256.HashSizeInBytes * 2];
+            Span<byte> data = stackalloc byte[SHA256.HashSizeInBytes * 2];
 
-                SHA256.HashData(MemoryMarshal.Cast<char, byte>(accountName.ToString()), data);
-                SHA256.HashData(MemoryMarshal.Cast<char, byte>(password.Span), data.Slice(SHA256.HashSizeInBytes));
-                SHA256.HashData(data, buffer);
+            SHA256.HashData(MemoryMarshal.Cast<char, byte>(accountName.ToString()?.ToLowerInvariant()), data);
+            SHA256.HashData(MemoryMarshal.Cast<char, byte>(password.Span), data.Slice(SHA256.HashSizeInBytes));
+            SHA256.HashData(data, buffer);
 
-                return buffer;
-            }
-            finally
-            {
-                // No longer needed
-                memoryHandle?.Dispose();
-            }
+            return buffer;
         }
+        finally
+        {
+            // No longer needed
+            memoryHandle?.Dispose();
+        }
+    }
+
+    public async ValueTask<Account?> Register(AccountName accountName, TemporaryString password, MailAddress email, VCard vcard)
+    {
+        if(!accountName.IsUser || password.Length == 0)
+        {
+            // TODO Status
+            return null;
+        }
+
+        var identity = NewAccountIdentity(accountName, out var created);
+
+        if(!created)
+        {
+            // A pre-existing account
+            return null;
+        }
+
+        // TODO Normal password hashing algorithm
+        var hash = GetHash(accountName, password.Value, password);
+
+        var account = accounts.GetOrAdd(identity.Identifier, accountFactory, (identity, hash, email, vcard));
+        if(account.PasswordHash != hash)
+        {
+            // Created concurrently elsewhere
+            return null;
+        }
+
+        // Just added
+        await SaveDatabase();
+        return account;
     }
 }

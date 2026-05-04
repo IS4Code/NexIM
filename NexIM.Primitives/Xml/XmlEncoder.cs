@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -21,6 +22,7 @@ public abstract class XmlEncoder :
     IValueXmlEncoder<DateComponents>,
     IValueXmlEncoder<TimeZoneOffset>,
     IValueXmlEncoder<ValueUri>,
+    IValueXmlEncoder<MailAddress>,
     IValueXmlEncoder<True>
 {
     protected abstract XmlWriter Writer { get; }
@@ -138,6 +140,11 @@ public abstract class XmlEncoder :
     ValueTask IValueXmlEncoder<ValueUri>.Encode(XmlWriter writer, ValueUri value)
     {
         return new(writer.WriteStringAsync(value.ToString()));
+    }
+
+    ValueTask IValueXmlEncoder<MailAddress>.Encode(XmlWriter writer, MailAddress value)
+    {
+        return new(writer.WriteStringAsync(value.Address));
     }
 
     ValueTask IValueXmlEncoder<True>.Encode(XmlWriter writer, True value)

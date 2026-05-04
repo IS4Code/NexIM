@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Mail;
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
@@ -63,6 +64,7 @@ internal class AccountsContext : DbContext
         configurationBuilder.Properties<Guid>().HaveConversion<GuidToBytesConverter>();
         configurationBuilder.Properties<LanguageCode?>().HaveConversion<LanguageCodeConverter>();
         configurationBuilder.Properties<SubscriptionState>().HaveConversion<SubscriptionStateConverter>();
+        configurationBuilder.Properties<MailAddress>().HaveConversion<MailAddressConverter>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -81,7 +83,7 @@ internal class AccountsContext : DbContext
 
             e.Property(x => x.PasswordHash);
 
-            e.Property(x => x.VCard).HasConversion(vcardConverter);
+            e.Property(x => x.VCard).HasConversion(vcardConverter!);
 
             e.HasMany(x => x.ContactsBuilder).WithOne().HasForeignKey(x => x.OwnerIdentifier);
             e.HasMany(x => x.PrivateStorageBuilder).WithOne().HasForeignKey(x => x.OwnerIdentifier);

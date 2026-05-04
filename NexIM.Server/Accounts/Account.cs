@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using NexIM.Server.Accounts.VCards;
@@ -22,7 +23,9 @@ public partial class Account
 
     internal byte[] PasswordHash { get; }
 
-    public VCard? VCard { get; set; }
+    public required MailAddress Email { get; set; }
+
+    public required VCard VCard { get; set; }
 
     SnapshotDictionary<Guid, Contact> contacts = default;
     SnapshotDictionary<XName, PrivateStorageData> privateStorage = default;

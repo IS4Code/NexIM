@@ -149,6 +149,13 @@ internal class GetInfoQuery : GetSetInfoQuery
         this.EnsureReceiverIsServer();
         return this.GetHandler<GetAuthQuery>();
     }
+
+    protected async sealed override ValueTask<IRegisterQueryHandler> OnRegisterQuery()
+    {
+        SetHandled();
+        this.EnsureReceiverIsServer();
+        return this.GetHandler<GetRegisterQuery>();
+    }
 }
 
 internal class SetInfoQuery : GetSetInfoQuery
@@ -187,6 +194,13 @@ internal class SetInfoQuery : GetSetInfoQuery
         SetHandled();
         this.EnsureReceiverIsServer();
         return this.GetHandler<SetAuthQuery>();
+    }
+
+    protected async sealed override ValueTask<IRegisterQueryHandler> OnRegisterQuery()
+    {
+        SetHandled();
+        this.EnsureReceiverIsServer();
+        return this.GetHandler<SetRegisterQuery>();
     }
 
     protected async sealed override ValueTask<IBindHandler> OnBind()

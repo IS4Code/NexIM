@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using NexIM.Server.Accounts;
+using NexIM.Server.Accounts.VCards;
 using NexIM.Server.Database;
 
 namespace NexIM.Server;
@@ -39,9 +41,12 @@ partial class Server
         return database.UploadedFiles.Find(identifier);
     }
 
-    private Account CreateAccount(Identity identity, byte[] passwordHash)
+    private Account CreateAccount(Identity identity, byte[] passwordHash, MailAddress email, VCard vcard)
     {
-        var created = new Account(this, identity, passwordHash);
+        var created = new Account(this, identity, passwordHash) {
+            Email = email,
+            VCard = vcard
+        };
         database.Accounts.Add(created);
         return created;
     }

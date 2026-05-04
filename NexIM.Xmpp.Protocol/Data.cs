@@ -84,3 +84,20 @@ public enum FieldType
     [Name("text-single")] Text,
     [Name("text-private")] PrivateText
 }
+
+[ComplexType, Namespace(XOob)]
+public interface IExternalDataHandler : IPayloadHandler
+{
+    [Name("x")]
+    ValueTask<IReferenceHandler> DataReference();
+}
+
+[ComplexType, Namespace(XOob)]
+public interface IReferenceHandler : IPayloadHandler
+{
+    [Name("url")]
+    ValueTask Url(ValueUri? value);
+
+    [Name("desc")]
+    ValueTask Description(LanguageTaggedString? text);
+}

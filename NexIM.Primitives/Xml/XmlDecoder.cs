@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using System.Xml;
+using NexIM.Primitives.Tools;
 
 namespace NexIM.Primitives.Xml;
 
@@ -21,6 +23,7 @@ public abstract class XmlDecoder :
     IValueXmlDecoder<DateComponents>,
     IValueXmlDecoder<TimeZoneOffset>,
     IValueXmlDecoder<ValueUri>,
+    IValueXmlDecoder<MailAddress>,
     IValueXmlDecoder<True>
 {
     protected abstract void ThrowElementNotEmpty();
@@ -295,14 +298,27 @@ public abstract class XmlDecoder :
 
     async ValueTask<ValueUri> IValueXmlDecoder<ValueUri>.Decode(XmlReader reader)
     {
-        var uri = await reader.ReadContentAsStringAsync();
+        var str = await reader.ReadContentAsStringAsync();
 
-        if(!String.IsNullOrEmpty(uri))
+        if(!String.IsNullOrEmpty(str))
         {
-            uri = uri.Trim(whitespace);
+            str = str.Trim(whitespace);
         }
 
-        return ValueUri.Parse(uri);
+        return ValueUri.Parse(str);
+    }
+
+    async ValueTask<MailAddress> IValueXmlDecoder<MailAddress>.Decode(XmlReader reader)
+    {
+        var str = await reader.ReadContentAsStringAsync();
+
+        if(!String.IsNullOrEmpty(str))
+        {
+            str = str.Trim(whitespace);
+        }
+
+        FormatHelper.ValidateEmailAddress(str);
+        return new MailAddress(str);
     }
 
     async ValueTask<True> IValueXmlDecoder<True>.Decode(XmlReader reader)

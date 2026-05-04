@@ -15,6 +15,9 @@ public interface IInfoQueryHandler : IStanzaHandler
     [Name("query", IqAuth)]
     ValueTask<IAuthQueryHandler> AuthQuery();
 
+    [Name("query", IqRegister)]
+    ValueTask<IRegisterQueryHandler> RegisterQuery();
+
     [Name("query", DiscoInfo)]
     ValueTask<IDiscoInfoQueryHandler> DiscoInfoQuery([Name("node")] Token<DiscoNode>? node);
 
@@ -74,22 +77,6 @@ public interface IRosterItemHandler : IPayloadHandler
 {
     [Name("group")]
     ValueTask Group(string? name);
-}
-
-[ComplexType, Namespace(IqAuth)]
-public interface IAuthQueryHandler : IPayloadHandler
-{
-    [Name("username")]
-    ValueTask Username(string? value);
-
-    [Name("password")]
-    ValueTask Password(TemporaryString? value);
-
-    [Name("digest")]
-    ValueTask Digest(string? value);
-
-    [Name("resource")]
-    ValueTask Resource(string? value);
 }
 
 [ComplexType, Namespace(XmppBind)]
