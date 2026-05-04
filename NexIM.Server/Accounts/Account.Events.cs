@@ -243,7 +243,7 @@ partial class Account : IEventHandler
 
             case UpdateEvent { Data: VCardQueryData vcardData }:
                 // Updating vCard
-                VCard = vcardData.VCard;
+                VCard = vcardData.VCard ?? new();
                 return Save();
 
             default:
