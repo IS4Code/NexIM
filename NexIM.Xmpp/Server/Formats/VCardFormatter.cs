@@ -155,7 +155,7 @@ internal static class VCardFormatter
                     await classification.IsPublic();
                     break;
                 case VCardPrivacyClassification.Private:
-                    await classification.IsPublic();
+                    await classification.IsPrivate();
                     break;
                 case VCardPrivacyClassification.Confidential:
                     await classification.IsConfidential();
