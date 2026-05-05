@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using MessagePack;
 using NexIM.Primitives;
 
+[module: MessagePackAssumedFormattable(typeof(Remote<TemporaryFile>))]
+
 namespace NexIM.Server.Accounts.VCards;
 
 [MessagePackObject]
@@ -92,7 +94,7 @@ public abstract class VCardResource
 
 public abstract class VCardData : VCardResource
 {
-    [Key(1)] public TemporaryFile? BinaryValue;
+    [Key(1)] public Remote<TemporaryFile>? BinaryValue;
 }
 
 [MessagePackObject]

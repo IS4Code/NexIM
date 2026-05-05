@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -12,15 +11,9 @@ namespace NexIM.Server;
 
 partial class Server
 {
-    readonly Func<Guid, (Identity, byte[], MailAddress, VCard), Account> accountFactory;
-
     private ValueTuple Authentication {
-        [MemberNotNull(nameof(accountFactory))]
         init {
-            accountFactory = (_, info) => {
-                var (id, hash, email, vcard) = info;
-                return CreateAccount(id, hash, email, vcard);
-            };
+
         }
     }
 
@@ -75,32 +68,19 @@ partial class Server
             return null;
         }
 
+        if(await FindIdentity(accountName) is not { Owned: true } identity)
+        {
+            // TODO Auto-register only in debug mode
+            return await Register(accountName, password, memoryHandle, new("placeholder@example.org"), new());
+        }
+
         // TODO Normal password hashing algorithm
         var hash = GetHash(accountName, password, memoryHandle);
 
-        var identity = NewAccountIdentity(accountName, out var created);
-        Account? account;
-        if(!created)
+        if(await GetAccount(identity) is not { } account)
         {
-            // A pre-existing account
-            account = GetAccount(identity);
-            if(account == null)
-            {
-                // TODO Account not preloaded or concurrently created?
-                return null;
-            }
-        }
-        else
-        {
-            // TODO Debug mode
-            account = accounts.GetOrAdd(identity.Identifier, accountFactory, (identity, hash, new MailAddress("placeholder@example.org"), new VCard()));
-            if(account.PasswordHash == hash)
-            {
-                // Just added
-                await SaveDatabase();
-                return account;
-            }
-            // Concurrently added; password must still be verified
+            // TODO Database inconsistency (owned identity but no account)
+            return null;
         }
 
         if(!CryptographicOperations.FixedTimeEquals(hash, account.PasswordHash))
@@ -108,6 +88,7 @@ partial class Server
             // Password mismatch
             return null;
         }
+
         // Authenticated
         return account;
     }
@@ -133,7 +114,12 @@ partial class Server
         }
     }
 
-    public async ValueTask<Account?> Register(AccountName accountName, TemporaryString password, MailAddress email, VCard vcard)
+    public ValueTask<Account?> Register(AccountName accountName, TemporaryString password, MailAddress email, VCard vcard)
+    {
+        return Register(accountName, password.Value, password, email, vcard);
+    }
+
+    private async ValueTask<Account?> Register(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle, MailAddress email, VCard vcard)
     {
         if(!accountName.IsUser || password.Length == 0)
         {
@@ -141,26 +127,16 @@ partial class Server
             return null;
         }
 
-        var identity = NewAccountIdentity(accountName, out var created);
-
-        if(!created)
-        {
-            // A pre-existing account
-            return null;
-        }
-
         // TODO Normal password hashing algorithm
-        var hash = GetHash(accountName, password.Value, password);
+        var hash = GetHash(accountName, password, memoryHandle);
 
-        var account = accounts.GetOrAdd(identity.Identifier, accountFactory, (identity, hash, email, vcard));
-        if(account.PasswordHash != hash)
+        if(await CreateNewAccount(accountName, new(hash, email, vcard)) is not { } account)
         {
-            // Created concurrently elsewhere
+            // Already exists
             return null;
         }
 
-        // Just added
-        await SaveDatabase();
-        return account;
+        // Deduplication (prevent data race when the account retrieved again)
+        return await AddAccount(account);
     }
 }

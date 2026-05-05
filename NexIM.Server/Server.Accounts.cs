@@ -1,76 +1,90 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
+using System.Threading.Tasks;
 using NexIM.Server.Accounts;
 
 namespace NexIM.Server;
 
 partial class Server
 {
-    readonly ConcurrentDictionary<Guid, Account> accounts = new();
-    readonly ConcurrentDictionary<Guid, Identity> identityByGuid = new();
-    readonly ConcurrentDictionary<AccountName, Identity> identityByAccount = new();
+    // TODO Cleanup if not referenced
+    readonly ConcurrentDictionary<Guid, ValueTask<Account?>> accounts = new();
 
-    readonly Func<AccountName, Identity> createUnownedIdentity;
-    readonly Func<AccountName, Identity> createOwnedIdentity;
-
-    [ThreadStatic]
-    static Identity? createdIdentity;
+    readonly Func<Guid, ValueTask<Account?>> findAccountAddFactory;
+    readonly Func<Guid, ValueTask<Account?>, ValueTask<Account?>> findAccountUpdateFactory;
+    readonly Func<Guid, Account, ValueTask<Account>> addAccountAddFactory;
+    readonly Func<Guid, ValueTask<Account?>, Account, ValueTask<Account>> addAccountUpdateFactory;
 
     private ValueTuple Accounts {
-        [MemberNotNull(nameof(createUnownedIdentity))]
-        [MemberNotNull(nameof(createOwnedIdentity))]
+        [MemberNotNull(nameof(findAccountAddFactory), nameof(findAccountUpdateFactory), nameof(addAccountAddFactory), nameof(addAccountUpdateFactory))]
         init {
-            createUnownedIdentity = name => {
-                var identity = new Identity(IdentifierHelper.CreateGuid(name), name);
-                identityByGuid[identity.Identifier] = identity;
-                createdIdentity = identity;
-                return identity;
+            findAccountAddFactory = guid => {
+                return FindAccount(guid).Preserve();
             };
 
-            createOwnedIdentity = name => {
-                var identity = new Identity(IdentifierHelper.CreateGuid(), name);
-                identityByGuid[identity.Identifier] = identity;
-                createdIdentity = identity;
-                return identity;
+            findAccountUpdateFactory = (guid, previous) => {
+                if(previous.IsCompleted && (!previous.IsCompletedSuccessfully || previous.GetAwaiter().GetResult() == null))
+                {
+                    // Completed without result - try again
+                    return FindAccount(guid).Preserve();
+                }
+                // Use in progress or successful query
+                return previous;
+            };
+
+            addAccountAddFactory = (guid, added) => {
+                // First one added
+                return new(added);
+            };
+
+            addAccountUpdateFactory = (guid, previous, added) => {
+                if(previous.IsCompleted && (!previous.IsCompletedSuccessfully || previous.GetAwaiter().GetResult() == null))
+                {
+                    // Completed without result - use instance
+                    return new(added);
+                }
+                // An in-progress query was exposed, which must be used if it returns something
+                return new(Inner());
+                async Task<Account> Inner()
+                {
+                    try
+                    {
+                        if(await previous is { } result)
+                        {
+                            // Forget the instance and use this result instead
+                            return result;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore - exception will be handled by the code that started the task
+                    }
+                    // No result - this one can be safely used
+                    return added;
+                }
             };
         }
     }
 
-    internal void RegisterIdentity(Identity identity)
+    public async ValueTask<Account?> GetAccount(AccountName name, CancellationToken cancellationToken = default)
     {
-        // Called from DB
-        identityByGuid[identity.Identifier] = identity;
-        identityByAccount[identity.Name] = identity;
+        if(await FindIdentity(name, cancellationToken) is not { } id)
+        {
+            return null;
+        }
+        return await GetAccount(id);
     }
 
-    internal Identity GetAccountIdentity(AccountName name, out bool created)
+    internal ValueTask<Account?> GetAccount(Identity id)
     {
-        return GetIdentity(name, createUnownedIdentity, out created);
+        return accounts.AddOrUpdate(id.Identifier, findAccountAddFactory, findAccountUpdateFactory);
     }
 
-    internal Identity NewAccountIdentity(AccountName name, out bool created)
+    internal ValueTask<Account> AddAccount(Account account)
     {
-        return GetIdentity(name, createOwnedIdentity, out created);
-    }
-
-    internal Identity? TryGetAccountIdentity(AccountName name)
-    {
-        return TryGetIdentity(name);
-    }
-
-    public Account? GetAccount(AccountName name)
-    {
-        // Does not create identity if non-existent
-        return
-            identityByAccount.TryGetValue(name, out var id)
-            ? GetAccount(id) : null;
-    }
-
-    internal Account? GetAccount(Identity identity)
-    {
-        return
-            accounts.TryGetValue(identity.Identifier, out var account)
-            ? account : null;
+        // The factories always produce a result
+        return accounts.AddOrUpdate(account.Identifier, addAccountAddFactory!, addAccountUpdateFactory!, account)!;
     }
 }

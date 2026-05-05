@@ -1,86 +1,292 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net.Mail;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
 using NexIM.Server.Database;
+using NexIM.Tools;
+using static MessagePack.GeneratedMessagePackResolver.NexIM.Server.Accounts;
 
 namespace NexIM.Server;
 
 partial class Server
 {
-    readonly SemaphoreSlim databaseSemaphore = new(1, 1);
-    readonly AccountsContext database;
+    /// <summary>
+    /// The shared database context used for lookups of entities.
+    /// The only mutation that happens through this context is for
+    /// adding unowned identities.
+    /// </summary>
+    readonly GlobalContext globalDatabase;
+    // TODO Possibly pool these contexts to establish multiple connections when the lock becomes a bottleneck
 
     private ValueTuple Database {
-        [MemberNotNull(nameof(database))]
+        [MemberNotNull(nameof(globalDatabase))]
         init {
-            database = new(this);
-            database.Database.EnsureCreated();
-
-            // TODO Load only active ones
-            foreach(var account in database.FullAccounts)
-            {
-                accounts[account.Identifier] = account;
-            }
+            globalDatabase = new(this);
+            globalDatabase.Database.EnsureCreated();
         }
     }
 
-    internal async Task SaveDatabase()
+    /// <summary>
+    /// Performs a lookup for a previously uploaded file by its identifier.
+    /// </summary>
+    internal async ValueTask<UploadedFile?> FindUploadedFile(Guid identifier, CancellationToken cancellationToken = default)
     {
-        await databaseSemaphore.WaitAsync();
+        await globalDatabase.Lock.WaitAsync(cancellationToken);
         try
         {
-            await database.SaveChangesAsync();
+            return await globalDatabase.UploadedFiles.FindAsync(new object[] { identifier }, cancellationToken);
         }
         finally
         {
-            databaseSemaphore.Release();
+            globalDatabase.Lock.Release();
         }
     }
 
-    internal void AddUploadedFile(UploadedFile file)
+    /// <summary>
+    /// Performs a lookup for an identity based on account name.
+    /// </summary>
+    /// <remarks>
+    /// Pre-existing owned identities are preferred.
+    /// </remarks>
+    internal async ValueTask<Identity?> FindIdentity(AccountName name, CancellationToken cancellationToken = default)
     {
-        database.UploadedFiles.Add(file);
-    }
-
-    internal UploadedFile? FindUploadedFile(Guid identifier)
-    {
-        return database.UploadedFiles.Find(identifier);
-    }
-
-    private Account CreateAccount(Identity identity, byte[] passwordHash, MailAddress email, VCard vcard)
-    {
-        var created = new Account(this, identity, passwordHash) {
-            Email = email,
-            VCard = vcard
-        };
-        database.Accounts.Add(created);
-        return created;
-    }
-
-    private Identity GetIdentity(AccountName name, Func<AccountName, Identity> factory, out bool created)
-    {
+        await globalDatabase.Lock.WaitAsync(cancellationToken);
         try
         {
-            var identity = identityByAccount.GetOrAdd(name, factory);
-            created = identity == createdIdentity;
-            if(created)
+            return await (
+                from id in globalDatabase.Identities
+                where id.User == name.User && id.Host == name.Host
+                orderby id.Owned descending
+                select id
+            ).FirstOrDefaultAsync(cancellationToken);
+        }
+        finally
+        {
+            globalDatabase.Lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Performs a lookup for an identity based on account name, or creates
+    /// a new unowned one.
+    /// </summary>
+    /// <remarks>
+    /// Pre-existing owned identities are preferred.
+    /// </remarks>
+    internal async ValueTask<Identity> FindOrCreateIdentity(AccountName name, CancellationToken cancellationToken = default)
+    {
+        await globalDatabase.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            var identity = await (
+                from id in globalDatabase.Identities
+                where id.User == name.User && id.Host == name.Host
+                orderby id.Owned descending
+                select id
+            ).FirstOrDefaultAsync(cancellationToken);
+            if(identity == null)
             {
-                database.Identities.Add(identity);
+                // Not found, create an unowned one
+                identity = new(IdentifierHelper.CreateGuid(name), name);
+                globalDatabase.Add(identity);
+                try
+                {
+                    await globalDatabase.SaveChangesAsync(cancellationToken);
+                }
+                catch(DbUpdateException)
+                {
+                    // Unique constraint hit, the identity was added concurrently
+                }
             }
             return identity;
         }
         finally
         {
-            createdIdentity = null;
+            globalDatabase.Lock.Release();
         }
     }
 
-    private Identity? TryGetIdentity(AccountName name)
+    /// <summary>
+    /// Performs a lookup for an identity based on account name.
+    /// </summary>
+    /// <remarks>
+    /// Pre-existing owned identities are preferred.
+    /// </remarks>
+    internal async ValueTask<Identities?> FindIdentities(AccountNames names, CancellationToken cancellationToken = default)
     {
-        return identityByAccount.TryGetValue(name, out var identity) ? identity : null;
+        if(names.TryGetSingle(out var singleName))
+        {
+            if(await FindIdentity(singleName, cancellationToken) is { } id)
+            {
+                return id;
+            }
+            return null;
+        }
+
+        var (users, hosts) = DeconstructAccountNames(names);
+        var resultBuilder = Identities.Builder.Empty;
+        var retrievedBuilder = AccountNames.Builder.Empty;
+
+        await globalDatabase.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            await (
+                from id in globalDatabase.Identities
+                where users.Contains(id.User) && hosts.Contains(id.Host)
+                orderby id.Owned descending
+                select id
+            ).ForEachAsync(x => {
+                if(!names.Contains(x.Name))
+                {
+                    // Not an exact match
+                    return;
+                }
+                if(!retrievedBuilder.Add(x.Name))
+                {
+                    // Already present (owned over unowned)
+                    return;
+                }
+                resultBuilder.Add(x);
+            }, cancellationToken);
+        }
+        finally
+        {
+            globalDatabase.Lock.Release();
+        }
+
+        return resultBuilder.TryToSet();
     }
+
+    /// <summary>
+    /// Performs a lookup for an identity based on account name, or creates
+    /// a new unowned one.
+    /// </summary>
+    /// <remarks>
+    /// Pre-existing owned identities are preferred.
+    /// </remarks>
+    internal async ValueTask<Identities> FindOrCreateIdentities(AccountNames names, CancellationToken cancellationToken = default)
+    {
+        if(names.TryGetSingle(out var singleName))
+        {
+            return await FindOrCreateIdentity(singleName, cancellationToken);
+        }
+
+        var (users, hosts) = DeconstructAccountNames(names);
+        var resultBuilder = Identities.Builder.Empty;
+        var retrievedBuilder = AccountNames.Builder.Empty;
+        var remainingBuilder = names.ToBuilder();
+
+        await globalDatabase.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            await (
+                from id in globalDatabase.Identities
+                where users.Contains(id.User) && hosts.Contains(id.Host)
+                orderby id.Owned descending
+                select id
+            ).ForEachAsync(x => {
+                if(!names.Contains(x.Name))
+                {
+                    // Not an exact match
+                    return;
+                }
+                if(!retrievedBuilder.Add(x.Name))
+                {
+                    // Already present (owned over unowned)
+                    return;
+                }
+                resultBuilder.Add(x);
+                remainingBuilder.Remove(x.Name);
+            }, cancellationToken);
+
+            if(remainingBuilder.Count > 0)
+            {
+                foreach(var name in remainingBuilder)
+                {
+                    // Not found, create an unowned one
+                    Identity identity = new(IdentifierHelper.CreateGuid(name), name);
+                    resultBuilder.Add(identity);
+
+                    globalDatabase.Add(identity);
+                }
+
+                try
+                {
+                    await globalDatabase.SaveChangesAsync(cancellationToken);
+                }
+                catch(DbUpdateException)
+                {
+                    // Unique constraint hit, the identity was added concurrently
+                }
+            }
+        }
+        finally
+        {
+            globalDatabase.Lock.Release();
+        }
+
+        return resultBuilder.TryToSet() ?? throw new InvalidOperationException("The builder is empty.");
+    }
+
+    private (HashSet<string?> users, HashSet<string> hosts) DeconstructAccountNames(AccountNames names)
+    {
+        var users = new HashSet<string?>(StringComparer.OrdinalIgnoreCase);
+        var hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach(var name in names)
+        {
+            users.Add(name.User);
+            hosts.Add(name.Host);
+        }
+        return (users, hosts);
+    }
+
+    // TODO Recycle contexts
+
+    internal async ValueTask<Account?> FindAccount(Guid identityGuid, CancellationToken cancellationToken = default)
+    {
+        // Prepare an isolated context for the account
+        var context = new AccountContext(this);
+
+        return await context.FullAccounts.FirstOrDefaultAsync(x => x.Identifier == identityGuid, cancellationToken);
+    }
+
+    internal async ValueTask<Account?> CreateNewAccount(AccountName name, AccountRegistrationInfo info, CancellationToken cancellationToken = default)
+    {
+        // Work in an isolated context to ensure everything happens as a transaction
+        var context = new AccountContext(this);
+
+        // Identity from the timestamp
+        var identity = new Identity(IdentifierHelper.CreateGuid(out var timestamp), name);
+        context.Add(identity);
+
+        var account = new Account(context, identity, info.PasswordHash) {
+            Created = timestamp,
+            Email = info.Email,
+            VCard = info.VCard
+        };
+
+        context.Add(account);
+
+        try
+        {
+            // Write out the new account
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch(DbUpdateException)
+        {
+            // Can't create (likely already exists)
+            return null;
+        }
+
+        return account;
+    }
+
+    internal readonly record struct AccountRegistrationInfo(byte[] PasswordHash, MailAddress Email, VCard VCard);
 }

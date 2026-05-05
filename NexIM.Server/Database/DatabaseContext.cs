@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net.Mail;
+using System.Threading;
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
@@ -11,32 +12,28 @@ using NexIM.Server.Accounts;
 
 namespace NexIM.Server.Database;
 
-internal sealed class AccountsContext : DbContext
+internal abstract class DatabaseContext : DbContext
 {
     public Server Server { get; }
 
-    public DbSet<Account> Accounts { get; set; }
-    public DbSet<Identity> Identities { get; set; }
-    public DbSet<Contact> Contacts { get; set; }
-    public DbSet<PrivateStorageData> PrivateStorage { get; set; }
-    public DbSet<UploadedFile> UploadedFiles { get; set; }
+    public SemaphoreSlim Lock { get; } = new(1, 1);
 
-    public IQueryable<Account> FullAccounts => Accounts
-        .Include(x => x.Identity)
-        .Include(x => x.ContactsBuilder)
-        .Include(x => x.PrivateStorageBuilder)
-        .Include(x => x.UploadedFilesBuilder);
+    public DbSet<Identity> Identities => Set<Identity>();
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<PrivateStorageData> PrivateStorage => Set<PrivateStorageData>();
+    public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
 
     readonly VCardConverter vcardConverter;
     readonly EventExtensionsConverter eventExtensionsConverter;
     readonly NullableNonEmptySetConverter<string> stringSetConverter;
 
-    static AccountsContext()
+    static DatabaseContext()
     {
         SQLitePCL.Batteries_V2.Init();
     }
 
-    public AccountsContext(Server server)
+    public DatabaseContext(Server server)
     {
         Server = server;
         var msgpackOptions = CreateOptions(MessagePackSerializerOptions.Standard);
@@ -45,7 +42,7 @@ internal sealed class AccountsContext : DbContext
         stringSetConverter = new(msgpackOptions);
     }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder options)
+    protected sealed override void OnConfiguring(DbContextOptionsBuilder options)
     {
 #if DEBUG
         options.EnableSensitiveDataLogging();
@@ -59,7 +56,7 @@ internal sealed class AccountsContext : DbContext
         options.UseSqlite("Data Source=accounts.db");
     }
 
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    protected sealed override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<Guid>().HaveConversion<GuidToBytesConverter>();
         configurationBuilder.Properties<LanguageCode?>().HaveConversion<LanguageCodeConverter>();
@@ -67,7 +64,7 @@ internal sealed class AccountsContext : DbContext
         configurationBuilder.Properties<MailAddress>().HaveConversion<MailAddressConverter>();
     }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected sealed override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Identity>(e => {
             e.HasKey(x => x.Identifier);
@@ -129,7 +126,7 @@ internal sealed class AccountsContext : DbContext
     sealed class Resolver(IFormatterResolver standardResolver, Server server) : IFormatterResolver,
         IResolver<TimeZoneOffset>,
         IResolver<DateComponents>,
-        IResolver<TemporaryFile?>,
+        IResolver<Remote<TemporaryFile>?>,
         IResolver<ValueUri>
     {
         readonly TimeZoneOffsetFormatter timeZoneOffsetFormatter = new(standardResolver);
@@ -152,7 +149,7 @@ internal sealed class AccountsContext : DbContext
             return dateFormatter;
         }
 
-        IMessagePackFormatter<TemporaryFile?>? IResolver<TemporaryFile?>.GetFormatter()
+        IMessagePackFormatter<Remote<TemporaryFile>?>? IResolver<Remote<TemporaryFile>?>.GetFormatter()
         {
             return temporaryFileFormatter;
         }

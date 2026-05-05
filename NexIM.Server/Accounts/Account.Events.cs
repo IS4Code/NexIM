@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using NexIM.Server.Accounts.VCards;
 using NexIM.Server.Events;
 using NexIM.Server.Tools;
+using NexIM.Tools;
 
 namespace NexIM.Server.Accounts;
 
@@ -92,13 +93,23 @@ partial class Account : IEventHandler
         return tasks.Combine();
     }
 
-    internal bool CanSharePresenceWith(Identifier identifier)
+    internal async ValueTask<bool> CanSharePresenceWith(Identifier identifier)
     {
         if(identifier.Account is not { } account)
         {
             return false;
         }
-        return account == Name || GetContact(account)?.SubscriptionState.AcceptedFrom == true;
+        if(account == Name)
+        {
+            // Account itself
+            return true;
+        }
+        if(await Server.FindIdentity(account) is not { } id)
+        {
+            // Identity not known
+            return false;
+        }
+        return GetContact(id)?.SubscriptionState.AcceptedFrom == true;
     }
 
     private ValueTask<StatusReports> RoutePresence(TargetType targetType, Identifiers targetTo, PresenceEvent presEvent)
@@ -251,7 +262,7 @@ partial class Account : IEventHandler
         }
     }
 
-    private ValueTask<StatusReports> OnQuery(Event evnt)
+    private async ValueTask<StatusReports> OnQuery(Event evnt)
     {
         if(evnt.From.Account == Name)
         {
@@ -259,7 +270,7 @@ partial class Account : IEventHandler
             if(OnOwnerQuery(evnt) is { } task)
             {
                 // Recognized
-                return task;
+                return await task;
             }
         }
 
@@ -270,13 +281,13 @@ partial class Account : IEventHandler
                 // Retrieving a VCard
                 if(VCard is not { } vcard)
                 {
-                    return new(Report(StatusCode.NotFound));
+                    return Report(StatusCode.NotFound);
                 }
-                if(!CanSeeVCard(vcard))
+                if(!await CanSeeVCard(vcard))
                 {
-                    return new(Report(StatusCode.Unauthorized));
+                    return Report(StatusCode.Unauthorized);
                 }
-                return Post(new ResponseEvent {
+                return await Post(new ResponseEvent {
                     Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
                     Processing = EventProcessing.Create(),
                     Data = new VCardQueryData {
@@ -290,20 +301,20 @@ partial class Account : IEventHandler
                 // Retrieving the time requires VCard
                 if(VCard is not { } vcard)
                 {
-                    return new(Report(StatusCode.Unavailable));
+                    return Report(StatusCode.Unavailable);
                 }
-                if(!CanSeeVCard(vcard))
+                if(!await CanSeeVCard(vcard))
                 {
-                    return new(Report(StatusCode.Unauthorized));
+                    return Report(StatusCode.Unauthorized);
                 }
                 if(vcard.TimeZones is not { Count: > 0 } timezones)
                 {
-                    return new(Report(StatusCode.Unavailable));
+                    return Report(StatusCode.Unavailable);
                 }
                 // Use first timezone
                 var offset = timezones[0].Value;
                 var processing = EventProcessing.Create();
-                return Post(new ResponseEvent {
+                return await Post(new ResponseEvent {
                     Origin = evnt.Origin.RespondFrom(Name.ToIdentifier()),
                     Processing = processing,
                     Data = new TimeData {
@@ -313,18 +324,18 @@ partial class Account : IEventHandler
             }
 
             case RetrieveEvent { Data: PingData }:
-                return new(Report(StatusCode.Success));
+                return Report(StatusCode.Success);
 
             case QueryEvent { Data: RosterQueryData or PrivateData or VCardQueryData }:
                 // Supported but must be owner
-                return new(Report(StatusCode.Unauthorized));
+                return Report(StatusCode.Unauthorized);
 
             default:
                 // Can't process arbitrary event
-                return new(Report(StatusCode.UnrecognizedRequest));
+                return Report(StatusCode.UnrecognizedRequest);
         }
 
-        bool CanSeeVCard(VCard vcard)
+        async ValueTask<bool> CanSeeVCard(VCard vcard)
         {
             switch(vcard.PrivacyClassification)
             {
@@ -336,7 +347,7 @@ partial class Account : IEventHandler
                 case VCardPrivacyClassification.Public:
                     return true;
                 default:
-                    return CanSharePresenceWith(evnt.From);
+                    return await CanSharePresenceWith(evnt.From);
             }
         }
     }
@@ -367,52 +378,62 @@ partial class Account : IEventHandler
         }
     }
 
-    private ValueTask<StatusReports> OnOutgoingSubscriptionEvent(SubscriptionEvent presEvent)
+    private async ValueTask<StatusReports> OnOutgoingSubscriptionEvent(SubscriptionEvent presEvent)
     {
         var tasks = new List<ValueTask<StatusReports>>();
 
         var from = presEvent.From;
-        switch(presEvent)
+
+        // Outgoing events that may add new contacts
+        bool createIfNotFound = presEvent is SubscriptionRequestedEvent or SubscriptionAcceptedEvent;
+        if(await FindIdentities(presEvent.To, createIfNotFound, tasks) is { } ids)
         {
-            case SubscriptionRequestedEvent:
-                HandleOutgoingSubscriptionRequest(from, presEvent.To, presEvent, tasks);
-                break;
-            case SubscriptionAcceptedEvent:
-                HandleOutgoingSubscriptionAcceptation(from, presEvent.To, presEvent, tasks);
-                break;
-            case SubscriptionRejectedEvent:
-                HandleOutgoingSubscriptionRejection(from, presEvent.To, presEvent, tasks);
-                break;
-            case SubscriptionCancelledEvent:
-                HandleOutgoingSubscriptionCancellation(from, presEvent.To, presEvent, tasks);
-                break;
+            switch(presEvent)
+            {
+                case SubscriptionRequestedEvent:
+                    HandleOutgoingSubscriptionRequest(from, ids, presEvent, tasks);
+                    break;
+                case SubscriptionAcceptedEvent:
+                    HandleOutgoingSubscriptionAcceptation(from, ids, presEvent, tasks);
+                    break;
+                case SubscriptionRejectedEvent:
+                    HandleOutgoingSubscriptionRejection(from, ids, presEvent, tasks);
+                    break;
+                case SubscriptionCancelledEvent:
+                    HandleOutgoingSubscriptionCancellation(from, ids, presEvent, tasks);
+                    break;
+            }
         }
 
-        return tasks.Combine();
+        return await tasks.Combine();
     }
 
-    private ValueTask<StatusReports> OnIncomingSubscriptionEvent(SubscriptionEvent presEvent)
+    private async ValueTask<StatusReports> OnIncomingSubscriptionEvent(SubscriptionEvent presEvent)
     {
         var tasks = new List<ValueTask<StatusReports>>();
 
-        var from = presEvent.From;
-        switch(presEvent)
+        // Incoming events that may add new contacts
+        bool createIfNotFound = presEvent is SubscriptionRequestedEvent;
+        if(await FindIdentity(presEvent.From, createIfNotFound, tasks) is { } id)
         {
-            case SubscriptionRequestedEvent:
-                HandleIncomingSubscriptionRequest(from, presEvent, tasks);
-                break;
-            case SubscriptionAcceptedEvent:
-                HandleIncomingSubscriptionAcceptation(from, presEvent, tasks);
-                break;
-            case SubscriptionRejectedEvent:
-                HandleIncomingSubscriptionRejection(from, presEvent, tasks);
-                break;
-            case SubscriptionCancelledEvent:
-                HandleIncomingSubscriptionCancellation(from, presEvent, tasks);
-                break;
+            switch(presEvent)
+            {
+                case SubscriptionRequestedEvent:
+                    HandleIncomingSubscriptionRequest(id, presEvent, tasks);
+                    break;
+                case SubscriptionAcceptedEvent:
+                    HandleIncomingSubscriptionAcceptation(id, presEvent, tasks);
+                    break;
+                case SubscriptionRejectedEvent:
+                    HandleIncomingSubscriptionRejection(id, presEvent, tasks);
+                    break;
+                case SubscriptionCancelledEvent:
+                    HandleIncomingSubscriptionCancellation(id, presEvent, tasks);
+                    break;
+            }
         }
 
-        return tasks.Combine();
+        return await tasks.Combine();
     }
 
     enum TargetType
@@ -420,5 +441,47 @@ partial class Account : IEventHandler
         Server,
         Account,
         Sessions
+    }
+
+    private async ValueTask<Identity?> FindIdentity(Identifier identifier, bool createIfNotFound, List<ValueTask<StatusReports>> tasks)
+    {
+        if(identifier.Account is not { } account)
+        {
+            // Can't get identity for missing account
+            tasks.Add(new(Report(StatusCode.InvalidParameter)));
+            return null;
+        }
+        if(createIfNotFound)
+        {
+            return await Server.FindOrCreateIdentity(account);
+        }
+        return await Server.FindIdentity(account);
+    }
+
+    private async ValueTask<Identities?> FindIdentities(Identifiers identifiers, bool createIfNotFound, List<ValueTask<StatusReports>> tasks)
+    {
+        var builder = AccountNames.Builder.Empty;
+
+        foreach(var identifier in identifiers)
+        {
+            if(identifier.Account is not { } account)
+            {
+                // Can't get identity for missing account
+                tasks.Add(new(Report(StatusCode.InvalidParameter)));
+                continue;
+            }
+
+            builder.Add(account);
+        }
+
+        if(builder.TryToSet() is not { } accounts)
+        {
+            return null;
+        }
+        if(createIfNotFound)
+        {
+            return await Server.FindOrCreateIdentities(accounts);
+        }
+        return await Server.FindIdentities(accounts);
     }
 }

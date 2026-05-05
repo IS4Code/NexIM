@@ -7,11 +7,11 @@ namespace NexIM.Server.Accounts;
 
 partial class Account
 {
-    private ValueTask<StatusReports> RemoveContact(AccountName target)
+    private async ValueTask<StatusReports> RemoveContact(AccountName target)
     {
-        if(!RemoveContact(target, out var contact, out var contacts))
+        if(await Server.FindIdentity(target) is not { } id || !RemoveContact(id, out var contact, out var contacts))
         {
-            return new(Report(StatusCode.NotFound));
+            return Report(StatusCode.NotFound);
         }
 
         var tasks = new List<ValueTask<StatusReports>>();
@@ -37,27 +37,27 @@ partial class Account
             }));
         }
 
-        return tasks.Combine();
+        return await tasks.Combine();
     }
 
-    private ValueTask<StatusReports> UpdateContact(Contact info)
+    private async ValueTask<StatusReports> UpdateContact(Contact info)
     {
-        var changed = SetContact(info, out _, out var updated, out var contacts);
+        var changed = SetContact(await Server.FindOrCreateIdentity(info.Account), info, out _, out var updated, out var contacts);
         if(updated is null)
         {
             // Cannot add/not present
-            return new(Report(StatusCode.Blocked));
+            return Report(StatusCode.Blocked);
         }
 
         if(!changed)
         {
             // Unmodified but successful
-            return new(Report(StatusCode.Success));
+            return Report(StatusCode.Success);
         }
 
         var tasks = new List<ValueTask<StatusReports>>();
         OnContactUpdated(updated, contacts, tasks);
-        return tasks.Combine();
+        return await tasks.Combine();
     }
 
     private void OnContactUpdated(Contact contact, IReadOnlyCollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)

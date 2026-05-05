@@ -172,7 +172,7 @@ public abstract class ClientSession : IAsyncDisposable
                 // Respond with the last known presence immediately
                 if(!directedPresence.TryGetValue(evnt.From, out var statusUpdate))
                 {
-                    if(!Account.CanSharePresenceWith(evnt.From))
+                    if(!await Account.CanSharePresenceWith(evnt.From))
                     {
                         // Only share undirected presence with contacts
                         return Report(StatusCode.SubscriptionRequired);

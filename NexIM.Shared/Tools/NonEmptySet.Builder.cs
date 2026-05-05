@@ -43,31 +43,32 @@ partial struct NonEmptySet<T>
             return new(first, rest?.ToImmutable() ?? emptySet);
         }
 
-        public void Add(T item)
+        public bool Add(T item)
         {
             if(!firstTaken)
             {
                 first = item;
                 firstTaken = true;
-                return;
+                return true;
             }
 
             switch(comparer.Compare(first, item))
             {
                 case 0:
                     // Same as first
-                    break;
+                    return false;
                 case < 0:
                     // After first
-                    (rest ??= emptySet.ToBuilder()).Add(item);
-                    break;
+                    return (rest ??= emptySet.ToBuilder()).Add(item);
                 default:
                     // Replace first
                     (rest ??= emptySet.ToBuilder()).Add(first);
                     first = item;
-                    break;
+                    return true;
             }
         }
+
+        void ICollection<T>.Add(T item) => Add(item);
 
         public void Add(NonEmptySet<T> items)
         {

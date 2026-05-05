@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using NexIM.Server.Events;
+using NexIM.Tools;
 
 namespace NexIM.Server.Accounts;
 
@@ -26,33 +27,26 @@ partial class Account
         tasks.Add(Server.Post(evnt));
     }
 
-    private void HandleOutgoingSubscriptionRequest(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionRequest(Identifier source, Identities targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
-        foreach(var identifier in targets)
+        foreach(var id in targets)
         {
-            if(identifier.Account is not { } targetAccount)
-            {
-                // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.Unavailable)));
-                continue;
-            }
-
-            if(!TrySetPendingSubscriptionTo(targetAccount, out _, out var updated, out var contacts))
+            if(!TrySetPendingSubscriptionTo(id, out _, out var updated, out var contacts))
             {
                 // No change
                 tasks.Add(new(Report(StatusCode.Success)));
                 continue;
             }
 
-            var targetAccountIdentifier = targetAccount.ToIdentifier();
+            var target = id.Name.ToIdentifier();
 
             if(updated.SubscriptionState.AcceptedTo)
             {
                 // Already subscribed - confirm
                 RouteToSessions(new SubscriptionAcceptedEvent {
-                    Origin = EventOrigin.FromTo(targetAccountIdentifier, Name.ToIdentifier(), evnt.TransactionLanguage),
+                    Origin = EventOrigin.FromTo(target, Name.ToIdentifier(), evnt.TransactionLanguage),
                     Processing = EventProcessing.Create(),
                     Data = PresenceData.Empty
                 }, source, tasks);
@@ -70,22 +64,15 @@ partial class Account
             OnContactUpdated(updated, contacts, tasks);
 
             // Pass the event through
-            (targetsList ??= new()).Add(targetAccountIdentifier);
+            (targetsList ??= new()).Add(target);
         }
 
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private void HandleIncomingSubscriptionRequest(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionRequest(Identity id, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
-        if(identifier.Account is not { } senderAccount)
-        {
-            // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.Unavailable)));
-            return;
-        }
-
-        if(!TrySetPendingSubscriptionFrom(senderAccount, out _, out var updated, out var contacts))
+        if(!TrySetPendingSubscriptionFrom(id, out _, out var updated, out var contacts))
         {
             // No change
             tasks.Add(new(Report(StatusCode.Success)));
@@ -98,7 +85,7 @@ partial class Account
 
             OnContactUpdated(updated, contacts, tasks);
 
-            OnSubscribed(identifier, tasks);
+            OnSubscribed(id.Name.ToIdentifier(), tasks);
             return;
         }
 
@@ -119,21 +106,14 @@ partial class Account
     }
 
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Consistency")]
-    private void HandleOutgoingSubscriptionAcceptation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionAcceptation(Identifier source, Identities targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
-        foreach(var identifier in targets)
+        foreach(var id in targets)
         {
-            if(identifier.Account is not { } targetAccount)
-            {
-                // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.Unavailable)));
-                continue;
-            }
-
             // Update confirmation
-            if(!TrySetAcceptedSubscriptionFrom(targetAccount, out _, out var updated, out var contacts))
+            if(!TrySetAcceptedSubscriptionFrom(id, out _, out var updated, out var contacts))
             {
                 // No change
                 tasks.Add(new(Report(StatusCode.Success)));
@@ -160,23 +140,16 @@ partial class Account
             OnContactUpdated(updated, contacts, tasks);
 
             // Pass the event through
-            (targetsList ??= new()).Add(targetAccount.ToIdentifier());
+            (targetsList ??= new()).Add(id.Name.ToIdentifier());
         }
 
         ResendEventFromAccount(evnt, targetsList, tasks);
         OnSubscribed(targetsList, tasks);
     }
 
-    private void HandleIncomingSubscriptionAcceptation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionAcceptation(Identity id, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
-        if(identifier.Account is not { } senderAccount)
-        {
-            // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.Unavailable)));
-            return;
-        }
-
-        if(!TrySetAcceptedSubscriptionTo(senderAccount, out _, out var updated, out var contacts) || !updated.SubscriptionState.AcceptedTo)
+        if(!TrySetAcceptedSubscriptionTo(id, out _, out var updated, out var contacts) || !updated.SubscriptionState.AcceptedTo)
         {
             // No change
             tasks.Add(new(Report(StatusCode.Success)));
@@ -194,21 +167,14 @@ partial class Account
     }
 
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Consistency")]
-    private void HandleOutgoingSubscriptionRejection(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionRejection(Identifier source, Identities targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? unavailableList = null;
         List<Identifier>? targetsList = null;
 
-        foreach(var identifier in targets)
+        foreach(var id in targets)
         {
-            if(identifier.Account is not { } targetAccount)
-            {
-                // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.Unavailable)));
-                continue;
-            }
-
-            if(!TrySetCancelledSubscriptionFrom(targetAccount, out var previous, out var updated, out var contacts))
+            if(!TrySetCancelledSubscriptionFrom(id, out var previous, out var updated, out var contacts))
             {
                 // No change
                 tasks.Add(new(Report(StatusCode.Success)));
@@ -218,13 +184,13 @@ partial class Account
             // Inform of updated contact
             OnContactUpdateOrRemoved(previous, updated, contacts, tasks);
 
-            var targetAccountIdentifier = targetAccount.ToIdentifier();
+            var target = id.Name.ToIdentifier();
 
             switch(previous.SubscriptionState)
             {
                 case { AcceptedFrom: true }:
                     // Stopped allowing subscription
-                    (unavailableList ??= new()).Add(targetAccountIdentifier);
+                    (unavailableList ??= new()).Add(target);
                     break;
                 case { PendingFrom: true }:
                     // Rejected subscription request
@@ -236,23 +202,16 @@ partial class Account
             }
 
             // Pass the event through
-            (targetsList ??= new()).Add(targetAccountIdentifier);
+            (targetsList ??= new()).Add(target);
         }
 
         OnUnsubscribed(unavailableList, tasks);
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private void HandleIncomingSubscriptionRejection(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionRejection(Identity id, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
-        if(identifier.Account is not { } senderAccount)
-        {
-            // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.Unavailable)));
-            return;
-        }
-
-        if(!TrySetCancelledSubscriptionTo(senderAccount, out _, out var updated, out var contacts))
+        if(!TrySetCancelledSubscriptionTo(id, out _, out var updated, out var contacts))
         {
             // No change
             tasks.Add(new(Report(StatusCode.Success)));
@@ -270,20 +229,13 @@ partial class Account
     }
 
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Consistency")]
-    private void HandleOutgoingSubscriptionCancellation(Identifier source, Identifiers targets, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleOutgoingSubscriptionCancellation(Identifier source, Identities targets, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
         List<Identifier>? targetsList = null;
 
-        foreach(var identifier in targets)
+        foreach(var id in targets)
         {
-            if(identifier.Account is not { } targetAccount)
-            {
-                // Unrecognized identifier
-                tasks.Add(new(Report(StatusCode.Unavailable)));
-                continue;
-            }
-
-            if(!TrySetCancelledSubscriptionTo(targetAccount, out _, out var updated, out var contacts))
+            if(!TrySetCancelledSubscriptionTo(id, out _, out var updated, out var contacts))
             {
                 // No change
                 tasks.Add(new(Report(StatusCode.Success)));
@@ -294,22 +246,15 @@ partial class Account
             OnContactUpdated(updated, contacts, tasks);
 
             // Pass the event through
-            (targetsList ??= new()).Add(targetAccount.ToIdentifier());
+            (targetsList ??= new()).Add(id.Name.ToIdentifier());
         }
 
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
-    private void HandleIncomingSubscriptionCancellation(Identifier identifier, Event evnt, List<ValueTask<StatusReports>> tasks)
+    private void HandleIncomingSubscriptionCancellation(Identity id, Event evnt, List<ValueTask<StatusReports>> tasks)
     {
-        if(identifier.Account is not { } senderAccount)
-        {
-            // Unrecognized identifier
-            tasks.Add(new(Report(StatusCode.Unavailable)));
-            return;
-        }
-
-        if(!TrySetCancelledSubscriptionFrom(senderAccount, out var previous, out var updated, out var contacts))
+        if(!TrySetCancelledSubscriptionFrom(id, out var previous, out var updated, out var contacts))
         {
             // No change
             tasks.Add(new(Report(StatusCode.Success)));
@@ -331,7 +276,7 @@ partial class Account
         OnContactUpdateOrRemoved(previous, updated, contacts, tasks);
 
         // Send as unavailable
-        OnUnsubscribed(new(identifier), tasks);
+        OnUnsubscribed(id.Name.ToIdentifier(), tasks);
     }
 
     private void OnSubscribed(Identifiers targets, List<ValueTask<StatusReports>> tasks)

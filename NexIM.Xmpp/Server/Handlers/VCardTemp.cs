@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
@@ -56,13 +57,13 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
         foreach(var data in vcard.Data)
         {
             // Each embedded file must change ownership to the account
-            if(data.BinaryValue is { } file and not UploadedFile)
+            if(data.BinaryValue?.TryGetValue(out var file) == true && file is not UploadedFile)
             {
                 string? contentType = data switch {
                     VCardMedia media => media.FormatType,
                     _ => null
                 };
-                data.BinaryValue = this.GetClientSession().AcquireUploadedFile(file, null, contentType);
+                data.BinaryValue = new(this.GetClientSession().AcquireUploadedFile(file, null, contentType));
                 file.Dispose();
             }
         }
@@ -98,7 +99,10 @@ internal abstract class DataVCardTemp : BaseDelegatingVCardHandler<VCardParser<I
                 try
                 {
                     // Already uploaded files will be unaffected by dispose
-                    data.Current.BinaryValue?.Dispose();
+                    if(data.Current.BinaryValue?.TryGetValue(out var file) == true)
+                    {
+                        file.Dispose();
+                    }
                 }
                 catch when(DisposeRest())
                 {

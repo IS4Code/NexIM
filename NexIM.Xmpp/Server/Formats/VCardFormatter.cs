@@ -140,7 +140,10 @@ internal static class VCardFormatter
             {
                 await using var soundHandler = await handler.Pronunciation();
                 await soundHandler.PhoneticTranscriptionNotNull(pronunciation.PhoneticTranscription);
-                await soundHandler.BinaryValueNotNull(pronunciation.BinaryValue?.ToBase64());
+                if(pronunciation.BinaryValue is { } binary)
+                {
+                    await soundHandler.BinaryValueNotNull((await binary.Get(static x => x))?.ToBase64());
+                }
                 await soundHandler.ExternalValueNotNull(pronunciation.ExternalValue);
             }
         }
@@ -177,7 +180,10 @@ internal static class VCardFormatter
     static async ValueTask WriteTo(VCardMedia media, IVCardMediaHandler handler)
     {
         await handler.FormatType(media.FormatType);
-        await handler.BinaryValueNotNull(media.BinaryValue?.ToBase64());
+        if(media.BinaryValue is { } binary)
+        {
+            await handler.BinaryValueNotNull((await binary.Get(static x => x))?.ToBase64());
+        }
         await handler.ExternalValueNotNull(media.ExternalValue);
     }
 

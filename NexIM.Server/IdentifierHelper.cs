@@ -10,9 +10,13 @@ namespace NexIM.Server;
 
 internal static class IdentifierHelper
 {
-    public static DateTimeOffset IdentifierTimeNow => GetPreciseDateTime();
+    public static DateTime IdentifierTimeNow => GetPreciseDateTime();
 
-    public static Guid CreateGuid() => CreateGuid(IdentifierTimeNow);
+    public static Guid CreateGuid(out DateTime timestamp)
+    {
+        timestamp = IdentifierTimeNow;
+        return CreateGuid(timestamp);
+    }
 
     static readonly byte[] urlNamespace = { 0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8 };
 
@@ -42,10 +46,13 @@ internal static class IdentifierHelper
         return new(hash.Slice(0, 16), true);
     }
 
-    public static Guid CreateGuid(DateTimeOffset timestamp)
+    public static Guid CreateGuid(DateTime timestamp)
     {
+        // UTC
+        timestamp = timestamp.ToUniversalTime();
+
         // Precision lost when converted to milliseconds
-        int subMs = (int)(timestamp.UtcTicks % TimeSpan.TicksPerMillisecond);
+        int subMs = (int)(timestamp.Ticks % TimeSpan.TicksPerMillisecond);
 
         // Set 10 bits of sub-millisecond timestamp per Section 6.2 (Method 3) of RFC 9562.
         Span<Guid> guid = stackalloc Guid[] { Guid.CreateVersion7(timestamp) };
@@ -90,7 +97,7 @@ internal static class IdentifierHelper
     /// Retrieves the precise time by utilizing both
     /// <see cref="DateTime.UtcNow"/> and <see cref="Stopwatch"/>.
     /// </summary>
-    private static DateTimeOffset GetPreciseDateTime()
+    private static DateTime GetPreciseDateTime()
     {
         // Load previously measured time
         var previous = Interlocked.Read(ref lastMeasuredTimeBits);

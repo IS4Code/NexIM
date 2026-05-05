@@ -1,9 +1,11 @@
-﻿using System;
+﻿global using Identities = NexIM.Tools.NonEmptySet<NexIM.Server.Accounts.Identity>;
+using System;
+using System.Collections.Generic;
 using NexIM.Server.Database;
 
 namespace NexIM.Server.Accounts;
 
-internal sealed class Identity : IEquatable<Identity>
+internal sealed class Identity : IEquatable<Identity>, IComparable<Identity>
 {
     public Guid Identifier { get; }
     public string? User { get; }
@@ -33,9 +35,9 @@ internal sealed class Identity : IEquatable<Identity>
         Host = name.Host;
     }
 
-    public Identity(AccountsContext context, Guid identifier, string? user, string host) : this(identifier, new(user, host))
+    internal Identity(DatabaseContext _, Guid identifier, string? user, string host) : this(identifier, new(user, host))
     {
-        context.Server.RegisterIdentity(this);
+
     }
 
     public bool Equals(Identity? other)
@@ -46,6 +48,12 @@ internal sealed class Identity : IEquatable<Identity>
     public override bool Equals(object? obj)
     {
         return obj is Identity other && Equals(other);
+    }
+
+    static readonly Comparer<AccountName?> nameComparer = Comparer<AccountName?>.Default;
+    public int CompareTo(Identity? other)
+    {
+        return nameComparer.Compare(Name, other?.Name);
     }
 
     public override int GetHashCode()

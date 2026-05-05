@@ -1,4 +1,5 @@
-﻿using System;
+﻿global using AccountNames = NexIM.Tools.NonEmptySet<NexIM.Server.AccountName>;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using NexIM.Server.Accounts;
 

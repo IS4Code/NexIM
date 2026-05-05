@@ -33,26 +33,26 @@ partial class Server
         return name.IsLocal && !name.IsUser;
     }
 
-    private ValueTask<StatusReports> Route(AccountName accountName, Identifiers targetTo, Event evnt)
+    private async ValueTask<StatusReports> Route(AccountName accountName, Identifiers targetTo, Event evnt)
     {
         if(IsServer(accountName))
         {
-            return RouteToSelf(evnt);
+            return await RouteToSelf(evnt);
         }
 
         if(!accountName.IsUser)
         {
             // TODO Recognize other entities
-            return new(Report(StatusCode.Unavailable));
+            return Report(StatusCode.Unavailable);
         }
 
-        if(GetAccount(accountName) is not { } account)
+        if(await GetAccount(accountName) is not { } account)
         {
-            return new(Report(StatusCode.Unavailable));
+            return Report(StatusCode.Unavailable);
         }
 
         // Deliver to the relevant account
-        return account.Post(evnt.WithTo(targetTo));
+        return await account.Post(evnt.WithTo(targetTo));
     }
 
     private ValueTask<StatusReports> RouteToSelf(Event evnt)

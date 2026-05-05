@@ -78,6 +78,21 @@ public readonly struct Remote<TObject> : IEquatable<Remote<TObject>> where TObje
         }
     }
 
+    public bool TryGetValue([MaybeNullWhen(false)] out TObject result)
+    {
+        switch(_data)
+        {
+            case IRemoteProvider:
+                goto default;
+            case TObject obj:
+                result = obj;
+                return true;
+            default:
+                result = default;
+                return false;
+        }
+    }
+
     public bool Equals(Remote<TObject> other)
     {
         if(_data == other._data)
