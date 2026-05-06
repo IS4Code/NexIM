@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Grammar;
 using NexIM.Primitives.Xml.Handlers;
@@ -312,4 +313,11 @@ public interface IVCardCredentialHandler : IPayloadHandler
 
     [Name("CRED")]
     ValueTask Value(string? value);
+}
+
+[ComplexType, Namespace(VCardTempUpdate)]
+public interface IVCardUpdateHandler : IPayloadHandler
+{
+    [Name("photo")]
+    ValueTask Photo(Hex<ArraySegment<byte>>? hash);
 }

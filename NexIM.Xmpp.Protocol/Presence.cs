@@ -35,6 +35,9 @@ public interface IPresenceHandler : IStanzaHandler, IPresentationHandler, IDeliv
 
     [Name("priority")]
     ValueTask Priority(sbyte? value);
+
+    [Name("x", VCardTempUpdate)]
+    ValueTask<IVCardUpdateHandler> VCardUpdate();
 }
 
 [SimpleType]

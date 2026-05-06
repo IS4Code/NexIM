@@ -222,6 +222,48 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
         while((read = await reader(new(storage, Length, storage.Length - Length), args)) > 0);
     }
 
+    public static TemporaryArray<T> CreateFrom<TArgs>(SynchronousReader<TArgs> reader, TArgs args, int capacity = 1, ITemporaryArraySource<T>? arraySource = null)
+    {
+        var arr = new TemporaryArray<T>(capacity: capacity, arraySource: arraySource);
+        try
+        {
+            arr.ReadFrom(reader, args);
+            return arr;
+        }
+        catch when(Dispose())
+        {
+            // Dispose unreturned data immediately
+            throw;
+        }
+
+        bool Dispose()
+        {
+            arr.Dispose();
+            return false;
+        }
+    }
+
+    public static async ValueTask<TemporaryArray<T>> CreateFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args, int capacity = 1, ITemporaryArraySource<T>? arraySource = null)
+    {
+        var arr = new TemporaryArray<T>(capacity: capacity, arraySource: arraySource);
+        try
+        {
+            await arr.ReadFromAsync(reader, args);
+            return arr;
+        }
+        catch when(Dispose())
+        {
+            // Dispose unreturned data immediately
+            throw;
+        }
+
+        bool Dispose()
+        {
+            arr.Dispose();
+            return false;
+        }
+    }
+
     public void WriteTo<TArgs>(SynchronousWriter<TArgs> writer, TArgs args)
     {
         writer(Value, args);

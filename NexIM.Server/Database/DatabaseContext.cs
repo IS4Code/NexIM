@@ -59,6 +59,7 @@ internal abstract class DatabaseContext : DbContext
     protected sealed override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<Guid>().HaveConversion<GuidToBytesConverter>();
+        configurationBuilder.Properties<ArraySegment<byte>>().HaveConversion<ArraySegmentToBytesConverter>();
         configurationBuilder.Properties<LanguageCode?>().HaveConversion<LanguageCodeConverter>();
         configurationBuilder.Properties<SubscriptionState>().HaveConversion<SubscriptionStateConverter>();
         configurationBuilder.Properties<MailAddress>().HaveConversion<MailAddressConverter>();

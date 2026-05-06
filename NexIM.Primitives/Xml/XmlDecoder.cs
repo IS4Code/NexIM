@@ -14,8 +14,11 @@ public abstract class XmlDecoder :
     IValueXmlDecoder<TemporaryString>,
     IValueXmlDecoder<TemporaryUtf8String>,
     IValueXmlDecoder<Base64<ArraySegment<byte>>>,
+    IValueXmlDecoder<Hex<ArraySegment<byte>>>,
     IValueXmlDecoder<Base64<TemporaryArray<byte>>>,
+    IValueXmlDecoder<Hex<TemporaryArray<byte>>>,
     IValueXmlDecoder<Base64<TemporaryFile>>,
+    IValueXmlDecoder<Hex<TemporaryFile>>,
     IValueXmlDecoder<Token<Enum>>,
     IValueXmlDecoder<LanguageTaggedString>,
     IValueXmlDecoder<DateTime>,
@@ -95,12 +98,22 @@ public abstract class XmlDecoder :
 
     async ValueTask<Base64<ArraySegment<byte>>> IValueXmlDecoder<Base64<ArraySegment<byte>>>.Decode(XmlReader reader)
     {
+        return await Read(xmlTemporaryBase64Reader, reader);
+    }
+
+    async ValueTask<Hex<ArraySegment<byte>>> IValueXmlDecoder<Hex<ArraySegment<byte>>>.Decode(XmlReader reader)
+    {
+        return await Read(xmlTemporaryHexReader, reader);
+    }
+
+    async ValueTask<ArraySegment<byte>> Read<TArgs>(TemporaryArray<byte>.AsynchronousReader<TArgs> reader, TArgs args)
+    {
         var pool = ArrayPool<byte>.Instance;
         var buffer = pool.Rent(1024);
         try
         {
             var stream = new MemoryStream();
-            while(await reader.ReadContentAsBase64Async(buffer, 0, buffer.Length) is > 0 and var read)
+            while(await reader(new(buffer, 0, buffer.Length), args) is > 0 and var read)
             {
                 stream.Write(buffer, 0, read);
             }
@@ -120,8 +133,12 @@ public abstract class XmlDecoder :
         return reader.ReadContentAsCharsAsync(buffer.Array!, buffer.Offset, buffer.Count);
     };
 
-    static readonly TemporaryArray<byte>.AsynchronousReader<XmlReader> xmlTemporaryByteReader = static (buffer, reader) => {
+    static readonly TemporaryArray<byte>.AsynchronousReader<XmlReader> xmlTemporaryBase64Reader = static (buffer, reader) => {
         return new(reader.ReadContentAsBase64Async(buffer.Array!, buffer.Offset, buffer.Count));
+    };
+
+    static readonly TemporaryArray<byte>.AsynchronousReader<XmlReader> xmlTemporaryHexReader = static (buffer, reader) => {
+        return new(reader.ReadContentAsBinHexAsync(buffer.Array!, buffer.Offset, buffer.Count));
     };
 
     async ValueTask<TemporaryString> IValueXmlDecoder<TemporaryString>.Decode(XmlReader reader)
@@ -150,7 +167,7 @@ public abstract class XmlDecoder :
         var str = new TemporaryUtf8String(arraySource: ArraySource<char>.Instance);
         try
         {
-            await str.ReadFromAsync(xmlTemporaryByteReader, reader);
+            await str.ReadFromAsync(xmlTemporaryBase64Reader, reader);
             return str;
         }
         catch when(Dispose())
@@ -168,28 +185,22 @@ public abstract class XmlDecoder :
 
     async ValueTask<Base64<TemporaryArray<byte>>> IValueXmlDecoder<Base64<TemporaryArray<byte>>>.Decode(XmlReader reader)
     {
-        var arr = new TemporaryArray<byte>(arraySource: ArraySource<byte>.Instance);
-        try
-        {
-            await arr.ReadFromAsync(xmlTemporaryByteReader, reader);
-            return arr;
-        }
-        catch when(Dispose())
-        {
-            // Dispose unreturned data immediately
-            throw;
-        }
+        return await TemporaryArray<byte>.CreateFromAsync(xmlTemporaryBase64Reader, reader, arraySource: ArraySource<byte>.Instance);
+    }
 
-        bool Dispose()
-        {
-            arr.Dispose();
-            return false;
-        }
+    async ValueTask<Hex<TemporaryArray<byte>>> IValueXmlDecoder<Hex<TemporaryArray<byte>>>.Decode(XmlReader reader)
+    {
+        return await TemporaryArray<byte>.CreateFromAsync(xmlTemporaryHexReader, reader, arraySource: ArraySource<byte>.Instance);
     }
 
     async ValueTask<Base64<TemporaryFile>> IValueXmlDecoder<Base64<TemporaryFile>>.Decode(XmlReader reader)
     {
-        return await TemporaryFile.ReadFromAsync(StorageQuota.Local, xmlTemporaryByteReader, reader);
+        return await TemporaryFile.ReadFromAsync(StorageQuota.Local, xmlTemporaryBase64Reader, reader);
+    }
+
+    async ValueTask<Hex<TemporaryFile>> IValueXmlDecoder<Hex<TemporaryFile>>.Decode(XmlReader reader)
+    {
+        return await TemporaryFile.ReadFromAsync(StorageQuota.Local, xmlTemporaryHexReader, reader);
     }
 
     protected async ValueTask<string> DecodeTokenAsync(XmlReader reader)

@@ -182,7 +182,9 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
             Body = new(content.ToImmutable()),
             ThreadIdentifier = thread?.identifier,
             ParentThreadIdentifier = thread?.parent,
-            Presentation = new(Nickname: nick),
+            Presentation = new() {
+                Nickname = nick
+            },
             State = state ?? ConversationState.Unspecified,
             Timing = delay?.timing,
             AddressRelations = addresses,

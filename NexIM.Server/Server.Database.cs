@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mail;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -36,12 +38,32 @@ partial class Server
     /// <summary>
     /// Performs a lookup for a previously uploaded file by its identifier.
     /// </summary>
-    internal async ValueTask<UploadedFile?> FindUploadedFile(Guid identifier, CancellationToken cancellationToken = default)
+    public async ValueTask<UploadedFile?> FindUploadedFile(Guid identifier, CancellationToken cancellationToken = default)
     {
         await globalDatabase.Lock.WaitAsync(cancellationToken);
         try
         {
             return await globalDatabase.UploadedFiles.FindAsync(new object[] { identifier }, cancellationToken);
+        }
+        finally
+        {
+            globalDatabase.Lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Performs a lookup for a previously uploaded file by its SHA-1 hash.
+    /// </summary>
+    public async ValueTask<UploadedFile?> FindUploadedFileBySha1(ArraySegment<byte> hash, CancellationToken cancellationToken = default)
+    {
+        await globalDatabase.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            /*if(MemoryMarshal.TryGetArray(hash, out var segment) && segment.Offset == 0 && segment.Count == segment.Array!.Length)
+            {
+                return await globalDatabase.UploadedFiles.FirstOrDefaultAsync(x => x.Sha1Hash == segment.Array, cancellationToken);
+            }*/
+            return await globalDatabase.UploadedFiles.FirstOrDefaultAsync(x => x.Sha1Hash.SequenceEqual(hash), cancellationToken);
         }
         finally
         {

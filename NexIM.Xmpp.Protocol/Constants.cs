@@ -34,4 +34,5 @@ static class Constants
     public const string XmppSid = "urn:xmpp:sid:0";
     public const string XOob = "jabber:x:oob";
     public const string IqRegister = "jabber:iq:register";
+    public const string VCardTempUpdate = "vcard-temp:x:update";
 }

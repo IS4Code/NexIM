@@ -10,8 +10,8 @@ public sealed class UploadedFile : TemporaryFile
     public required Guid Identifier { get; init; }
     public required DateTimeOffset Uploaded { get; init; }
     // TODO Multiple hashes
-    public required byte[] Sha1Hash { get; init; }
-    public required byte[] Sha256Hash { get; init; }
+    public required ArraySegment<byte> Sha1Hash { get; init; }
+    public required ArraySegment<byte> Sha256Hash { get; init; }
 
     public string? Name { get; set; }
     public string? ContentType { get; set; }

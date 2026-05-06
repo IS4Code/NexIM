@@ -137,6 +137,15 @@ public class XmppClientSession : ClientSession
             await output.Capabilities(xmpp.GetToken<CapabilitiesHash>(identifier.VersionType), identifier.Application, identifier.Version, null);
         }
 
+        if(data.Presentation.Avatar is { } avatar)
+        {
+            await using var vcardUpdate = await output.VCardUpdate();
+            if(avatar.TryCast<UploadedFile>() is { } file && await file.Get(x => x.Sha1Hash) is { } hash)
+            {
+                await vcardUpdate.Photo(hash);
+            }
+        }
+
         await WriteSender(data.Presentation, output);
 
         await WriteDelivery(output, data, evnt);

@@ -150,4 +150,8 @@ public readonly struct MessageBodyCollection(MessageBodyCollectionData data) : I
 }
 
 [StructLayout(LayoutKind.Auto)]
-public readonly record struct Presentation(string? Nickname);
+public readonly record struct Presentation
+{
+    public string? Nickname { get; init; }
+    public Remote<TemporaryFile>? Avatar { get; init; }
+}

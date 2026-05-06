@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Accounts;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
@@ -19,6 +24,7 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     string? nick;
     sbyte? priority;
     Remote<Capabilities>? caps;
+    Remote<TemporaryFile>? photo;
     (DateTime? timestamp, DeliveryTiming timing)? delay;
     AddressesParser<ICommandContext>? _addressesParser;
     AddressesParser<ICommandContext> addressesParser => _addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
@@ -72,6 +78,13 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         this.SetOnce(ref caps, this.GetClientSession().GetCapabilities(hashValue, node, version).TryCast<Capabilities>());
     }
 
+    protected async override ValueTask<IVCardUpdateHandler> OnVCardUpdate()
+    {
+        var handler = this.GetHandler<VCardUpdate>();
+        handler.parent = this;
+        return handler;
+    }
+
     protected virtual PresenceData GetPresence()
     {
         return new PresenceData {
@@ -80,7 +93,10 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
                 ?? (this.GetStanza().Type?.ToEnum() == StanzaType.Unavailable ? Availability.Unavailable : Availability.Available),
                 statusTextBuilder.TryToString()
             ),
-            Presentation = new(Nickname: nick),
+            Presentation = new() {
+                Nickname = nick,
+                Avatar = photo
+            },
             Priority = priority,
             Capabilities = caps ?? default,
             Timing = delay?.timing,
@@ -140,6 +156,65 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         {
             this.Post(GetEvent());
         }
+    }
+
+    sealed class VCardUpdate : BaseVCardUpdateHandler<ICommandContext>
+    {
+        public Presence parent = null!;
+
+        protected async override ValueTask OnPhoto(Hex<ArraySegment<byte>>? hash)
+        {
+            this.SetOnce(ref parent.photo, new(new FileProvider(hash?.Value ?? default, this.GetServer())));
+        }
+
+        protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
+        public override ValueTask DisposeAsync() => default;
+    }
+
+    sealed class FileProvider : DerivedRemoteProvider<TemporaryFile, UploadedFile>, RemoteProvider<UploadedFile>.IResultRemoteProvider<ArraySegment<byte>>
+    {
+        readonly ArraySegment<byte> hash;
+        readonly NexIM.Server.Server server;
+
+        public FileProvider(ArraySegment<byte> hash, NexIM.Server.Server server)
+        {
+            this.hash = hash;
+            this.server = server;
+        }
+
+        protected override ValueTask<UploadedFile?> Load(CancellationToken cancellationToken)
+        {
+            return server.FindUploadedFileBySha1(hash, cancellationToken);
+        }
+
+        static readonly MemberInfo identifierMember =
+            ((MemberExpression)((Expression<Func<UploadedFile, ArraySegment<byte>>>)(x => x.Sha1Hash)).Body).Member;
+
+        ValueTask<ArraySegment<byte>>? IResultRemoteProvider<ArraySegment<byte>>.TryGetImmediate(LambdaExpression retrieveExpression, CancellationToken cancellationToken)
+        {
+            var argument = retrieveExpression.Parameters[0];
+            switch(retrieveExpression.Body)
+            {
+                case MemberExpression { Expression: var param, Member: var member } when argument.Equals(param) && identifierMember.Equals(member):
+                    return new(hash);
+            }
+            return null;
+        }
+
+        public bool Equals(FileProvider other)
+        {
+            return hash.AsSpan().SequenceEqual(other.hash.AsSpan()) && server == other.server;
+        }
+
+        public override int GetHashCode()
+        {
+            var hashCode = new HashCode();
+            hashCode.AddBytes(hash.AsSpan());
+            return hashCode.ToHashCode();
+        }
+
+        public override bool Equals(IRemoteProvider obj) => obj is FileProvider other && Equals(other);
+        public override bool References(UploadedFile? other) => other != null && other.Sha1Hash.AsSpan().SequenceEqual(hash.AsSpan());
     }
 }
 

@@ -13,8 +13,11 @@ public abstract class XmlEncoder :
     IValueXmlEncoder<TemporaryString>,
     IValueXmlEncoder<TemporaryUtf8String>,
     IValueXmlEncoder<Base64<ArraySegment<byte>>>,
+    IValueXmlEncoder<Hex<ArraySegment<byte>>>,
     IValueXmlEncoder<Base64<TemporaryArray<byte>>>,
+    IValueXmlEncoder<Hex<TemporaryArray<byte>>>,
     IValueXmlEncoder<Base64<TemporaryFile>>,
+    IValueXmlEncoder<Hex<TemporaryFile>>,
     IValueXmlEncoder<Token<Enum>>,
     IValueXmlEncoder<LanguageTaggedString>,
     IValueXmlEncoder<DateTime>,
@@ -48,13 +51,22 @@ public abstract class XmlEncoder :
         return new(writer.WriteCharsAsync(buffer.Array!, buffer.Offset, buffer.Count));
     };
 
-    static readonly TemporaryArray<byte>.AsynchronousWriter<XmlWriter> xmlTemporaryByteWriter = static (buffer, writer) => {
+    static readonly TemporaryArray<byte>.AsynchronousWriter<XmlWriter> xmlTemporaryBase64Writer = static (buffer, writer) => {
         return new(writer.WriteBase64Async(buffer.Array!, buffer.Offset, buffer.Count));
+    };
+
+    static readonly TemporaryArray<byte>.AsynchronousWriter<XmlWriter> xmlTemporaryHexWriter = static (buffer, writer) => {
+        return new(writer.WriteBinHexAsync(buffer.Array!, buffer.Offset, buffer.Count));
     };
 
     ValueTask IValueXmlEncoder<Base64<ArraySegment<byte>>>.Encode(XmlWriter writer, Base64<ArraySegment<byte>> value)
     {
-        return xmlTemporaryByteWriter(value, writer);
+        return xmlTemporaryBase64Writer(value, writer);
+    }
+
+    ValueTask IValueXmlEncoder<Hex<ArraySegment<byte>>>.Encode(XmlWriter writer, Hex<ArraySegment<byte>> value)
+    {
+        return xmlTemporaryHexWriter(value, writer);
     }
 
     ValueTask IValueXmlEncoder<TemporaryString>.Encode(XmlWriter writer, TemporaryString value)
@@ -64,17 +76,27 @@ public abstract class XmlEncoder :
 
     ValueTask IValueXmlEncoder<TemporaryUtf8String>.Encode(XmlWriter writer, TemporaryUtf8String value)
     {
-        return value.WriteToAsync(xmlTemporaryByteWriter, writer);
+        return value.WriteToAsync(xmlTemporaryBase64Writer, writer);
     }
 
     ValueTask IValueXmlEncoder<Base64<TemporaryArray<byte>>>.Encode(XmlWriter writer, Base64<TemporaryArray<byte>> value)
     {
-        return value.Value.WriteToAsync(xmlTemporaryByteWriter, writer);
+        return value.Value.WriteToAsync(xmlTemporaryBase64Writer, writer);
+    }
+
+    ValueTask IValueXmlEncoder<Hex<TemporaryArray<byte>>>.Encode(XmlWriter writer, Hex<TemporaryArray<byte>> value)
+    {
+        return value.Value.WriteToAsync(xmlTemporaryHexWriter, writer);
     }
 
     ValueTask IValueXmlEncoder<Base64<TemporaryFile>>.Encode(XmlWriter writer, Base64<TemporaryFile> value)
     {
-        return value.Value.WriteToAsync(xmlTemporaryByteWriter, writer);
+        return value.Value.WriteToAsync(xmlTemporaryBase64Writer, writer);
+    }
+
+    ValueTask IValueXmlEncoder<Hex<TemporaryFile>>.Encode(XmlWriter writer, Hex<TemporaryFile> value)
+    {
+        return value.Value.WriteToAsync(xmlTemporaryHexWriter, writer);
     }
 
     protected async ValueTask EncodeTokenAsync(XmlWriter writer, string tokenValue)
