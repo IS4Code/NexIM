@@ -8,31 +8,23 @@ using NexIM.Server.Events;
 
 namespace NexIM.Xmpp.Model;
 
-internal sealed class CapabilitiesProvider : DerivedRemoteProvider<Capabilities, XmppCapabilities>, RemoteProvider<XmppCapabilities>.IResultRemoteProvider<CapabilitiesIdentifier>
+internal sealed class CapabilitiesProvider : IdentifierRemoteProvider<Capabilities, XmppCapabilities, CapabilitiesIdentifier>
 {
-    readonly CapabilitiesIdentifier identifier;
     readonly Task<XmppCapabilities> task;
+
+    protected override CapabilitiesIdentifier Identifier { get; }
+    protected override MemberInfo IdentifierMember => identifierMember;
 
     public CapabilitiesProvider(CapabilitiesIdentifier identifier, Task<XmppCapabilities> task)
     {
         // TODO Lazy loading
-        this.identifier = identifier;
         this.task = task;
-    }
-
-    public override bool Equals(IRemoteProvider other)
-    {
-        return other is CapabilitiesProvider provider && identifier == provider.identifier;
+        Identifier = identifier;
     }
 
     public override bool References(XmppCapabilities? other)
     {
-        return identifier == other?.Identifier;
-    }
-
-    public override int GetHashCode()
-    {
-        return identifier.GetHashCode();
+        return Identifier == other?.Identifier;
     }
 
     protected override ValueTask<XmppCapabilities?> Load(CancellationToken cancellationToken)
@@ -42,15 +34,4 @@ internal sealed class CapabilitiesProvider : DerivedRemoteProvider<Capabilities,
 
     static readonly MemberInfo identifierMember =
         ((MemberExpression)((Expression<Func<XmppCapabilities, CapabilitiesIdentifier>>)(c => c.Identifier)).Body).Member;
-
-    ValueTask<CapabilitiesIdentifier>? IResultRemoteProvider<CapabilitiesIdentifier>.TryGetImmediate(LambdaExpression retrieveExpression, CancellationToken cancellationToken)
-    {
-        var argument = retrieveExpression.Parameters[0];
-        switch(retrieveExpression.Body)
-        {
-            case MemberExpression { Expression: var param, Member: var member } when argument.Equals(param) && identifierMember.Equals(member):
-                return new(identifier);
-        }
-        return null;
-    }
 }

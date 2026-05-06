@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -276,6 +277,35 @@ public abstract class DerivedRemoteProvider<TBase, TDerived> : RemoteProvider<TD
     bool IReferenceRemoteProvider<TBase>.References(TBase? other)
     {
         return other is TDerived derived && References(derived);
+    }
+}
+
+public abstract class IdentifierRemoteProvider<TBase, TDerived, TIdentifier> : DerivedRemoteProvider<TBase, TDerived>, RemoteProvider<TDerived>.IResultRemoteProvider<TIdentifier> where TDerived : notnull, TBase where TBase : notnull
+{
+    static readonly EqualityComparer<TIdentifier> identifierComparer = EqualityComparer<TIdentifier>.Default;
+
+    protected abstract TIdentifier Identifier { get; }
+    protected abstract MemberInfo IdentifierMember { get; }
+
+    public virtual ValueTask<TIdentifier>? TryGetImmediate(LambdaExpression retrieveExpression, CancellationToken cancellationToken)
+    {
+        var argument = retrieveExpression.Parameters[0];
+        switch(retrieveExpression.Body)
+        {
+            case MemberExpression { Expression: var param, Member: var member } when argument.Equals(param) && IdentifierMember.Equals(member):
+                return new(Identifier);
+        }
+        return null;
+    }
+
+    public override bool Equals(IRemoteProvider other)
+    {
+        return other is IdentifierRemoteProvider<TBase, TDerived, TIdentifier> provider && identifierComparer.Equals(Identifier, provider.Identifier);
+    }
+
+    public override int GetHashCode()
+    {
+        return identifierComparer.GetHashCode(Identifier);
     }
 }
 

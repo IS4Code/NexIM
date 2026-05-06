@@ -44,43 +44,19 @@ internal sealed class TemporaryFileFormatter(IFormatterResolver standardResolver
         return new(new FileProvider(identifier, server));
     }
 
-    sealed class FileProvider : DerivedRemoteProvider<TemporaryFile, UploadedFile>, RemoteProvider<UploadedFile>.IResultRemoteProvider<Guid>
+    sealed class FileProvider(Guid identifier, Server server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, Guid>
     {
-        readonly Guid identifier;
-        readonly Server server;
-
-        public FileProvider(Guid identifier, Server server)
-        {
-            this.identifier = identifier;
-            this.server = server;
-        }
+        protected override Guid Identifier => identifier;
+        protected override MemberInfo IdentifierMember => identifierMember;
 
         protected override ValueTask<UploadedFile?> Load(CancellationToken cancellationToken)
         {
-            return server.FindUploadedFile(identifier, cancellationToken);
+            return server.FindUploadedFile(Identifier, cancellationToken);
         }
 
         static readonly MemberInfo identifierMember =
             ((MemberExpression)((Expression<Func<UploadedFile, Guid>>)(x => x.Identifier)).Body).Member;
 
-        ValueTask<Guid>? IResultRemoteProvider<Guid>.TryGetImmediate(LambdaExpression retrieveExpression, CancellationToken cancellationToken)
-        {
-            var argument = retrieveExpression.Parameters[0];
-            switch(retrieveExpression.Body)
-            {
-                case MemberExpression { Expression: var param, Member: var member } when argument.Equals(param) && identifierMember.Equals(member):
-                    return new(identifier);
-            }
-            return null;
-        }
-
-        public bool Equals(FileProvider other)
-        {
-            return identifier == other.identifier && server == other.server;
-        }
-
-        public override bool Equals(IRemoteProvider obj) => obj is FileProvider other && Equals(other);
-        public override int GetHashCode() => identifier.GetHashCode();
-        public override bool References(UploadedFile? other) => identifier == other?.Identifier;
+        public override bool References(UploadedFile? other) => Identifier == other?.Identifier;
     }
 }

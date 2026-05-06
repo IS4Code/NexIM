@@ -171,16 +171,10 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         public override ValueTask DisposeAsync() => default;
     }
 
-    sealed class FileProvider : DerivedRemoteProvider<TemporaryFile, UploadedFile>, RemoteProvider<UploadedFile>.IResultRemoteProvider<ArraySegment<byte>>
+    sealed class FileProvider(ArraySegment<byte> hash, NexIM.Server.Server server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, ArraySegment<byte>>
     {
-        readonly ArraySegment<byte> hash;
-        readonly NexIM.Server.Server server;
-
-        public FileProvider(ArraySegment<byte> hash, NexIM.Server.Server server)
-        {
-            this.hash = hash;
-            this.server = server;
-        }
+        protected override ArraySegment<byte> Identifier => hash;
+        protected override MemberInfo IdentifierMember => identifierMember;
 
         protected override ValueTask<UploadedFile?> Load(CancellationToken cancellationToken)
         {
@@ -190,20 +184,9 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
         static readonly MemberInfo identifierMember =
             ((MemberExpression)((Expression<Func<UploadedFile, ArraySegment<byte>>>)(x => x.Sha1Hash)).Body).Member;
 
-        ValueTask<ArraySegment<byte>>? IResultRemoteProvider<ArraySegment<byte>>.TryGetImmediate(LambdaExpression retrieveExpression, CancellationToken cancellationToken)
-        {
-            var argument = retrieveExpression.Parameters[0];
-            switch(retrieveExpression.Body)
-            {
-                case MemberExpression { Expression: var param, Member: var member } when argument.Equals(param) && identifierMember.Equals(member):
-                    return new(hash);
-            }
-            return null;
-        }
-
         public bool Equals(FileProvider other)
         {
-            return hash.AsSpan().SequenceEqual(other.hash.AsSpan()) && server == other.server;
+            return hash.AsSpan().SequenceEqual(other.Identifier.AsSpan());
         }
 
         public override int GetHashCode()
