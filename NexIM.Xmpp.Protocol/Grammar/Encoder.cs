@@ -14,6 +14,8 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
     protected abstract CancellationToken CancellationToken { get; }
     protected abstract ValueTask<Encoder> ForkInner();
 
+    protected override bool LowerCaseHex => true;
+
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)
     {
         // An unrecognized element might differ in original xml:lang

@@ -29,6 +29,7 @@ public abstract class XmlEncoder :
     IValueXmlEncoder<True>
 {
     protected abstract XmlWriter Writer { get; }
+    protected virtual bool LowerCaseHex => false;
 
     public abstract string? DefaultNamespace { get; }
 
@@ -55,8 +56,13 @@ public abstract class XmlEncoder :
         return new(writer.WriteBase64Async(buffer.Array!, buffer.Offset, buffer.Count));
     };
 
-    static readonly TemporaryArray<byte>.AsynchronousWriter<XmlWriter> xmlTemporaryHexWriter = static (buffer, writer) => {
-        return new(writer.WriteBinHexAsync(buffer.Array!, buffer.Offset, buffer.Count));
+    static readonly TemporaryArray<byte>.AsynchronousWriter<(XmlWriter, bool)> xmlTemporaryHexWriter = static (buffer, info) => {
+        var (writer, lowercase) = info;
+        return new(
+            lowercase
+            ? writer.WriteLowerCaseBinHexAsync(buffer.Array!, buffer.Offset, buffer.Count)
+            : writer.WriteBinHexAsync(buffer.Array!, buffer.Offset, buffer.Count)
+        );
     };
 
     ValueTask IValueXmlEncoder<Base64<ArraySegment<byte>>>.Encode(XmlWriter writer, Base64<ArraySegment<byte>> value)
@@ -66,7 +72,7 @@ public abstract class XmlEncoder :
 
     ValueTask IValueXmlEncoder<Hex<ArraySegment<byte>>>.Encode(XmlWriter writer, Hex<ArraySegment<byte>> value)
     {
-        return xmlTemporaryHexWriter(value, writer);
+        return xmlTemporaryHexWriter(value, (writer, LowerCaseHex));
     }
 
     ValueTask IValueXmlEncoder<TemporaryString>.Encode(XmlWriter writer, TemporaryString value)
@@ -86,7 +92,7 @@ public abstract class XmlEncoder :
 
     ValueTask IValueXmlEncoder<Hex<TemporaryArray<byte>>>.Encode(XmlWriter writer, Hex<TemporaryArray<byte>> value)
     {
-        return value.Value.WriteToAsync(xmlTemporaryHexWriter, writer);
+        return value.Value.WriteToAsync(xmlTemporaryHexWriter, (writer, LowerCaseHex));
     }
 
     ValueTask IValueXmlEncoder<Base64<TemporaryFile>>.Encode(XmlWriter writer, Base64<TemporaryFile> value)
@@ -96,7 +102,7 @@ public abstract class XmlEncoder :
 
     ValueTask IValueXmlEncoder<Hex<TemporaryFile>>.Encode(XmlWriter writer, Hex<TemporaryFile> value)
     {
-        return value.Value.WriteToAsync(xmlTemporaryHexWriter, writer);
+        return value.Value.WriteToAsync(xmlTemporaryHexWriter, (writer, LowerCaseHex));
     }
 
     protected async ValueTask EncodeTokenAsync(XmlWriter writer, string tokenValue)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -143,6 +144,58 @@ public static class XmlExtensions
     {
         return writeEndAttributeAsync(writer);
     }
+
+    public static async Task WriteLowerCaseBinHexAsync(this XmlWriter writer, byte[] buffer, int index, int count)
+    {
+        var pool = ArrayPool<char>.Shared;
+        var data = pool.Rent(Math.Min(count * 2, 128));
+        try
+        {
+            bool repeat;
+            do
+            {
+                repeat = WriteHexString(out var offset);
+                await writer.WriteRawAsync(data, 0, offset);
+            }
+            while(repeat);
+        }
+        finally
+        {
+            pool.Return(data);
+        }
+
+        bool WriteHexString(out int offset)
+        {
+            var span = MemoryMarshal.Cast<char, int>(data.AsSpan());
+
+            offset = 0;
+            try
+            {
+                int endIndex = index + count;
+                while(index < endIndex)
+                {
+                    if(offset >= span.Length)
+                    {
+                        // Flush
+                        return true;
+                    }
+                    span[offset++] = hexData[buffer[index++]];
+                }
+                return false;
+            }
+            finally
+            {
+                // In chars
+                offset = offset * sizeof(int) / sizeof(char);
+            }
+        }
+    }
+
+    static readonly int[] hexData =
+        Enumerable.Range(0, 256)
+        // Two chars packed into int
+        .Select(x => MemoryMarshal.Cast<char, int>(x.ToString("x2").AsSpan())[0])
+        .ToArray();
 
     public static async ValueTask<XElement> CaptureContent(this XmlReader reader)
     {
