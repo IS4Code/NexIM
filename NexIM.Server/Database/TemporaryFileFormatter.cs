@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using MessagePack;
 using MessagePack.Formatters;
 using NexIM.Primitives;
@@ -41,22 +37,6 @@ internal sealed class TemporaryFileFormatter(IFormatterResolver standardResolver
             return null;
         }
         var identifier = guidFormatter.Deserialize(ref reader, options);
-        return new(new FileProvider(identifier, server));
-    }
-
-    sealed class FileProvider(Guid identifier, Server server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, Guid>
-    {
-        protected override Guid Identifier => identifier;
-        protected override MemberInfo IdentifierMember => identifierMember;
-
-        protected override ValueTask<UploadedFile?> Load(CancellationToken cancellationToken)
-        {
-            return server.FindUploadedFile(Identifier, cancellationToken);
-        }
-
-        static readonly MemberInfo identifierMember =
-            ((MemberExpression)((Expression<Func<UploadedFile, Guid>>)(x => x.Identifier)).Body).Member;
-
-        public override bool References(UploadedFile? other) => Identifier == other?.Identifier;
+        return new(server.GetUploadedFileProvider(identifier));
     }
 }

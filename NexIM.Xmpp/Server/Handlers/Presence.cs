@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
-using NexIM.Server.Accounts;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
@@ -164,40 +160,17 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
 
         protected async override ValueTask OnPhoto(Hex<ArraySegment<byte>>? hash)
         {
-            this.SetOnce(ref parent.photo, new(new FileProvider(hash?.Value ?? default, this.GetServer())));
+            var value = hash?.Value ?? default;
+            this.SetOnce(ref parent.photo, new(this.GetServer().GetUploadedFileBySha1Provider(value)));
+        }
+
+        public async override ValueTask DisposeAsync()
+        {
+            // Photo-aware but not announcing
+            parent.photo ??= new();
         }
 
         protected override ValueTask OnUnrecognized(XmlReader payloadReader) => default;
-        public override ValueTask DisposeAsync() => default;
-    }
-
-    sealed class FileProvider(ArraySegment<byte> hash, NexIM.Server.Server server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, ArraySegment<byte>>
-    {
-        protected override ArraySegment<byte> Identifier => hash;
-        protected override MemberInfo IdentifierMember => identifierMember;
-
-        protected override ValueTask<UploadedFile?> Load(CancellationToken cancellationToken)
-        {
-            return server.FindUploadedFileBySha1(hash, cancellationToken);
-        }
-
-        static readonly MemberInfo identifierMember =
-            ((MemberExpression)((Expression<Func<UploadedFile, ArraySegment<byte>>>)(x => x.Sha1Hash)).Body).Member;
-
-        public bool Equals(FileProvider other)
-        {
-            return hash.AsSpan().SequenceEqual(other.Identifier.AsSpan());
-        }
-
-        public override int GetHashCode()
-        {
-            var hashCode = new HashCode();
-            hashCode.AddBytes(hash.AsSpan());
-            return hashCode.ToHashCode();
-        }
-
-        public override bool Equals(IRemoteProvider obj) => obj is FileProvider other && Equals(other);
-        public override bool References(UploadedFile? other) => other != null && other.Sha1Hash.AsSpan().SequenceEqual(hash.AsSpan());
     }
 }
 

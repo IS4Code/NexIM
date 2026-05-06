@@ -1,19 +1,14 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mail;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
 using NexIM.Server.Database;
-using NexIM.Tools;
-using static MessagePack.GeneratedMessagePackResolver.NexIM.Server.Accounts;
 
 namespace NexIM.Server;
 
@@ -38,7 +33,7 @@ partial class Server
     /// <summary>
     /// Performs a lookup for a previously uploaded file by its identifier.
     /// </summary>
-    public async ValueTask<UploadedFile?> FindUploadedFile(Guid identifier, CancellationToken cancellationToken = default)
+    internal async ValueTask<UploadedFile?> FindUploadedFile(Guid identifier, CancellationToken cancellationToken = default)
     {
         await globalDatabase.Lock.WaitAsync(cancellationToken);
         try
@@ -54,7 +49,7 @@ partial class Server
     /// <summary>
     /// Performs a lookup for a previously uploaded file by its SHA-1 hash.
     /// </summary>
-    public async ValueTask<UploadedFile?> FindUploadedFileBySha1(ArraySegment<byte> hash, CancellationToken cancellationToken = default)
+    internal async ValueTask<UploadedFile?> FindUploadedFileBySha1(ArraySegment<byte> hash, CancellationToken cancellationToken = default)
     {
         await globalDatabase.Lock.WaitAsync(cancellationToken);
         try
