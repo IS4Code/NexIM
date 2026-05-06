@@ -54,10 +54,6 @@ partial class Server
         await globalDatabase.Lock.WaitAsync(cancellationToken);
         try
         {
-            /*if(MemoryMarshal.TryGetArray(hash, out var segment) && segment.Offset == 0 && segment.Count == segment.Array!.Length)
-            {
-                return await globalDatabase.UploadedFiles.FirstOrDefaultAsync(x => x.Sha1Hash == segment.Array, cancellationToken);
-            }*/
             return await globalDatabase.UploadedFiles.FirstOrDefaultAsync(x => x.Sha1Hash.SequenceEqual(hash), cancellationToken);
         }
         finally
