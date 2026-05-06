@@ -42,7 +42,9 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
         set => Data[index] = value;
     }
 
-    public TemporaryArray(int capacity = 1, ITemporaryArraySource<T>? arraySource = null)
+    private protected const int DefaultCapacity = 1;
+
+    public TemporaryArray(int capacity = DefaultCapacity, ITemporaryArraySource<T>? arraySource = null)
     {
         source = arraySource ?? TemporaryArraySource<T>.Shared;
 
@@ -222,7 +224,7 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
         while((read = await reader(new(storage, Length, storage.Length - Length), args)) > 0);
     }
 
-    public static TemporaryArray<T> CreateFrom<TArgs>(SynchronousReader<TArgs> reader, TArgs args, int capacity = 1, ITemporaryArraySource<T>? arraySource = null)
+    public static TemporaryArray<T> CreateFrom<TArgs>(SynchronousReader<TArgs> reader, TArgs args, int capacity = DefaultCapacity, ITemporaryArraySource<T>? arraySource = null)
     {
         var arr = new TemporaryArray<T>(capacity: capacity, arraySource: arraySource);
         try
@@ -243,7 +245,7 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
         }
     }
 
-    public static async ValueTask<TemporaryArray<T>> CreateFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args, int capacity = 1, ITemporaryArraySource<T>? arraySource = null)
+    public static async ValueTask<TemporaryArray<T>> CreateFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args, int capacity = DefaultCapacity, ITemporaryArraySource<T>? arraySource = null)
     {
         var arr = new TemporaryArray<T>(capacity: capacity, arraySource: arraySource);
         try

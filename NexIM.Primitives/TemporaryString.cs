@@ -10,7 +10,7 @@ namespace NexIM.Primitives;
 /// </summary>
 public class TemporaryString : TemporaryArray<char>
 {
-    public TemporaryString(int capacity = 1, ITemporaryArraySource<char>? arraySource = null) : base(capacity, arraySource)
+    public TemporaryString(int capacity = DefaultCapacity, ITemporaryArraySource<char>? arraySource = null) : base(capacity, arraySource)
     {
 
     }
@@ -30,29 +30,23 @@ public class TemporaryString : TemporaryArray<char>
 /// Provides a mutable byte-encoded string implementation whose contents
 /// can be determinstically cleared from memory.
 /// </summary>
-public class TemporaryEncodedString : TemporaryArray<char>
+public abstract class TemporaryEncodedString : TemporaryArray<char>
 {
-    readonly Encoding encoding;
+    protected abstract Encoding Encoding { get; }
+
     readonly ITemporaryArraySource<byte> byteArraySource;
 
-    public TemporaryEncodedString(Encoding encoding, int capacity = 1, ITemporaryArraySource<char>? arraySource = null, ITemporaryArraySource<byte>? byteArraySource = null) : base(capacity, arraySource)
+    public TemporaryEncodedString(int capacity = DefaultCapacity, ITemporaryArraySource<char>? arraySource = null, ITemporaryArraySource<byte>? byteArraySource = null) : base(capacity, arraySource)
     {
-        this.encoding = encoding;
         this.byteArraySource = byteArraySource ?? TemporaryArraySource<byte>.Shared;
     }
 
-    private protected TemporaryEncodedString(Encoding encoding, ITemporaryArraySource<byte>? byteArraySource, TemporaryArray<char> original) : base(original)
+    private protected TemporaryEncodedString(ITemporaryArraySource<byte>? byteArraySource, TemporaryArray<char> original) : base(original)
     {
-        this.encoding = encoding;
         this.byteArraySource = byteArraySource ?? (original as TemporaryEncodedString)?.byteArraySource ?? TemporaryArraySource<byte>.Shared;
     }
 
-    private protected TemporaryEncodedString(Encoding encoding, TemporaryEncodedString original) : this(encoding, original.byteArraySource, original)
-    {
-
-    }
-
-    private TemporaryEncodedString(TemporaryEncodedString original) : this(original.encoding, original.byteArraySource, original)
+    private protected TemporaryEncodedString(TemporaryEncodedString original) : this(original.byteArraySource, original)
     {
 
     }
@@ -79,7 +73,7 @@ public class TemporaryEncodedString : TemporaryArray<char>
         var offset = input.Offset;
         var remaining = input.Count;
 
-        var decoder = encoding.GetDecoder();
+        var decoder = Encoding.GetDecoder();
         ReadFrom((buffer, args) => {
             decoder.Convert(array, offset, remaining, buffer.Array, buffer.Offset, buffer.Count, true, out var bytesUsed, out var charsUsed, out var completed);
 
@@ -103,7 +97,7 @@ public class TemporaryEncodedString : TemporaryArray<char>
         var offset = input.Offset;
         var remaining = input.Count;
 
-        var encoder = encoding.GetEncoder();
+        var encoder = Encoding.GetEncoder();
         output.ReadFrom((buffer, args) => {
             encoder.Convert(array, offset, remaining, buffer.Array, buffer.Offset, buffer.Count, true, out var charsUsed, out var bytesUsed, out var completed);
 
@@ -132,21 +126,6 @@ public class TemporaryEncodedString : TemporaryArray<char>
         EncodeTo(array);
         await array.WriteToAsync(writer, args);
     }
-
-    public static TemporaryEncodedString MoveFrom(TemporaryArray<char> original, Encoding encoding, ITemporaryArraySource<byte>? byteArraySource = null)
-    {
-        return new(encoding, byteArraySource, original);
-    }
-
-    public static TemporaryEncodedString MoveFrom(TemporaryEncodedString original, Encoding encoding)
-    {
-        return new(encoding, original);
-    }
-
-    public static TemporaryEncodedString MoveFrom(TemporaryEncodedString original)
-    {
-        return new(original);
-    }
 }
 
 /// <summary>
@@ -157,17 +136,19 @@ public class TemporaryUtf8String : TemporaryEncodedString
 {
     static readonly Encoding encoding = new UTF8Encoding(false);
 
-    public TemporaryUtf8String(int capacity = 1, ITemporaryArraySource<char>? arraySource = null) : base(encoding, capacity, arraySource)
+    protected sealed override Encoding Encoding => encoding;
+
+    public TemporaryUtf8String(int capacity = DefaultCapacity, ITemporaryArraySource<char>? arraySource = null) : base(capacity, arraySource)
     {
 
     }
 
-    private protected TemporaryUtf8String(ITemporaryArraySource<byte>? byteArraySource, TemporaryArray<char> original) : base(encoding, byteArraySource, original)
+    private protected TemporaryUtf8String(ITemporaryArraySource<byte>? byteArraySource, TemporaryArray<char> original) : base(byteArraySource, original)
     {
 
     }
 
-    private protected TemporaryUtf8String(TemporaryEncodedString original) : base(encoding, original)
+    private protected TemporaryUtf8String(TemporaryEncodedString original) : base(original)
     {
 
     }
@@ -177,7 +158,7 @@ public class TemporaryUtf8String : TemporaryEncodedString
         return new(byteArraySource, original);
     }
 
-    public static new TemporaryUtf8String MoveFrom(TemporaryEncodedString original)
+    public static TemporaryUtf8String MoveFrom(TemporaryEncodedString original)
     {
         return new(original);
     }
