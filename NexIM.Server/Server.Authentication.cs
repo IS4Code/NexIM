@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
+using NexIM.Server.Tools;
 
 namespace NexIM.Server;
 
@@ -74,42 +75,33 @@ partial class Server
             return await Register(accountName, password, memoryHandle, new("placeholder@example.org"), new());
         }
 
-        // TODO Normal password hashing algorithm
-        var hash = GetHash(accountName, password, memoryHandle);
-
-        if(await GetAccount(identity) is not { } account)
-        {
-            // TODO Database inconsistency (owned identity but no account)
-            return null;
-        }
-
-        if(!CryptographicOperations.FixedTimeEquals(hash, account.PasswordHash))
-        {
-            // Password mismatch
-            return null;
-        }
-
-        // Authenticated
-        return account;
-    }
-
-    byte[] GetHash(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle)
-    {
         try
         {
-            var buffer = new byte[SHA256.HashSizeInBytes];
+            if(await GetAccount(identity) is not { } account)
+            {
+                // TODO Database inconsistency (owned identity but no account)
+                return null;
+            }
 
-            Span<byte> data = stackalloc byte[SHA256.HashSizeInBytes * 2];
+            var result = await PasswordHasher.VerifyPassword(password, account.PasswordHash);
+            if(result == PasswordHasher.VerificationResult.NotVerified)
+            {
+                // Password mismatch
+                return null;
+            }
 
-            SHA256.HashData(MemoryMarshal.Cast<char, byte>(accountName.ToString()?.ToLowerInvariant()), data);
-            SHA256.HashData(MemoryMarshal.Cast<char, byte>(password.Span), data.Slice(SHA256.HashSizeInBytes));
-            SHA256.HashData(data, buffer);
+            if(result == PasswordHasher.VerificationResult.VerifiedWeak)
+            {
+                // Give it a rehash
+                account.PasswordHash = await PasswordHasher.HashPassword(password);
+                await account.Save();
+            }
 
-            return buffer;
+            // Authenticated
+            return account;
         }
         finally
         {
-            // No longer needed
             memoryHandle?.Dispose();
         }
     }
@@ -121,14 +113,21 @@ partial class Server
 
     private async ValueTask<Account?> Register(AccountName accountName, ReadOnlyMemory<char> password, IDisposable? memoryHandle, MailAddress email, VCard vcard)
     {
-        if(!accountName.IsUser || password.Length == 0)
+        byte[] hash;
+        try
         {
-            // TODO Status
-            return null;
-        }
+            if(!accountName.IsUser || password.Length == 0)
+            {
+                // TODO Status
+                return null;
+            }
 
-        // TODO Normal password hashing algorithm
-        var hash = GetHash(accountName, password, memoryHandle);
+            hash = await PasswordHasher.HashPassword(password);
+        }
+        finally
+        {
+            memoryHandle?.Dispose();
+        }
 
         if(await CreateNewAccount(accountName, new(hash, email, vcard)) is not { } account)
         {
@@ -136,7 +135,7 @@ partial class Server
             return null;
         }
 
-        // Deduplication (prevent data race when the account retrieved again)
+        // Deduplication (prevent data race when the account is retrieved again)
         return await AddAccount(account);
     }
 }

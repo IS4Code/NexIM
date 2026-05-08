@@ -22,7 +22,7 @@ public partial class Account
 
     public AccountName Name => Identity.Name;
 
-    internal byte[] PasswordHash { get; }
+    internal byte[] PasswordHash { get; set; }
 
     public required DateTime Created { get; set; }
     public required MailAddress Email { get; set; }
@@ -58,9 +58,17 @@ public partial class Account
         PasswordHash = passwordHash;
     }
 
-    private async ValueTask<StatusReports> Save()
+    internal async ValueTask<StatusReports> Save()
     {
-        await context.SaveChangesAsync();
+        await context.Lock.WaitAsync();
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        finally
+        {
+            context.Lock.Release();
+        }
         return Report(StatusCode.Success);
     }
 
