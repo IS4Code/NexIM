@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -123,9 +124,9 @@ internal static class PasswordHasher
         }
         else
         {
-            using var str = new TemporaryUtf8String(password.Length);
+            using var str = new TemporaryUtf8String(password.Length, ArraySource<char>.Instance, ArraySource<byte>.Instance);
             str.Append(password);
-            using var bytes = new TemporaryArray<byte>(password.Length);
+            using var bytes = new TemporaryArray<byte>(byteCount, ArraySource<byte>.Instance);
             str.WriteTo(static (segment, array) => array.Append(segment.AsSpan()), bytes);
             str.Clear();
 
@@ -219,6 +220,21 @@ internal static class PasswordHasher
                 return x;
             }
             return (int)Math.Round(Math.Pow(b, x + a));
+        }
+    }
+
+    sealed class ArraySource<T> : TemporaryArraySource<T> where T : unmanaged
+    {
+        public static readonly ArraySource<T> Instance = new();
+
+        private ArraySource() : base(ArrayPool<T>.Create())
+        {
+
+        }
+
+        public override void ZeroMemory(Span<T> span)
+        {
+            CryptographicOperations.ZeroMemory(MemoryMarshal.Cast<T, byte>(span));
         }
     }
 }
