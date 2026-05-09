@@ -120,8 +120,9 @@ internal abstract class DatabaseContext : DbContext
     {
         return from.WithResolver(
             CompositeResolver.Create(
-                from.Resolver,
-                new Resolver(from.Resolver, Server)
+                // Must go first to avoid unwrapping the element type
+                new Resolver(from.Resolver, Server),
+                from.Resolver
             )
         );
     }
