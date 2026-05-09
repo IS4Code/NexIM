@@ -20,6 +20,9 @@ public sealed class ManagedHttpListener : IHttpListener
 
 #nullable disable
     public ICollection<string> Prefixes => listener.Prefixes;
+    public X509Certificate2 Certificate {
+        set => listener.SetCertificate(value);
+    }
 
     public void Start() => listener.Start();
     public void Stop() => listener.Stop();

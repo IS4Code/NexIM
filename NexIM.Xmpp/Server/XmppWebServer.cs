@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -18,6 +19,9 @@ public class XmppWebServer
     readonly XmppWebSocketListener webSocketListener;
 
     public ICollection<string> Prefixes => listener.Prefixes;
+    public X509Certificate2 Certificate {
+        set => listener.Certificate = value;
+    }
 
     public XmppWebServer(XmppWebSocketListener webSocketListener)
     {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using NexIM.Server;
@@ -13,6 +14,9 @@ public partial class WellKnownServices
     readonly IHttpListener listener;
 
     public ICollection<string> Prefixes => listener.Prefixes;
+    public X509Certificate2 Certificate {
+        set => listener.Certificate = value;
+    }
 
     public WellKnownServices()
     {

@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Xml;
+using NexIM.Server;
 using NexIM.Tools;
 
 namespace NexIM.Xmpp.Server.Communication;
@@ -26,7 +27,7 @@ internal sealed class XmppTcpSession(XmppServer server, NetworkStream networkStr
             return true;
         },
         ClientCertificateRequired = true,
-        ServerCertificate = GetCertificate()
+        ServerCertificate = Configuration.GetCertificate(LocalResource?.ToString()!)
     };
 
     protected override XmlNameTable NameTable => readerSettings.NameTable ?? base.NameTable;
@@ -37,18 +38,5 @@ internal sealed class XmppTcpSession(XmppServer server, NetworkStream networkStr
 
         reader = XmlReader.Create(stream, readerSettings);
         writer = XmlWriter.Create(stream, writerSettings);
-    }
-
-    private X509Certificate GetCertificate()
-    {
-        using var rsa = RSA.Create();
-        var req = new CertificateRequest("CN=" + LocalResource?.ToString(), rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-
-        var cert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddDays(7));
-
-        // Load as persisted
-        cert = new(cert.Export(X509ContentType.Pkcs12, ""), "", X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet);
-
-        return cert;
     }
 }

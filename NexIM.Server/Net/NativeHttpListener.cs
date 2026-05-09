@@ -15,6 +15,11 @@ public sealed class NativeHttpListener : IHttpListener
 
 #nullable disable
     public ICollection<string> Prefixes => listener.Prefixes;
+    public X509Certificate2 Certificate {
+        set {
+            // Ignore (must be done externally)
+        }
+    }
 
     public void Start() => listener.Start();
     public void Stop() => listener.Stop();

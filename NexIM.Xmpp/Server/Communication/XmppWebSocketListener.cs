@@ -23,6 +23,9 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
     readonly IHttpListener listener;
 
     public ICollection<string> Prefixes => listener.Prefixes;
+    public X509Certificate2 Certificate {
+        set => listener.Certificate = value;
+    }
 
     protected override ConformanceLevel ConformanceLevel => ConformanceLevel.Fragment;
 

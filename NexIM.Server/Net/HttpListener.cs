@@ -12,6 +12,7 @@ namespace NexIM.Server.Net;
 public interface IHttpListener
 {
     ICollection<string> Prefixes { get; }
+    X509Certificate2 Certificate { set; }
 
     void Start();
     void Stop();
