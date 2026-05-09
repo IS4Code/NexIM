@@ -157,12 +157,13 @@ internal static class PasswordHasher
         public byte HashAlgorithmIndex => (byte)(HashAlgorithmIndexAndSaltRatio & 0xF);
         public HashAlgorithmName HashAlgorithm => hashAlgorithms[HashAlgorithmIndex];
 
-        public byte SaltRatio => (byte)(HashAlgorithmIndexAndSaltRatio >> 4);
-        public int SaltLength => SaltAndKeyLength * SaltRatio / 16;
+        private int SaltAndKeyLengthTotal => (int)Math.Pow(2, Math.Floor(Math.Log2(SaltAndKeyLength)));
+        private byte SaltRatio => (byte)((HashAlgorithmIndexAndSaltRatio >> 4) + 1);
+        public int SaltLength => SaltAndKeyLengthTotal * SaltRatio / 16;
         public int KeyLength => SaltAndKeyLength - SaltLength;
 
         public HashInfo(HashAlgorithmName hashAlgorithm, int iterations, int saltLength, int derivedLength) : this(
-            (byte)(GetHashAlgorithmIndex(hashAlgorithm) | (GetSaltLengthRatio(saltLength, derivedLength) << 4)),
+            (byte)(GetHashAlgorithmIndex(hashAlgorithm) | ((GetSaltLengthRatio(saltLength, derivedLength) - 1) << 4)),
             PackByte(iterations),
             saltLength + derivedLength
         )
@@ -185,8 +186,9 @@ internal static class PasswordHasher
 
         static int GetSaltLengthRatio(int saltLength, int derivedLength)
         {
-            var ratio = (double)saltLength / (saltLength + derivedLength);
-            return (int)Math.Round(ratio * 16);
+            var total = Math.Pow(2, Math.Floor(Math.Log2(saltLength + derivedLength)));
+            var ratio = (int)Math.Round(saltLength / total * 16);
+            return Math.Clamp(ratio, 1, 16);
         }
 
         /// <summary>
