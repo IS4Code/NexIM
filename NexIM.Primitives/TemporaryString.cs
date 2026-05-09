@@ -138,7 +138,7 @@ public class TemporaryUtf8String : TemporaryEncodedString
 
     protected sealed override Encoding Encoding => encoding;
 
-    public TemporaryUtf8String(int capacity = DefaultCapacity, ITemporaryArraySource<char>? arraySource = null) : base(capacity, arraySource)
+    public TemporaryUtf8String(int capacity = DefaultCapacity, ITemporaryArraySource<char>? arraySource = null, ITemporaryArraySource<byte>? byteArraySource = null) : base(capacity, arraySource, byteArraySource)
     {
 
     }
