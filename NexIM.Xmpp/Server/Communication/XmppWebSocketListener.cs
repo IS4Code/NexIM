@@ -86,7 +86,7 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
 
     static readonly Regex prefixRegex = new(@"^http(s?)://([^:/]*)(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-    async ValueTask IMetadataDescriptor.Links(Uri uri, IResourceDescriptorHandler handler)
+    public IEnumerable<string> GetEndpoints(Uri uri)
     {
         foreach(var prefix in Prefixes)
         {
@@ -104,6 +104,14 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
 
             var href = $"ws{match.Groups[1].Value}://{host}{match.Groups[3].Value}";
 
+            yield return href;
+        }
+    }
+
+    async ValueTask IMetadataDescriptor.Links(Uri uri, IResourceDescriptorHandler handler)
+    {
+        foreach(var href in GetEndpoints(uri))
+        {
             await using var link = await handler.Link(LinkRelation.WebSocketConnection.ToToken(), null, ValueUri.Parse(href), null);
         }
     }

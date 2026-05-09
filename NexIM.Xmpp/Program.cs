@@ -19,10 +19,14 @@ internal class Program
         metadataServer.Prefixes.Add("http://+:800/.well-known/");
         metadataServer.MetadataProviders.Add(wsListener);
 
+        var webServer = new XmppWebServer(wsListener);
+        webServer.Prefixes.Add("http://+:800/");
+
         await Task.WhenAll(
             tcpListener.RunAsync(),
             wsListener.RunAsync(),
-            metadataServer.RunAsync()
+            metadataServer.RunAsync(),
+            webServer.RunAsync()
         );
     }
 }
