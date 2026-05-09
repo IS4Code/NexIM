@@ -91,7 +91,6 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         catch(Exception e) when(GetXmppException<XmppStreamException>(e, out var xe))
         {
             await HandleException(xe);
-            throw;
         }
         catch(Exception e) when(Configuration.OnUnexpectedException(e))
         {

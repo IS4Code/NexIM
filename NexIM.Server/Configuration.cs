@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net.Sockets;
+using System.Net.WebSockets;
 using NexIM.Server.Net;
 
 namespace NexIM.Server;
@@ -12,6 +14,12 @@ public class Configuration
 
     public static bool OnUnexpectedException(Exception e)
     {
+        if(e is SocketException or WebSocketException or OperationCanceledException)
+        {
+            // Connection closed
+            return true;
+        }
+
         lock(typeof(Console))
         {
             Console.WriteLine(e);
