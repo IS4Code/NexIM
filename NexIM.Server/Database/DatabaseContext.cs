@@ -63,6 +63,8 @@ internal abstract class DatabaseContext : DbContext
         configurationBuilder.Properties<LanguageCode?>().HaveConversion<LanguageCodeConverter>();
         configurationBuilder.Properties<SubscriptionState>().HaveConversion<SubscriptionStateConverter>();
         configurationBuilder.Properties<MailAddress>().HaveConversion<MailAddressConverter>();
+        configurationBuilder.Properties<DateTime>().HaveConversion<DateTimeToBinaryConverter>();
+        configurationBuilder.Properties<DateTimeOffset>().HaveConversion<DateTimeOffsetToBinaryConverter>();
     }
 
     protected sealed override void OnModelCreating(ModelBuilder modelBuilder)
