@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
@@ -91,13 +92,15 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
 
     public IEnumerable<string> GetEndpoints(Uri uri)
     {
-        foreach(var prefix in Prefixes)
-        {
-            if(prefixRegex.Match(prefix) is not { Success: true } match)
-            {
-                continue;
-            }
+        var matches =
+            from prefix in Prefixes
+            let match = prefixRegex.Match(prefix)
+            where match.Success
+            orderby match.Groups[1].Length descending
+            select match;
 
+        foreach(var match in matches)
+        {
             var host = match.Groups[2].Value;
             if(host is "+" or "*")
             {
