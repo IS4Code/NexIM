@@ -24,6 +24,19 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     const string namespaceAttributeFullName = grammarNs + "." + "NamespaceAttribute";
     const string nameAttributeFullName = grammarNs + "." + "NameAttribute";
 
+    private void Report(Exception e, Action<Diagnostic> diagnostic)
+    {
+        diagnostic(Diagnostic.Create(
+            "XML0000",
+            "SourceGenerator",
+            (LocalizableString)((e.ToString()).Replace('\n', ' ').Replace("\r", "")),
+            DiagnosticSeverity.Error,
+            DiagnosticSeverity.Error,
+            true,
+            0
+        ));
+    }
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var provider = context.SyntaxProvider.CreateSyntaxProvider(
@@ -72,21 +85,28 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
 
     private void Execute(SourceProductionContext context, ImmutableArray<ITypeSymbol?> types)
     {
-        var realTypes = (IEnumerable<ITypeSymbol>)types.Where(t => t != null);
-
-        foreach(var group in realTypes.GroupBy<ITypeSymbol, INamespaceSymbol>(t => t.ContainingNamespace, SymbolEqualityComparer.Default))
+        try
         {
-            var ns = group.Key;
-            var nsName = GetQualifiedName(ns);
+            var realTypes = (IEnumerable<ITypeSymbol>)types.Where(t => t != null);
 
-            context.AddSource($"{nsName}.Encoder.Generated.cs", GenerateEncoder(ns, group));
-            context.AddSource($"{nsName}.Decoder.Generated.cs", GenerateDecoder(ns, group));
-            context.AddSource($"{nsName}.NullHandler.Generated.cs", GenerateNullHandler(ns, group));
-            context.AddSource($"{nsName}.UniversalHandler.Generated.cs", GenerateUniversalHandler(ns, group));
-            context.AddSource($"{nsName}.CapturingHandler.Generated.cs", GenerateCapturingHandler(ns, group));
-            context.AddSource($"{nsName}.BaseHandlers.Generated.cs", GenerateBaseHandlers(ns, group));
-            context.AddSource($"{nsName}.Extensions.Generated.cs", GenerateExtensions(ns, group));
-            context.AddSource($"{nsName}.Tokens.Generated.cs", GenerateTokens(ns, group));
+            foreach(var group in realTypes.GroupBy<ITypeSymbol, INamespaceSymbol>(t => t.ContainingNamespace, SymbolEqualityComparer.Default))
+            {
+                var ns = group.Key;
+                var nsName = GetQualifiedName(ns);
+
+                context.AddSource($"{nsName}.Encoder.Generated.cs", GenerateEncoder(ns, group));
+                context.AddSource($"{nsName}.Decoder.Generated.cs", GenerateDecoder(ns, group));
+                context.AddSource($"{nsName}.NullHandler.Generated.cs", GenerateNullHandler(ns, group));
+                context.AddSource($"{nsName}.UniversalHandler.Generated.cs", GenerateUniversalHandler(ns, group));
+                context.AddSource($"{nsName}.CapturingHandler.Generated.cs", GenerateCapturingHandler(ns, group));
+                context.AddSource($"{nsName}.BaseHandlers.Generated.cs", GenerateBaseHandlers(ns, group));
+                context.AddSource($"{nsName}.Extensions.Generated.cs", GenerateExtensions(ns, group));
+                context.AddSource($"{nsName}.Tokens.Generated.cs", GenerateTokens(ns, group));
+            }
+        }
+        catch(Exception e)
+        {
+            Report(e, context.ReportDiagnostic);
         }
     }
 

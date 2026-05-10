@@ -23,6 +23,19 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     const string keyAttributeFullName = grammarNs + "." + "KeyAttribute";
     const string valueKindAttributeFullName = grammarNs + "." + "ValueKindAttribute";
 
+    private void Report(Exception e, Action<Diagnostic> diagnostic)
+    {
+        diagnostic(Diagnostic.Create(
+            "JSON0000",
+            "SourceGenerator",
+            (LocalizableString)((e.ToString()).Replace('\n', ' ').Replace("\r", "")),
+            DiagnosticSeverity.Error,
+            DiagnosticSeverity.Error,
+            true,
+            0
+        ));
+    }
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var provider = context.SyntaxProvider.CreateSyntaxProvider(
@@ -71,14 +84,21 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
 
     private void Execute(SourceProductionContext context, ImmutableArray<ITypeSymbol?> types)
     {
-        var realTypes = (IEnumerable<ITypeSymbol>)types.Where(t => t != null);
-
-        foreach(var group in realTypes.GroupBy<ITypeSymbol, INamespaceSymbol>(t => t.ContainingNamespace, SymbolEqualityComparer.Default))
+        try
         {
-            var ns = group.Key;
-            var nsName = GetQualifiedName(ns);
+            var realTypes = (IEnumerable<ITypeSymbol>)types.Where(t => t != null);
 
-            context.AddSource($"{nsName}.JsonEncoder.Generated.cs", GenerateEncoder(ns, group));
+            foreach(var group in realTypes.GroupBy<ITypeSymbol, INamespaceSymbol>(t => t.ContainingNamespace, SymbolEqualityComparer.Default))
+            {
+                var ns = group.Key;
+                var nsName = GetQualifiedName(ns);
+
+                context.AddSource($"{nsName}.JsonEncoder.Generated.cs", GenerateEncoder(ns, group));
+            }
+        }
+        catch(Exception e)
+        {
+            Report(e, context.ReportDiagnostic);
         }
     }
 
