@@ -22,6 +22,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Tools", "NexIM.Tools\
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "NexIM.Shared", "NexIM.Shared\NexIM.Shared.shproj", "{4C37D1D7-0E65-4714-829C-4D06ADD7C54D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NexIM.App", "NexIM.App\NexIM.App.csproj", "{24FA16F4-BA45-475B-91DB-00430BC0BE33}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -64,6 +66,10 @@ Global
 		{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AE3AB3A9-EEB1-4928-B9C6-413CEDE373F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24FA16F4-BA45-475B-91DB-00430BC0BE33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24FA16F4-BA45-475B-91DB-00430BC0BE33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24FA16F4-BA45-475B-91DB-00430BC0BE33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24FA16F4-BA45-475B-91DB-00430BC0BE33}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
