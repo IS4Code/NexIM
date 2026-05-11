@@ -95,6 +95,9 @@ public abstract class JsonEncoder :
         await writer.WriteEndObjectAsync();
     }
 
+    /// <summary>
+    /// The paths of the currently open properties via <see cref="EnterProperty(JsonWriter, string, ValueKind)"/>.
+    /// </summary>
     readonly Stack<string> scopes = new();
 
     protected async ValueTask EnterProperty(JsonWriter writer, string name, ValueKind kind)
@@ -121,6 +124,12 @@ public abstract class JsonEncoder :
             return;
         }
 
+        if(writer.WriteState == WriteState.Array && expectedState == WriteState.Array && containingPath != null && PathEndsWith(containingPath, name))
+        {
+            // Inside an array property already
+            return;
+        }
+
         await ExitProperty(writer, path, containingPath);
         await writer.WritePropertyNameAsync(name);
         switch(kind)
@@ -137,14 +146,16 @@ public abstract class JsonEncoder :
 
     private string? GetContainingPath(string path)
     {
+        // There may be top scopes remaining from already exited properties
         while(scopes.Count > 0)
         {
-            // Remove non-containing paths
             var top = scopes.Peek();
             if(PathStartsWith(path, top))
             {
+                // This scope is still up-to-date
                 return top;
             }
+            // Remove non-containing path
             scopes.Pop();
         }
         return null;
@@ -152,7 +163,7 @@ public abstract class JsonEncoder :
 
     private Task ExitProperty(JsonWriter writer, string path, string? containingPath)
     {
-        if(path != containingPath)
+        if(path != containingPath && writer.WriteState != WriteState.Array)
         {
             // Not in a scope path
             return Task.CompletedTask;
@@ -173,6 +184,7 @@ public abstract class JsonEncoder :
     {
         return
             path.EndsWith(member, StringComparison.Ordinal) &&
+            // Starts the string or is preceded by member access
             (path.Length == member.Length || path[path.Length - member.Length - 1] == '.');
     }
 
@@ -180,7 +192,8 @@ public abstract class JsonEncoder :
     {
         return
             path.StartsWith(prefix, StringComparison.Ordinal) &&
-            (path.Length == prefix.Length || path[prefix.Length] == '.');
+            // Ends the string or is followed by separator
+            (path.Length == prefix.Length || path[prefix.Length] is '.' or '[');
     }
 
     sealed class JsonWriterExtra
