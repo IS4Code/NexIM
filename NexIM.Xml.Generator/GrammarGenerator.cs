@@ -115,11 +115,17 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
         typeof(DateTimeOffset).FullName,
         typeof(Uri).FullName,
         typeof(MailAddress).FullName,
+        typeof(IReadOnlyList<>).FullName
     };
 
     private static bool UseCustomEncodingForSystemType(ITypeSymbol type)
     {
-        return systemTypesWithEncodings.Contains(GetQualifiedName(type));
+        var name = GetQualifiedName(type);
+        if(type is INamedTypeSymbol { Arity: > 0 and var arity })
+        {
+            name += "`" + arity;
+        }
+        return systemTypesWithEncodings.Contains(name);
     }
 
     private static void Partition<TElement>(IndentedTextWriter writer, string nameVariable, Action<TElement> handler, IEnumerable<(string name, TElement element)> names)

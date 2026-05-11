@@ -30,9 +30,9 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
 
     protected override ConformanceLevel ConformanceLevel => ConformanceLevel.Fragment;
 
-    XmppServer Server => (XmppServer)base.Receiver;
+    new XmppServerReceiver Receiver => (XmppServerReceiver)base.Receiver;
 
-    public XmppWebSocketListener(XmppServer server) : base(server)
+    public XmppWebSocketListener(XmppServerReceiver serverReceiver) : base(serverReceiver)
     {
         listener = Configuration.CreateHttpListener();
     }
@@ -75,7 +75,7 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
     {
         var request = info.request;
         var wrapper = new Request(request, request.IsSecureConnection ? await request.GetClientCertificateAsync() : null);
-        return new XmppWebSocketSession(Server, wrapper, info.context, ReaderSettings, WriterSettings, cancellationToken);
+        return new XmppWebSocketSession(Receiver, wrapper, info.context, ReaderSettings, WriterSettings, cancellationToken);
     }
 
     ValueTask<IMetadataDescriptor?> IMetadataProvider.GetHostDescriptor(Uri uri)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Mail;
 using System.Threading.Tasks;
@@ -19,7 +20,9 @@ public abstract class XmlDecoder :
     IValueXmlDecoder<Hex<TemporaryArray<byte>>>,
     IValueXmlDecoder<Base64<TemporaryFile>>,
     IValueXmlDecoder<Hex<TemporaryFile>>,
+    IValueXmlDecoder<IReadOnlyList<string>>,
     IValueXmlDecoder<Token<Enum>>,
+    IValueXmlDecoder<LanguageCode>,
     IValueXmlDecoder<LanguageTaggedString>,
     IValueXmlDecoder<DateTime>,
     IValueXmlDecoder<DateTimeOffset>,
@@ -203,6 +206,90 @@ public abstract class XmlDecoder :
         return await TemporaryFile.ReadFromAsync(StorageQuota.Local, xmlTemporaryHexReader, reader);
     }
 
+    async ValueTask<IReadOnlyList<string>> IValueXmlDecoder<IReadOnlyList<string>>.Decode(XmlReader reader)
+    {
+        int start, total;
+
+        if(!reader.CanReadValueChunk)
+        {
+            // Obtain value directly
+            var value = await reader.GetValueAsync();
+            await reader.ReadAsync();
+            return value.Split(whitespace, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        var result = new List<string>();
+
+        var pool = ArrayPool<char>.Instance;
+        var array = pool.Rent(16);
+        try
+        {
+            start = 0;
+            total = 0;
+
+            // Read input chunks into a contiguous array
+
+            int read;
+            while((read = await reader.ReadContentAsCharsAsync(array, total, array.Length - total)) != 0)
+            {
+                total += read;
+
+                // Skip initial whitespace
+                TrimStart(array.AsSpan(start, total));
+
+                if(total == 0)
+                {
+                    // Only whitespace
+                    start = 0;
+                    total = 0;
+                    continue;
+                }
+
+                int tokenEnd = array.AsSpan(start, total).IndexOfAny(whitespace);
+                if(tokenEnd != -1)
+                {
+                    // Found individual token
+                    result.Add(array.AsSpan(start, tokenEnd).ToString());
+
+                    // Move the remainder to the beginning
+                    int next = start + tokenEnd;
+                    total -= next;
+                    array.AsSpan(next, total).CopyTo(array.AsSpan(0, total));
+                    start = 0;
+                }
+
+                if(total == array.Length)
+                {
+                    // Rent a larger array (will pick an exponentially larger bucket)
+                    var larger = pool.Rent(array.Length + 1);
+                    array.CopyTo(larger, 0);
+                    pool.Return(array);
+                    array = larger;
+                }
+            }
+
+            if(total > 0)
+            {
+                // Unterminated token remaining
+                result.Add(array.AsSpan(start, total).ToString());
+            }
+
+            return result;
+        }
+        finally
+        {
+            pool.Return(array);
+        }
+
+        void TrimStart(ReadOnlySpan<char> span)
+        {
+            var trimmed = span.TrimStart(whitespace.AsSpan());
+            int difference = span.Length - trimmed.Length;
+            start += difference;
+            total -= difference;
+        }
+    }
+
     protected async ValueTask<string> DecodeTokenAsync(XmlReader reader)
     {
         int start, total;
@@ -252,7 +339,7 @@ public abstract class XmlDecoder :
 
         void Trim(ReadOnlySpan<char> span)
         {
-            var trimmed = span.Trim(" \r\n\t".AsSpan());
+            var trimmed = span.Trim(whitespace.AsSpan());
             if(trimmed.Length == span.Length)
             {
                 return;
@@ -267,6 +354,11 @@ public abstract class XmlDecoder :
     async ValueTask<Token<Enum>> IValueXmlDecoder<Token<Enum>>.Decode(XmlReader reader)
     {
         return Token<Enum>.FromAtomized(await DecodeTokenAsync(reader));
+    }
+
+    async ValueTask<LanguageCode> IValueXmlDecoder<LanguageCode>.Decode(XmlReader reader)
+    {
+        return new(await DecodeTokenAsync(reader));
     }
 
     async ValueTask<LanguageTaggedString> IValueXmlDecoder<LanguageTaggedString>.Decode(XmlReader reader)

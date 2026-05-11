@@ -159,19 +159,19 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
     protected override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return this.GetServer().GetMessageHandler(this.GetSession(), stanza);
+        return this.GetServerReceiver().GetMessageHandler(this.GetSession(), stanza);
     }
 
     protected override ValueTask<IPresenceHandler> OnPresence(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return this.GetServer().GetPresenceHandler(this.GetSession(), stanza);
+        return this.GetServerReceiver().GetPresenceHandler(this.GetSession(), stanza);
     }
 
     protected override ValueTask<IInfoQueryHandler> OnInfoQuery(in Stanza stanza)
     {
         this.ValidateSender(stanza);
-        return this.GetServer().GetInfoQueryHandler(this.GetSession(), stanza);
+        return this.GetServerReceiver().GetInfoQueryHandler(this.GetSession(), stanza);
     }
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)

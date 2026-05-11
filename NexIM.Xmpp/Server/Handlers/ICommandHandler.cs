@@ -10,7 +10,7 @@ namespace NexIM.Xmpp.Server.Handlers;
 
 internal interface ICommandContext : IPayloadHandlerContext
 {
-    XmppServer Server { get; }
+    XmppServerReceiver ServerReceiver { get; }
     IXmppSession Session { get; }
     ref readonly Stanza LastStanza { get; }
     DateTimeOffset LastStanzaReceived { get; }

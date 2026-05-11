@@ -1,10 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Xml;
 using NexIM.Server;
@@ -16,10 +13,10 @@ namespace NexIM.Xmpp.Server.Communication;
 /// Provides a final <see cref="IXmppSession"/> implementation
 /// that communicates using TCP.
 /// </summary>
-internal sealed class XmppTcpSession(XmppServer server, NetworkStream networkStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppNetworkSession(networkStream, cancellationToken)
+internal sealed class XmppTcpSession(XmppServerReceiver serverReceiver, NetworkStream networkStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppNetworkSession(networkStream, cancellationToken)
 {
     public override string DefaultLanguage => "en";
-    public override XmppServer Server => server;
+    public override XmppServerReceiver ServerReceiver => serverReceiver;
 
     protected override SslServerAuthenticationOptions ServerAuthenticationOptions => new() {
         EnabledSslProtocols = (SslProtocols)(-1),
@@ -27,7 +24,7 @@ internal sealed class XmppTcpSession(XmppServer server, NetworkStream networkStr
             return true;
         },
         ClientCertificateRequired = true,
-        ServerCertificate = Configuration.GetCertificate(LocalResource?.ToString()!)
+        ServerCertificate = Configuration.GetCertificate("CN=" + LocalResource, null, null)
     };
 
     protected override XmlNameTable NameTable => readerSettings.NameTable ?? base.NameTable;

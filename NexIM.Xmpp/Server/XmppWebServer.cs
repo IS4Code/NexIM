@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using NexIM.Primitives;
 using NexIM.Server;
 using NexIM.Server.Net;
 using NexIM.Xmpp.Server.Communication;
@@ -16,17 +17,20 @@ namespace NexIM.Xmpp.Server;
 public class XmppWebServer
 {
     readonly IHttpListener listener;
-    readonly XmppWebSocketListener webSocketListener;
 
+    public XmppWebSocketListener? WebSocketListener { get; set; }
     public ICollection<string> Prefixes => listener.Prefixes;
     public X509Certificate2 Certificate {
         set => listener.Certificate = value;
     }
 
-    public XmppWebServer(XmppWebSocketListener webSocketListener)
+    public LanguageCode Language { get; set; } = new("en");
+    public string Title { get; set; } = "XMPP Web Portal";
+    public string Converse { get; set; } = "https://cdn.conversejs.org/dist/";
+
+    public XmppWebServer()
     {
         listener = Configuration.CreateHttpListener();
-        this.webSocketListener = webSocketListener;
     }
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
@@ -62,7 +66,7 @@ public class XmppWebServer
             }
 
             var uri = request.Url;
-            if(webSocketListener.GetEndpoints(uri).FirstOrDefault() is not { } endpoint)
+            if(WebSocketListener?.GetEndpoints(uri).FirstOrDefault() is not { } endpoint)
             {
                 response.StatusCode = HttpStatusCode.ServiceUnavailable;
                 return;
@@ -73,12 +77,12 @@ public class XmppWebServer
 
             using var writer = new StreamWriter(response.OutputStream);
             await writer.WriteAsync($@"<!DOCTYPE html>
-<html>
+<html lang=""{HttpUtility.HtmlAttributeEncode(Language.Value)}"">
 <head>
-<title>XMPP Web Portal</title>
+<title>{HttpUtility.HtmlEncode(Title)}</title>
 <meta charset=""utf-8"">
-<link rel=""stylesheet"" href=""https://cdn.conversejs.org/12.0.0/dist/converse.min.css"">
-<script src=""https://cdn.conversejs.org/12.0.0/dist/converse.min.js"" charset=""utf-8""></script>
+<link rel=""stylesheet"" href=""{HttpUtility.HtmlAttributeEncode(Converse)}converse.min.css"">
+<script src=""{HttpUtility.HtmlAttributeEncode(Converse)}converse.min.js"" charset=""utf-8""></script>
 </head>
 <body>
 <script>
@@ -91,7 +95,7 @@ converse.initialize({{
   priority: 5,
   show_retraction_warning: false,
   allow_non_roster_messaging: true,
-  i18n: 'en',
+  i18n: {HttpUtility.JavaScriptStringEncode(Language.Value, true)},
   websocket_url: {HttpUtility.JavaScriptStringEncode(endpoint, true)}
 }});
 </script>

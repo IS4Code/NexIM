@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using System.Xml;
@@ -18,7 +19,9 @@ public abstract class XmlEncoder :
     IValueXmlEncoder<Hex<TemporaryArray<byte>>>,
     IValueXmlEncoder<Base64<TemporaryFile>>,
     IValueXmlEncoder<Hex<TemporaryFile>>,
+    IValueXmlEncoder<IReadOnlyList<string>>,
     IValueXmlEncoder<Token<Enum>>,
+    IValueXmlEncoder<LanguageCode>,
     IValueXmlEncoder<LanguageTaggedString>,
     IValueXmlEncoder<DateTime>,
     IValueXmlEncoder<DateTimeOffset>,
@@ -105,6 +108,23 @@ public abstract class XmlEncoder :
         return value.Value.WriteToAsync(xmlTemporaryHexWriter, (writer, LowerCaseHex));
     }
 
+    async ValueTask IValueXmlEncoder<IReadOnlyList<string>>.Encode(XmlWriter writer, IReadOnlyList<string> value)
+    {
+        bool first = true;
+        foreach(var item in value)
+        {
+            if(first)
+            {
+                first = false;
+            }
+            else
+            {
+                await writer.WriteStringAsync(" ");
+            }
+            await writer.WriteStringAsync(item);
+        }
+    }
+
     protected async ValueTask EncodeTokenAsync(XmlWriter writer, string tokenValue)
     {
         await writer.WriteStringAsync(tokenValue);
@@ -113,6 +133,11 @@ public abstract class XmlEncoder :
     ValueTask IValueXmlEncoder<Token<Enum>>.Encode(XmlWriter writer, Token<Enum> token)
     {
         return EncodeTokenAsync(writer, token.Value);
+    }
+
+    async ValueTask IValueXmlEncoder<LanguageCode>.Encode(XmlWriter writer, LanguageCode value)
+    {
+        await writer.WriteStringAsync(value.Value);
     }
 
     async ValueTask IValueXmlEncoder<LanguageTaggedString>.Encode(XmlWriter writer, LanguageTaggedString value)

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Net.Mail;
 using System.Threading;
 using MessagePack;
@@ -53,7 +52,7 @@ internal abstract class DatabaseContext : DbContext
             }
         }, Microsoft.Extensions.Logging.LogLevel.Information);
 #endif
-        options.UseSqlite("Data Source=accounts.db");
+        options.UseSqlite(Server.SQLiteConnectionString);
     }
 
     protected sealed override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -63,9 +63,14 @@ internal static class CommandExtensions
         return GetContext(handler).Session;
     }
 
-    public static XmppServer GetServer(this ICommandHandler handler)
+    public static XmppServerReceiver GetServerReceiver(this ICommandHandler handler)
     {
-        return GetContext(handler).Server;
+        return GetContext(handler).ServerReceiver;
+    }
+
+    public static NexIM.Server.Server GetServer(this ICommandHandler handler)
+    {
+        return GetContext(handler).ServerReceiver.Server;
     }
 
     public static ref readonly Stanza GetStanza(this ICommandHandler handler)

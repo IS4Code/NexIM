@@ -29,7 +29,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
     static readonly ClientDecoder decoder = new();
     public override string DefaultNamespace => ClientDecoder.Namespace;
 
-    public abstract XmppServer Server { get; }
+    public abstract XmppServerReceiver ServerReceiver { get; }
     IXmppSession ICommandContext.Session => this;
 
     IXmppReceivingHandler mainHandler = NullHandler.Instance;

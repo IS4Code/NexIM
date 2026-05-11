@@ -1,8 +1,7 @@
-﻿using System.Threading.Tasks;
-using NexIM.Metadata;
-using NexIM.Server;
-using NexIM.Xmpp.Server;
-using NexIM.Xmpp.Server.Communication;
+﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using NexIM.App.Configuration;
 
 namespace NexIM.Xmpp;
 
@@ -10,32 +9,30 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        var server = new XmppServer();
+        var config = await ConfigurationReader.Read("config.xml");
 
-        var certificate = Configuration.GetCertificate("localhost");
+        config.XmppReceiver.Server = new NexIM.Server.Server(config.SQLiteConnectionString ?? "Data Source=accounts.db");
 
-        var tcpListener = new XmppTcpListener(server);
-        var wsListener = new XmppWebSocketListener(server);
-        wsListener.Certificate = certificate;
-        wsListener.Prefixes.Add("http://+:800/xmpp/");
-        wsListener.Prefixes.Add("https://+:4430/xmpp/");
+        var tasks = new List<Task>();
+        var cancellationToken = CancellationToken.None;
+        
+        if(config.XmppTcp is { } tcpListener)
+        {
+            tasks.Add(tcpListener.RunAsync(cancellationToken));
+        }
+        if(config.XmppWebSocket is { } wsListener)
+        {
+            tasks.Add(wsListener.RunAsync(cancellationToken));
+        }
+        if(config.XmppHtml is { } webListener)
+        {
+            tasks.Add(webListener.RunAsync(cancellationToken));
+        }
+        if(config.Metadata is { } metadataServer)
+        {
+            tasks.Add(metadataServer.RunAsync(cancellationToken));
+        }
 
-        var metadataServer = new WellKnownServices();
-        metadataServer.Certificate = certificate;
-        metadataServer.Prefixes.Add("http://+:800/.well-known/");
-        metadataServer.Prefixes.Add("https://+:4430/.well-known/");
-        metadataServer.MetadataProviders.Add(wsListener);
-
-        var webServer = new XmppWebServer(wsListener);
-        webServer.Certificate = certificate;
-        webServer.Prefixes.Add("http://+:800/");
-        webServer.Prefixes.Add("https://+:4430/");
-
-        await Task.WhenAll(
-            tcpListener.RunAsync(),
-            wsListener.RunAsync(),
-            metadataServer.RunAsync(),
-            webServer.RunAsync()
-        );
+        await Task.WhenAll(tasks);
     }
 }
