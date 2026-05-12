@@ -1,10 +1,10 @@
 ﻿namespace NexIM.Server;
 
-public sealed partial class Server
+public sealed partial class NexServer
 {
     internal string SQLiteConnectionString { get; }
 
-    public Server(string sqliteConnectionString)
+    public NexServer(string sqliteConnectionString)
     {
         SQLiteConnectionString = sqliteConnectionString;
 

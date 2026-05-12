@@ -8,6 +8,7 @@ using System.Xml;
 using System.Xml.Linq;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server;
 using NexIM.Server.Accounts;
 using NexIM.Server.Events;
 using NexIM.Xmpp.Protocol;
@@ -68,7 +69,7 @@ internal static class CommandExtensions
         return GetContext(handler).ServerReceiver;
     }
 
-    public static NexIM.Server.Server GetServer(this ICommandHandler handler)
+    public static NexServer GetServer(this ICommandHandler handler)
     {
         return GetContext(handler).ServerReceiver.Server;
     }

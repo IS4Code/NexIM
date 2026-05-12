@@ -6,7 +6,7 @@ using NexIM.Server.Events;
 
 namespace NexIM.Server;
 
-partial class Server
+partial class NexServer
 {
     static readonly Func<Identifier, AccountName> accountRouter = id => id.Account ?? default;
     readonly Func<AccountName, Identifiers, Event, ValueTask<StatusReports>> accountTarget;

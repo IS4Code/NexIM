@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using NexIM.Server;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
 using NexIM.Xmpp.Server.Communication;
@@ -9,8 +10,8 @@ namespace NexIM.Xmpp.Server;
 
 public class XmppServerReceiver : IXmppReceiver<XmppHandlerSession>
 {
-    NexIM.Server.Server? _server;
-    public NexIM.Server.Server Server {
+    NexServer? _server;
+    public NexServer Server {
         get => _server ?? throw new InvalidOperationException("No server has been configured.");
         set => _server = value;
     }

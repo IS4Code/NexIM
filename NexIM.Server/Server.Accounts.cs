@@ -7,7 +7,7 @@ using NexIM.Server.Accounts;
 
 namespace NexIM.Server;
 
-partial class Server
+partial class NexServer
 {
     // TODO Cleanup if not referenced
     readonly ConcurrentDictionary<Guid, ValueTask<Account?>> accounts = new();

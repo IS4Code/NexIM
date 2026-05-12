@@ -1,7 +1,5 @@
 using System;
 using System.Net.Mail;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
@@ -10,7 +8,7 @@ using NexIM.Server.Tools;
 
 namespace NexIM.Server;
 
-partial class Server
+partial class NexServer
 {
     private ValueTuple Authentication {
         init {

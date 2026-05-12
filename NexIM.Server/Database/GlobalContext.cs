@@ -1,6 +1,6 @@
 ﻿namespace NexIM.Server.Database;
 
-internal sealed class GlobalContext(Server server) : DatabaseContext(server)
+internal sealed class GlobalContext(NexServer server) : DatabaseContext(server)
 {
 
 }

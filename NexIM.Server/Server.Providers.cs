@@ -8,7 +8,7 @@ using System;
 
 namespace NexIM.Server;
 
-partial class Server
+partial class NexServer
 {
     public IRemoteProvider GetUploadedFileProvider(Guid identifier)
     {
@@ -24,7 +24,7 @@ partial class Server
         return new UploadedFileSha1Provider(hash, this);
     }
 
-    sealed class UploadedFileGuidProvider(Guid identifier, Server server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, Guid>
+    sealed class UploadedFileGuidProvider(Guid identifier, NexServer server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, Guid>
     {
         protected override Guid Identifier => identifier;
         protected override MemberInfo IdentifierMember => identifierMember;
@@ -40,7 +40,7 @@ partial class Server
         public override bool References(UploadedFile? other) => Identifier == other?.Identifier;
     }
 
-    sealed class UploadedFileSha1Provider(ArraySegment<byte> hash, Server server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, ArraySegment<byte>>
+    sealed class UploadedFileSha1Provider(ArraySegment<byte> hash, NexServer server) : IdentifierRemoteProvider<TemporaryFile, UploadedFile, ArraySegment<byte>>
     {
         protected override ArraySegment<byte> Identifier => hash;
         protected override MemberInfo IdentifierMember => identifierMember;

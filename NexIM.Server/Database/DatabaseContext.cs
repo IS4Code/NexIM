@@ -13,7 +13,7 @@ namespace NexIM.Server.Database;
 
 internal abstract class DatabaseContext : DbContext
 {
-    public Server Server { get; }
+    public NexServer Server { get; }
 
     public SemaphoreSlim Lock { get; } = new(1, 1);
 
@@ -32,7 +32,7 @@ internal abstract class DatabaseContext : DbContext
         SQLitePCL.Batteries_V2.Init();
     }
 
-    public DatabaseContext(Server server)
+    public DatabaseContext(NexServer server)
     {
         Server = server;
         var msgpackOptions = CreateOptions(MessagePackSerializerOptions.Standard);
@@ -126,7 +126,7 @@ internal abstract class DatabaseContext : DbContext
         );
     }
 
-    sealed class Resolver(IFormatterResolver standardResolver, Server server) : IFormatterResolver,
+    sealed class Resolver(IFormatterResolver standardResolver, NexServer server) : IFormatterResolver,
         IResolver<TimeZoneOffset>,
         IResolver<DateComponents>,
         IResolver<Remote<TemporaryFile>?>,

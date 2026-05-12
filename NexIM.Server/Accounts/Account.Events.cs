@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using NexIM.Server.Accounts.VCards;
 using NexIM.Server.Events;
 using NexIM.Server.Tools;
-using NexIM.Tools;
 
 namespace NexIM.Server.Accounts;
 

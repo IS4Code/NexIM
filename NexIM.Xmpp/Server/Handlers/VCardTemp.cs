@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;

@@ -7,7 +7,7 @@ using NexIM.Server.Accounts;
 namespace NexIM.Server.Database;
 
 [ExcludeFormatterFromSourceGeneratedResolver]
-internal sealed class TemporaryFileFormatter(IFormatterResolver standardResolver, Server server) : IMessagePackFormatter<Remote<TemporaryFile>?>
+internal sealed class TemporaryFileFormatter(IFormatterResolver standardResolver, NexServer server) : IMessagePackFormatter<Remote<TemporaryFile>?>
 {
     readonly IMessagePackFormatter<Guid> guidFormatter = standardResolver.GetFormatterWithVerify<Guid>();
 

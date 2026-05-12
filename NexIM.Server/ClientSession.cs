@@ -21,7 +21,7 @@ public abstract class ClientSession : IAsyncDisposable
 {
     public Account Account { get; }
 
-    public Server Server => Account.Server;
+    public NexServer Server => Account.Server;
 
     /// <summary>
     /// The set of targets to which directed presence has been sent and which

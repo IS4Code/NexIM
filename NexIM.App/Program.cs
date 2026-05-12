@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using NexIM.App.Configuration;
+using NexIM.Server;
 
 namespace NexIM.Xmpp;
 
@@ -11,7 +12,7 @@ internal class Program
     {
         var config = await ConfigurationReader.Read("config.xml");
 
-        config.XmppReceiver.Server = new NexIM.Server.Server(config.SQLiteConnectionString ?? "Data Source=accounts.db");
+        config.XmppReceiver.Server = new NexServer(config.SQLiteConnectionString ?? "Data Source=accounts.db");
 
         var tasks = new List<Task>();
         var cancellationToken = CancellationToken.None;

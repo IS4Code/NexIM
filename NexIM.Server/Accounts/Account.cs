@@ -15,7 +15,7 @@ namespace NexIM.Server.Accounts;
 public partial class Account
 {
     readonly DatabaseContext context;
-    public Server Server => context.Server;
+    public NexServer Server => context.Server;
 
     internal Identity Identity { get; init; }
     internal Guid Identifier { get; }

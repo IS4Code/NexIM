@@ -12,7 +12,7 @@ using NexIM.Server.Database;
 
 namespace NexIM.Server;
 
-partial class Server
+partial class NexServer
 {
     /// <summary>
     /// The shared database context used for lookups of entities.
