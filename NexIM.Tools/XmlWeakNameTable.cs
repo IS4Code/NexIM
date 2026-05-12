@@ -3,13 +3,17 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using NexIM.Xmpp.Protocol.Grammar;
+using NexIM.Primitives.Xml;
 
-namespace NexIM.Xmpp.Server;
+namespace NexIM.Tools;
 
-public class XmppNameTable : Vocabulary,
-    IEqualityComparer<XmppNameTable.PreHashed<XmppNameTable.WeakStringReference>>,
-    IAlternateEqualityComparer<XmppNameTable.PreHashed<ReadOnlyMemory<char>>, XmppNameTable.PreHashed<XmppNameTable.WeakStringReference>>
+/// <summary>
+/// Provides a thread-safe implementation of <see cref="XmlMemoryNameTable"/>
+/// with weakly-referenced contents.
+/// </summary>
+public class XmlWeakNameTable : XmlMemoryNameTable,
+    IEqualityComparer<XmlWeakNameTable.PreHashed<XmlWeakNameTable.WeakStringReference>>,
+    IAlternateEqualityComparer<XmlWeakNameTable.PreHashed<ReadOnlyMemory<char>>, XmlWeakNameTable.PreHashed<XmlWeakNameTable.WeakStringReference>>
 {
     readonly ConcurrentDictionary<PreHashed<WeakStringReference>, ValueTuple> data;
     readonly ConcurrentDictionary<PreHashed<WeakStringReference>, ValueTuple>.AlternateLookup<PreHashed<ReadOnlyMemory<char>>> lookup;
@@ -21,21 +25,10 @@ public class XmppNameTable : Vocabulary,
 
     public int WeakReferencesCount => data.Count - minimumCount;
 
-    public XmppNameTable()
+    public XmlWeakNameTable()
     {
         data = new(this);
         lookup = data.GetAlternateLookup<PreHashed<ReadOnlyMemory<char>>>();
-
-        Initialize();
-    }
-
-    protected override void Initialize()
-    {
-        if(data != null)
-        {
-            // Called from the base constructor when data is not yet initialized
-            base.Initialize();
-        }
     }
 
     [ThreadStatic]

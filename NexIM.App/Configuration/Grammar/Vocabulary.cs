@@ -6,9 +6,9 @@ using NexIM.Primitives.Xml;
 namespace NexIM.App.Configuration.Grammar;
 
 /// <summary>
-/// Provides atomized common XMPP vocabulary elements.
+/// Provides atomized common configuration vocabulary elements.
 /// </summary>
-public abstract partial class Vocabulary : XmlMemoryNameTable
+public sealed partial class Vocabulary : XmlVocabulary
 {
     public static class Standard
     {
@@ -20,14 +20,16 @@ public abstract partial class Vocabulary : XmlMemoryNameTable
         public static readonly Token<Enum> Lang = Token<Enum>.FromAtomized("lang");
     }
 
+    public static readonly Vocabulary Instance = new();
+
     private partial void AddKeys();
 
-    public Vocabulary()
+    private Vocabulary()
     {
         Initialize();
     }
 
-    protected virtual void Initialize()
+    protected override void Initialize()
     {
         AddKey(Standard.Empty.Value);
         AddKey(Standard.Xmlns.Value);
@@ -45,13 +47,5 @@ public abstract partial class Vocabulary : XmlMemoryNameTable
         AddKey("xml");
         AddKey("encoding");
         AddKey("standalone");
-    }
-
-    private partial void AddKey(string key)
-    {
-        if(!ReferenceEquals(key, Add(key)))
-        {
-            throw new NotSupportedException("The key reference is invalid.");
-        }
     }
 }

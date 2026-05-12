@@ -41,9 +41,6 @@ public class ClientDecoder : Decoder
 
     public override string GetDefaultNamespace(XmlNameTable nameTable)
     {
-        return nameTable switch {
-            Vocabulary => Namespace,
-            _ => nameTable.Add(Namespace)
-        };
+        return nameTable.Add(Namespace);
     }
 }

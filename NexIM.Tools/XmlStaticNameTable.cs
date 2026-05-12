@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using NexIM.App.Configuration.Grammar;
+using NexIM.Primitives.Xml;
 
-namespace NexIM.App;
+namespace NexIM.Tools;
 
-sealed class StaticNameTable : Vocabulary
+/// <summary>
+/// Provides a basic implementation of <see cref="XmlMemoryNameTable"/>.
+/// </summary>
+public class XmlStaticNameTable : XmlMemoryNameTable
 {
     readonly HashSet<string> table = new(Comparer.Instance);
     HashSet<string>.AlternateLookup<ReadOnlyMemory<char>> alternate => table.GetAlternateLookup<string, ReadOnlyMemory<char>>();

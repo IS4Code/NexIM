@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
+using NexIM.Tools;
 
 namespace NexIM.App.Configuration;
 
@@ -18,7 +19,7 @@ sealed class ConfigurationReader : BaseHandler
         IgnoreComments = true,
         IgnoreProcessingInstructions = true,
         IgnoreWhitespace = true,
-        NameTable = new StaticNameTable()
+        NameTable = Grammar.Vocabulary.Instance.CreateNameTable<XmlStaticNameTable>()
     };
 
     public static async ValueTask<ConfigurationHandler> Read(string file)

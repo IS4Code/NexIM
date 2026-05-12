@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Xml;
+using NexIM.Tools;
 using NexIM.Xmpp.Protocol;
 
 namespace NexIM.Xmpp.Server.Communication;
@@ -13,7 +14,7 @@ namespace NexIM.Xmpp.Server.Communication;
 /// </typeparam>
 public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where TSession : XmppXmlSession
 {
-    readonly XmppNameTable nametable;
+    readonly XmlWeakNameTable nametable = Protocol.Grammar.Vocabulary.Instance.CreateNameTable<XmlWeakNameTable>();
 
     protected XmlReaderSettings ReaderSettings { get; }
     protected XmlWriterSettings WriterSettings { get; }
@@ -24,8 +25,6 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
 
     public XmppXmlListener(IXmppReceiver<TSession> receiver) : base(receiver)
     {
-        nametable = new();
-
         ReaderSettings = new() {
             Async = true,
             CheckCharacters = false,

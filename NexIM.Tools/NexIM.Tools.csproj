@@ -12,4 +12,8 @@
 
   <Import Project="..\NexIM.Shared\NexIM.Shared.projitems" Label="Shared" />
 
+  <ItemGroup>
+    <ProjectReference Include="..\NexIM.Primitives\NexIM.Primitives.csproj" />
+  </ItemGroup>
+
 </Project>

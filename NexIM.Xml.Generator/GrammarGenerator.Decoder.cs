@@ -95,7 +95,6 @@ partial class GrammarGenerator
                 }
             }
 
-            writer.WriteLine("private partial void AddKey(string key);");
             writer.WriteLine("private partial void AddKeys()");
             writer.WriteLine("{");
             writer.Indent++;
