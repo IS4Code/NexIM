@@ -42,7 +42,11 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IDatabaseHandle
 
     internal async ValueTask ReadFrom(XmlReader reader)
     {
-        await Decode(reader, this);
+        while(reader.NodeType != XmlNodeType.None)
+        {
+            // Keep decoding while there is content
+            await await Decode(reader, this);
+        }
 
         // Finish configuration
 
