@@ -38,9 +38,13 @@ internal class SetBind : BindHandler<ICommandContext>
         var clientSession = session.ClientSession;
         var accountName = clientSession.Account.Name;
 
-        // Auto-generate resource name if missing
-        resource ??= Guid.NewGuid().ToString("N");
-        clientSession.Bind(resource);
+        // Use default resource name if missing
+        resource ??= clientSession.Resource;
+        if((await clientSession.Bind(resource)).ToStanzaException() is { } exception)
+        {
+            throw exception;
+        }
+
         session.RemoteResource = accountName.ToResource(resource);
 
         // Inform of the full resource

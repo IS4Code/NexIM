@@ -93,7 +93,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
     {
         if(this.TryGetClientSession() is { } session)
         {
-            this.GetAccount().RemoveSession(session);
+            await session.Account.RemoveSession(session);
         }
     }
 

@@ -29,10 +29,18 @@ public abstract class ClientSession : IAsyncDisposable
     /// </summary>
     readonly ConcurrentDictionary<Identifier, StatusUpdateEvent> directedPresence = new();
 
+    static readonly Func<string> resourceFactory = () => IdentifierHelper.CreateGuid(out _).ToString("N");
+    
+    // Backing field for explicitly set resources
+    string? _resource;
+
     /// <summary>
     /// The unique local identifier of this session for the account.
     /// </summary>
-    public string Resource { get; private set; }
+    public string Resource {
+        get => LazyInitializer.EnsureInitialized(ref _resource, resourceFactory);
+        private set => _resource = value;
+    }
 
     /// <summary>
     /// The full identifier of this session.
@@ -57,7 +65,7 @@ public abstract class ClientSession : IAsyncDisposable
     public ClientSession(Account account, string? resource)
     {
         Account = account;
-        Resource = resource ?? Guid.NewGuid().ToString("N");
+        Resource = resource!;
     }
 
     private StatusReport Report(StatusCode code)
@@ -65,12 +73,10 @@ public abstract class ClientSession : IAsyncDisposable
         return new(Identifier, code);
     }
 
-    public void Bind(string resource)
+    public async ValueTask<StatusCode> Bind(string resource)
     {
         Resource = resource;
-
-        // TODO Handle when already exists (conflict)
-        Account.AddSession(this);
+        return await Account.AddSession(this);
     }
 
     private void SubscribeToRosterUpdates()
@@ -100,12 +106,10 @@ public abstract class ClientSession : IAsyncDisposable
                 if(to.Contains(Identifier.Bare))
                 {
                     // Default presence for the session (broadcasted to contacts)
-                    var previous = OnStatusUpdate(statusEvent);
-
-                    if((statusEvent.Data.Status.Availability, previous?.Data.Status.Availability) is (not Availability.Unavailable, null or Availability.Unavailable))
+                    var status = await OnStatusUpdate(statusEvent);
+                    if(status != StatusCode.Success)
                     {
-                        // Going live - probe other contacts
-                        await ProbeContacts();
+                        return Report(status);
                     }
 
                     if(to.Count == 1)
@@ -126,7 +130,7 @@ public abstract class ClientSession : IAsyncDisposable
         return await Account.Post(evnt);
     }
 
-    private StatusUpdateEvent? OnStatusUpdate(StatusUpdateEvent? statusEvent)
+    private async ValueTask<StatusCode> OnStatusUpdate(StatusUpdateEvent? statusEvent)
     {
         if(!Configuration.PreserveUnavailableStatus && statusEvent?.IsUnavailable == true)
         {
@@ -136,9 +140,19 @@ public abstract class ClientSession : IAsyncDisposable
         // Preserve the status data
         var previous = Interlocked.Exchange(ref lastStatusUpdate, statusEvent);
 
-        Account.AddOrUpdateSession(this);
+        var status = await Account.AddOrUpdateSession(this);
+        if(status != StatusCode.Success)
+        {
+            return status;
+        }
 
-        return previous;
+        if((statusEvent?.Data.Status.Availability, previous?.Data.Status.Availability) is (not Availability.Unavailable, null or Availability.Unavailable))
+        {
+            // Going live - probe other contacts
+            await ProbeContacts();
+        }
+
+        return status;
     }
 
     private void OnDirectedStatusUpdate(StatusUpdateEvent statusEvent)

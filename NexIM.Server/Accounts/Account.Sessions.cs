@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading.Tasks;
+using NexIM.Server.Events;
 
 namespace NexIM.Server.Accounts;
 
@@ -10,17 +12,19 @@ partial class Account
 {
     AccountSessions sessions = AccountSessions.Create();
 
-    public void AddSession(ClientSession session)
+    public async ValueTask<StatusCode> AddSession(ClientSession session)
     {
-        sessions = sessions.Add(session);
+        sessions = sessions.TryAdd(session, out var success);
+        return success ? StatusCode.Success : StatusCode.AlreadyExists;
     }
 
-    public void AddOrUpdateSession(ClientSession session)
+    public async ValueTask<StatusCode> AddOrUpdateSession(ClientSession session)
     {
-        sessions = sessions.AddOrUpdate(session);
+        sessions = sessions.TryAddOrUpdate(session, out var success);
+        return success ? StatusCode.Success : StatusCode.AlreadyExists;
     }
 
-    public void RemoveSession(ClientSession session)
+    public async ValueTask RemoveSession(ClientSession session)
     {
         sessions = sessions.Remove(session);
     }
@@ -72,19 +76,28 @@ partial class Account
 
         public static AccountSessions Create(ClientSession session)
         {
-            return Create().Add(session);
+            return Create().TryAdd(session, out _);
         }
 
-        public AccountSessions Add(ClientSession session)
+        public AccountSessions TryAdd(ClientSession session, out bool success)
         {
-            if(!ByPriority.TryGetValue(session.Priority, out var sessions))
+            var byIdentifier = ByIdentifier;
+            if(byIdentifier.ContainsKey(session.Resource))
+            {
+                // Already present
+                success = false;
+                return this;
+            }
+            var byPriority = ByPriority;
+            if(!byPriority.TryGetValue(session.Priority, out var sessions))
             {
                 // No sessions with this priority
                 sessions = emptySessions;
             }
+            success = true;
             return new(
-                ByPriority.SetItem(session.Priority, sessions.Add(session)),
-                ByIdentifier.Add(session.Resource, session)
+                byPriority.SetItem(session.Priority, sessions.Add(session)),
+                byIdentifier.SetItem(session.Resource, session)
             );
         }
 
@@ -123,8 +136,33 @@ partial class Account
             );
         }
 
-        public AccountSessions AddOrUpdate(ClientSession session)
+        public AccountSessions TryAddOrUpdate(ClientSession session, out bool success)
         {
+            var identifier = session.Resource;
+            var byIdentifier = ByIdentifier;
+            if(byIdentifier.TryGetValue(identifier, out var existingSession))
+            {
+                if(existingSession != session)
+                {
+                    success = false;
+                    return this;
+                }
+                // No need to update
+            }
+            else if(FindSessionIdentifier(session, out var oldIdentifier))
+            {
+                // Exists with another identifier
+                var builder = byIdentifier.ToBuilder();
+                builder.Remove(oldIdentifier);
+                builder[identifier] = session;
+                byIdentifier = builder.ToImmutable();
+            }
+            else
+            {
+                // Adding anew
+                byIdentifier = byIdentifier.SetItem(identifier, session);
+            }
+
             var byPriority = ByPriority;
             var priority = session.Priority;
             if(byPriority.TryGetValue(priority, out var sessions) && sessions.Contains(session))
@@ -172,30 +210,7 @@ partial class Account
                 byPriority = byPriority.SetItem(priority, sessions);
             }
 
-            var identifier = session.Resource;
-            var byIdentifier = ByIdentifier;
-            if(byIdentifier.TryGetValue(identifier, out var existingSession))
-            {
-                if(existingSession != session)
-                {
-                    throw new InvalidOperationException("A session with this identifier already exists.");
-                }
-                // No need to update
-            }
-            else if(FindSessionIdentifier(session, out var oldIdentifier))
-            {
-                // Exists with another identifier
-                var builder = byIdentifier.ToBuilder();
-                builder.Remove(oldIdentifier);
-                builder[identifier] = session;
-                byIdentifier = builder.ToImmutable();
-            }
-            else
-            {
-                // Adding anew
-                byIdentifier = byIdentifier.SetItem(identifier, session);
-            }
-
+            success = true;
             return new(
                 byPriority,
                 byIdentifier

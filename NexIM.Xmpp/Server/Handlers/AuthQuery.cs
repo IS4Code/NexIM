@@ -134,7 +134,10 @@ internal class SetAuthQuery : BaseAuthQueryHandler<ICommandContext>, IDisposable
             }
 
             var clientSession = new XmppClientSession(account, resource, session);
-            account.AddSession(clientSession);
+            if((await account.AddSession(clientSession)).ToStanzaException() is { } exception)
+            {
+                throw exception;
+            }
 
             session.RemoteResource = identifier;
             session.ClientSession = clientSession;
