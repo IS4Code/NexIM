@@ -1,38 +1,41 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
+using System.Globalization;
 using NexIM.Primitives.Xml;
 
 namespace NexIM.Tools;
 
 /// <summary>
-/// Provides a basic implementation of <see cref="XmlMemoryNameTable"/>.
+/// Provides a thread-safe implementation of <see cref="XmlMemoryNameTable"/>.
 /// </summary>
 public class XmlStaticNameTable : XmlMemoryNameTable
 {
-    readonly HashSet<string> table = new(Comparer.Instance);
-    HashSet<string>.AlternateLookup<ReadOnlyMemory<char>> alternate => table.GetAlternateLookup<string, ReadOnlyMemory<char>>();
+    readonly ConcurrentDictionary<string, ValueTuple> data;
+    readonly ConcurrentDictionary<string, ValueTuple>.AlternateLookup<ReadOnlyMemory<char>> lookup;
+
+    public XmlStaticNameTable()
+    {
+        data = new(Comparer.Instance);
+        lookup = data.GetAlternateLookup<ReadOnlyMemory<char>>();
+    }
 
     public override string Add(ReadOnlyMemory<char> memory)
     {
-        if(alternate.TryGetValue(memory, out var result))
-        {
-            return result;
-        }
-        var str = Comparer.Instance.Create(memory);
-        table.Add(str);
-        return str;
+        lookup.TryAdd(memory, default);
+        // Either just added or already present
+        return Get(memory) ?? throw new NotSupportedException();
     }
 
     public override string? Get(ReadOnlyMemory<char> memory)
     {
-        return alternate.TryGetValue(memory, out var result) ? result : null;
+        return lookup.TryGetValue(memory, out var key, out _) ? key : null;
     }
 
     sealed class Comparer : IEqualityComparer<string>, IAlternateEqualityComparer<ReadOnlyMemory<char>, string>
     {
         static readonly StringComparer comparer = StringComparer.Ordinal;
+        static readonly CompareInfo compareInfo = CultureInfo.InvariantCulture.CompareInfo;
 
         public static readonly Comparer Instance = new();
 
@@ -46,7 +49,7 @@ public class XmlStaticNameTable : XmlMemoryNameTable
             return comparer.Equals(x, y);
         }
 
-        public int GetHashCode([DisallowNull] string obj)
+        public int GetHashCode(string obj)
         {
             return GetHashCode(obj.AsMemory());
         }
@@ -58,9 +61,7 @@ public class XmlStaticNameTable : XmlMemoryNameTable
 
         public int GetHashCode(ReadOnlyMemory<char> alternate)
         {
-            var hashCode = new HashCode();
-            hashCode.AddBytes(MemoryMarshal.Cast<char, byte>(alternate.Span));
-            return hashCode.ToHashCode();
+            return compareInfo.GetHashCode(alternate.Span, CompareOptions.Ordinal);
         }
 
         public string Create(ReadOnlyMemory<char> alternate)
