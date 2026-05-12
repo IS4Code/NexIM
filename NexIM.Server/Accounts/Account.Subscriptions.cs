@@ -66,6 +66,8 @@ partial class Account
             (targetsList ??= new()).Add(target);
         }
 
+        tasks.Add(Save());
+
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
@@ -77,6 +79,8 @@ partial class Account
             tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
+
+        tasks.Add(Save());
 
         if(updated.SubscriptionState.AcceptedFrom)
         {
@@ -142,6 +146,8 @@ partial class Account
             (targetsList ??= new()).Add(id.Name.ToIdentifier());
         }
 
+        tasks.Add(Save());
+
         ResendEventFromAccount(evnt, targetsList, tasks);
         OnSubscribed(targetsList, tasks);
     }
@@ -154,6 +160,8 @@ partial class Account
             tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
+
+        tasks.Add(Save());
 
         // Inform of updated contact
         OnContactUpdated(updated, contacts, tasks);
@@ -204,6 +212,8 @@ partial class Account
             (targetsList ??= new()).Add(target);
         }
 
+        tasks.Add(Save());
+
         OnUnsubscribed(unavailableList, tasks);
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
@@ -216,6 +226,8 @@ partial class Account
             tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
+
+        tasks.Add(Save());
 
         // Route to sessions
         foreach(var session in GetSessions(false))
@@ -248,6 +260,8 @@ partial class Account
             (targetsList ??= new()).Add(id.Name.ToIdentifier());
         }
 
+        tasks.Add(Save());
+
         ResendEventFromAccount(evnt, targetsList, tasks);
     }
 
@@ -259,6 +273,8 @@ partial class Account
             tasks.Add(new(Report(StatusCode.Success)));
             return;
         }
+
+        tasks.Add(Save());
 
         if(!previous.SubscriptionState.AcceptedFrom)
         {

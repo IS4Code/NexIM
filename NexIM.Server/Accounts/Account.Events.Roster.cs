@@ -16,6 +16,7 @@ partial class Account
 
         var tasks = new List<ValueTask<StatusReports>>();
 
+        tasks.Add(Save());
         OnContactRemoved(contact, contacts, tasks);
 
         if(contact.SubscriptionState.AcceptedTo)
@@ -56,14 +57,13 @@ partial class Account
         }
 
         var tasks = new List<ValueTask<StatusReports>>();
+        tasks.Add(Save());
         OnContactUpdated(updated, contacts, tasks);
         return await tasks.Combine();
     }
 
     private void OnContactUpdated(Contact contact, IReadOnlyCollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
-        tasks.Add(Save());
-
         RouteToAllSessions(new UpdateEvent {
             // Filled later
             Origin = EventOrigin.FromTo(Name.ToIdentifier(), default),
@@ -78,8 +78,6 @@ partial class Account
 
     private void OnContactRemoved(Contact contact, IReadOnlyCollection<Contact> contacts, List<ValueTask<StatusReports>> tasks)
     {
-        tasks.Add(Save());
-
         RouteToAllSessions(new UpdateEvent {
             // Filled later
             Origin = EventOrigin.FromTo(Name.ToIdentifier(), default),
