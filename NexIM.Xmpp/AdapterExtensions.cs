@@ -130,7 +130,7 @@ internal static partial class AdapterExtensions
             },
             From: evnt.From.ToResource(session),
             To: evnt.To.ToResource(session),
-            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session),
+            Identifier: evnt.TransactionIdentifier?.ToStanzaIdentifier(session) ?? Token<StanzaIdentifier>.FromAtomized(String.Empty),
             Language: evnt.TransactionLanguage
         );
     }
