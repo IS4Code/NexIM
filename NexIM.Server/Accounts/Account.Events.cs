@@ -168,9 +168,9 @@ partial class Account : IEventHandler
                     var subscribedSet = Identifiers.Builder.Empty;
                     foreach(var contact in Contacts)
                     {
-                        if(!contact.SubscriptionState.AcceptedFrom)
+                        if(!contact.SubscriptionState.AcceptedTo)
                         {
-                            // Not accepted
+                            // Subscription to the contact is not accepted, skip sending probe
                             continue;
                         }
 
