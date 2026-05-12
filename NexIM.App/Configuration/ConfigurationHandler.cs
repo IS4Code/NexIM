@@ -21,7 +21,8 @@ abstract class BaseHandler : PayloadHandler<EmptyPayloadHandlerContext>
 
     protected async override ValueTask OnUnrecognized(XmlReader payloadReader)
     {
-        var element = await XElement.LoadAsync(payloadReader, LoadOptions.None, CancellationToken.None);
+        using var subtree = payloadReader.ReadSubtree();
+        var element = await XElement.LoadAsync(subtree, LoadOptions.None, CancellationToken.None);
         throw new ApplicationException($"Unexpected element <{element.Name}>.");
     }
 }
