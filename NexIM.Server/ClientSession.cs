@@ -60,7 +60,7 @@ public abstract class ClientSession : IAsyncDisposable
     public PresenceData Presence => lastStatusUpdate?.Data ?? PresenceData.Empty;
 
     public bool ReceivesRosterUpdates { get; private set; }
-    public bool ReceivesPresenceUpdates => Presence.Status.Availability != Availability.Unavailable;
+    public bool ReceivesPresenceUpdates { get; private set; }
 
     public ClientSession(Account account, string? resource)
     {
@@ -79,9 +79,14 @@ public abstract class ClientSession : IAsyncDisposable
         return await Account.AddSession(this);
     }
 
-    private void SubscribeToRosterUpdates()
+    protected void SubscribeToRosterUpdates()
     {
         ReceivesRosterUpdates = true;
+    }
+
+    protected void SubscribeToPresenceUpdates()
+    {
+        ReceivesPresenceUpdates = true;
     }
 
     public UploadedFile AcquireUploadedFile(TemporaryFile fileSource, string? name, string? contentType)
@@ -105,6 +110,9 @@ public abstract class ClientSession : IAsyncDisposable
 
                 if(to.Contains(Identifier.Bare))
                 {
+                    // Enables receiving presence events
+                    SubscribeToPresenceUpdates();
+
                     // Default presence for the session (broadcasted to contacts)
                     var status = await OnStatusUpdate(statusEvent);
                     if(status != StatusCode.Success)
@@ -212,7 +220,6 @@ public abstract class ClientSession : IAsyncDisposable
 
             case PresenceEvent when !ReceivesPresenceUpdates:
                 // Not available for undirected presence
-                // TODO Invisible?
                 return Report(StatusCode.Unavailable);
 
             case QueryEvent { Data: RosterQueryData } when !ReceivesRosterUpdates:
