@@ -164,10 +164,23 @@ partial class Account : IEventHandler
 
                 if(presEvent.From.Account == Name)
                 {
+                    bool requestingUpdate = presEvent is StatusRequestEvent;
+
                     // Deliver to all eligible contacts
                     var subscribedSet = Identifiers.Builder.Empty;
                     foreach(var contact in Contacts)
                     {
+                        if(requestingUpdate && contact.SubscriptionState.PendingFrom)
+                        {
+                            // Re-request subscription
+                            RouteToSessions(new SubscriptionRequestedEvent {
+                                Origin = EventOrigin.FromTo(contact.Account.ToIdentifier(), Name.ToIdentifier()),
+                                // TODO Last known presence information
+                                Processing = EventProcessing.Create(),
+                                Data = PresenceData.Empty
+                            }, presEvent.From, tasks, false);
+                        }
+
                         if(!contact.SubscriptionState.AcceptedTo)
                         {
                             // Subscription to the contact is not accepted, skip sending probe
@@ -351,7 +364,7 @@ partial class Account : IEventHandler
         }
     }
 
-    private void RouteToSessions(Event evnt, Identifiers sessions, List<ValueTask<StatusReports>> tasks)
+    private void RouteToSessions(Event evnt, Identifiers sessions, List<ValueTask<StatusReports>> tasks, bool updateTarget = true)
     {
         foreach(var identifier in sessions)
         {
@@ -365,7 +378,7 @@ partial class Account : IEventHandler
                 tasks.Add(new(Report(StatusCode.NotFound)));
                 continue;
             }
-            tasks.Add(session.Outbound(evnt.WithTo(identifier)));
+            tasks.Add(session.Outbound(updateTarget ? evnt.WithTo(identifier) : evnt));
         }
     }
 
