@@ -149,12 +149,14 @@ partial class Account : IEventHandler
                         return OnIncomingSubscriptionEvent(subEvent);
                 }
 
+                bool requestingUpdate = presEvent is StatusRequestEvent;
+
                 // Deliver to all sessions
                 tasks = new();
                 foreach(var session in GetSessions(false))
                 {
                     // Also includes the originating session (echo)
-                    if(session.Identifier == presEvent.From && presEvent is StatusUpdateEvent)
+                    if(session.Identifier == presEvent.From && requestingUpdate)
                     {
                         // Unless probing
                         continue;
@@ -164,27 +166,71 @@ partial class Account : IEventHandler
 
                 if(presEvent.From.Account == Name)
                 {
-                    bool requestingUpdate = presEvent is StatusRequestEvent;
+                    // Broadcast from a session
 
                     // Deliver to all eligible contacts
                     var subscribedSet = Identifiers.Builder.Empty;
                     foreach(var contact in Contacts)
                     {
-                        if(requestingUpdate && contact.SubscriptionState.PendingFrom)
+                        if(requestingUpdate)
                         {
-                            // Re-request subscription
-                            RouteToSessions(new SubscriptionRequestedEvent {
-                                Origin = EventOrigin.FromTo(contact.Account.ToIdentifier(), Name.ToIdentifier()),
-                                // TODO Last known presence information
-                                Processing = EventProcessing.Create(),
-                                Data = PresenceData.Empty
-                            }, presEvent.From, tasks, false);
-                        }
+                            // Probing a contact
+                            if(contact.SubscriptionState.PendingFrom)
+                            {
+                                // Synthezise subscription request
+                                EventProcessing processing;
+                                PresenceData data;
+                                if(TryGetLastContactPresence(contact.Identity, null, null, out var lastSubscribeEvent))
+                                {
+                                    // Use last known presence information
+                                    processing = lastSubscribeEvent.Processing;
+                                    data = lastSubscribeEvent.Data;
+                                }
+                                else
+                                {
+                                    processing = EventProcessing.Create();
+                                    data = PresenceData.Empty;
+                                }
 
-                        if(!contact.SubscriptionState.AcceptedTo)
+                                // Re-request subscription
+                                RouteToSessions(new SubscriptionRequestedEvent {
+                                    Origin = EventOrigin.FromTo(contact.Account.ToIdentifier(), Name.ToIdentifier()),
+                                    Processing = processing,
+                                    Data = data
+                                }, presEvent.From, tasks, false);
+                            }
+
+                            if(!contact.SubscriptionState.AcceptedTo)
+                            {
+                                // Subscription to the contact was not accepted, skip sending probe
+                                continue;
+                            }
+
+                            if(TryGetLastContactPresence(contact.Identity, presEvent.Published, out var lastUpdateEvents))
+                            {
+                                // Presence is already known
+                                Identifiers to = presEvent.From;
+                                foreach(var evnt in lastUpdateEvents)
+                                {
+                                    if(evnt is StatusUpdateEvent)
+                                    {
+                                        RouteToSessions(evnt, to, tasks, false);
+                                    }
+                                }
+                                // No need to probe anymore
+                                continue;
+                            }
+
+                            // Probing is necessary
+                            OnStatusRequested(contact.Identity, presEvent);
+                        }
+                        else
                         {
-                            // Subscription to the contact is not accepted, skip sending probe
-                            continue;
+                            if(!contact.SubscriptionState.AcceptedFrom)
+                            {
+                                // Subscription from the contact was not accepted, skip sending status
+                                continue;
+                            }
                         }
 
                         subscribedSet.Add(contact.Account.ToIdentifier());
@@ -195,6 +241,11 @@ partial class Account : IEventHandler
                         // Send
                         tasks.Add(Server.Post(presEvent.WithTo(contactIdentifiers)));
                     }
+                }
+                else if(presEvent is StatusUpdateEvent statusEvent)
+                {
+                    // Update from another account
+                    tasks.Add(OnStatusUpdate(statusEvent));
                 }
 
                 return tasks.Combine();
@@ -431,6 +482,8 @@ partial class Account : IEventHandler
             switch(presEvent)
             {
                 case SubscriptionRequestedEvent:
+                    // Remember the presence data for subscription
+                    OnStatusUpdate(id, presEvent);
                     HandleIncomingSubscriptionRequest(id, presEvent, tasks);
                     break;
                 case SubscriptionAcceptedEvent:

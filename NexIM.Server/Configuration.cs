@@ -17,6 +17,10 @@ public class Configuration
 
     public static readonly TimeSpan XmppMinDelayTime = TimeSpan.FromSeconds(1);
 
+    public static readonly TimeSpan PresenceCacheStaleDelay = TimeSpan.FromHours(1);
+
+    public static readonly TimeSpan PresenceCacheInvalidateAfterProbeDelay = TimeSpan.FromMinutes(1);
+
     static Configuration()
     {
         // Used by SpaceWizards.HttpListener
