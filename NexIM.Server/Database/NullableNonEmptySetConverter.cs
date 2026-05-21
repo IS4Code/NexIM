@@ -59,7 +59,7 @@ internal sealed class NullableNonEmptySetConverter<T> : ValueConverter<NonEmptyS
 
         IMessagePackFormatter<NonEmptySet<T>?>? IResolver<NonEmptySet<T>?>.GetFormatter()
         {
-            return NullableNonEmptySetFormatterBase<T>.Create(standardResolver);
+            return new NullableNonEmptySetFormatter<T>(standardResolver);
         }
     }
 }

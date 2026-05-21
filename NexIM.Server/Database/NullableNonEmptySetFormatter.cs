@@ -5,19 +5,10 @@ using NexIM.Tools;
 
 namespace NexIM.Server.Database;
 
-internal abstract class NullableNonEmptySetFormatterBase<T>(IFormatterResolver standardResolver) where T : IComparable<T>
+[ExcludeFormatterFromSourceGeneratedResolver]
+internal sealed class NullableNonEmptySetFormatter<T>(IFormatterResolver standardResolver) : IMessagePackFormatter<NonEmptySet<T>?> where T : IComparable<T>
 {
     readonly IMessagePackFormatter<T> valueFormatter = standardResolver.GetFormatterWithVerify<T>();
-
-    public static IMessagePackFormatter<NonEmptySet<T>?> Create(IFormatterResolver standardResolver)
-    {
-        if(typeof(string).Equals(typeof(T)))
-        {
-            // Must have an explicit instantiation because of #2242 in MessagePack-CSharp
-            return (IMessagePackFormatter<NonEmptySet<T>?>)(object)(new NullableNonEmptyStringSetFormatter(standardResolver));
-        }
-        throw new NotSupportedException();
-    }
 
     public void Serialize(ref MessagePackWriter writer, NonEmptySet<T>? value, MessagePackSerializerOptions options)
     {
@@ -47,10 +38,4 @@ internal abstract class NullableNonEmptySetFormatterBase<T>(IFormatterResolver s
         }
         return builder.TryToSet();
     }
-}
-
-[ExcludeFormatterFromSourceGeneratedResolver]
-sealed file class NullableNonEmptyStringSetFormatter(IFormatterResolver standardResolver) : NullableNonEmptySetFormatterBase<string>(standardResolver), IMessagePackFormatter<NonEmptySet<string>?>
-{
-
 }
