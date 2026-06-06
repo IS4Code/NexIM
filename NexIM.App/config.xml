@@ -1,0 +1,42 @@
+<Server>
+
+  <Database>
+    <SQLite>Data Source=accounts.db</SQLite>
+  </Database>
+
+  <Certificates>
+
+    <SelfSigned>
+      <SubjectName>CN=localhost</SubjectName>
+      <Expires>P7D</Expires>
+    </SelfSigned>
+
+  </Certificates>
+  
+  <XMPP>
+  
+    <TCP>
+      <Endpoint>0.0.0.0:5222</Endpoint>
+    </TCP>
+    
+    <WebSocket>
+      <Endpoint>http://+:800/xmpp/</Endpoint>
+      <Endpoint>https://+:4430/xmpp/</Endpoint>
+    </WebSocket>
+    
+    <HTML>
+      <Endpoint>http://+:800/</Endpoint>
+      <Endpoint>https://+:4430/</Endpoint>
+      <Title>XMPP Web Portal</Title>
+      <Converse>https://cdn.conversejs.org/12.0.0/dist/</Converse>
+      <Language>en</Language>
+    </HTML>
+    
+  </XMPP>
+  
+  <Metadata>
+    <Endpoint>http://+:800/.well-known/</Endpoint>
+    <Endpoint>https://+:4430/.well-known/</Endpoint>
+  </Metadata>
+  
+</Server>
