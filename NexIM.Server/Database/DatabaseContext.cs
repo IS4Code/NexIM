@@ -25,6 +25,7 @@ internal abstract class DatabaseContext : DbContext
 
     readonly VCardConverter vcardConverter;
     readonly EventExtensionsConverter eventExtensionsConverter;
+    readonly EventExtensionsComparer eventExtensionsComparer;
     readonly NullableNonEmptySetConverter<string> stringSetConverter;
 
     static DatabaseContext()
@@ -38,6 +39,7 @@ internal abstract class DatabaseContext : DbContext
         var msgpackOptions = CreateOptions(MessagePackSerializerOptions.Standard);
         vcardConverter = new(msgpackOptions);
         eventExtensionsConverter = new(msgpackOptions);
+        eventExtensionsComparer = new();
         stringSetConverter = new(msgpackOptions);
     }
 
@@ -58,7 +60,7 @@ internal abstract class DatabaseContext : DbContext
     protected sealed override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<Guid>().HaveConversion<GuidToBytesConverter>();
-        configurationBuilder.Properties<ArraySegment<byte>>().HaveConversion<ArraySegmentToBytesConverter>();
+        configurationBuilder.Properties<ArraySegment<byte>>().HaveConversion<ArraySegmentToArrayConverter<byte>, ArraySegmentComparer<byte>>();
         configurationBuilder.Properties<LanguageCode?>().HaveConversion<LanguageCodeConverter>();
         configurationBuilder.Properties<SubscriptionState>().HaveConversion<SubscriptionStateConverter>();
         configurationBuilder.Properties<MailAddress>().HaveConversion<MailAddressConverter>();
@@ -104,7 +106,7 @@ internal abstract class DatabaseContext : DbContext
         modelBuilder.Entity<PrivateStorageData>(e => {
             e.HasKey(x => new { x.OwnerIdentifier, x.KeyNamespace, x.KeyName });
 
-            e.Property(x => x.Data).HasConversion(eventExtensionsConverter);
+            e.Property(x => x.Data).HasConversion(eventExtensionsConverter, eventExtensionsComparer);
         });
 
         modelBuilder.Entity<UploadedFile>(e => {

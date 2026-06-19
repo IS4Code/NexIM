@@ -1,5 +1,6 @@
 ﻿using System;
 using MessagePack;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NexIM.Server.Events;
 
@@ -30,5 +31,24 @@ internal sealed class EventExtensionsConverter : ValueConverter<EventExtensions,
             return default;
         }
         return MessagePackSerializer.Deserialize<EventExtensions>(value, options);
+    }
+}
+
+internal sealed class EventExtensionsComparer : ValueComparer<EventExtensions>
+{
+    public EventExtensionsComparer() : base(
+        (a, b) => Equals(a, b),
+        x => GetHashCode(x))
+    {
+    }
+
+    private static new bool Equals(EventExtensions first, EventExtensions second)
+    {
+        return first.Equals(second);
+    }
+
+    private static new int GetHashCode(EventExtensions value)
+    {
+        return value.GetHashCode();
     }
 }
