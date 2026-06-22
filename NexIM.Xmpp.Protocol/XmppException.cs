@@ -275,9 +275,14 @@ public class XmppSaslException : XmppException<ISaslFailureHandler>
     }
 
     public static XmppSaslException Aborted(string? message = null) => Create(message, static h => h.Aborted());
+    public static XmppSaslException AccountDisabled(string? message = null) => Create(message, static h => h.AccountDisabled());
+    public static XmppSaslException CredentialsExpired(string? message = null) => Create(message, static h => h.CredentialsExpired());
+    public static XmppSaslException EncryptionRequired(string? message = null) => Create(message, static h => h.EncryptionRequired());
     public static XmppSaslException IncorrectEncoding(string? message = null) => Create(message, static h => h.IncorrectEncoding());
     public static XmppSaslException InvalidAuthzid(string? message = null) => Create(message, static h => h.InvalidAuthzid());
     public static XmppSaslException InvalidMechanism(string? message = null) => Create(message, static h => h.InvalidMechanism());
+    public static XmppSaslException MalformedRequest(string? message = null) => Create(message, static h => h.MalformedRequest());
+    public static XmppSaslException MechanismTooWeak(string? message = null) => Create(message, static h => h.MechanismTooWeak());
     public static XmppSaslException NotAuthorized(string? message = null) => Create(message, static h => h.NotAuthorized());
     public static XmppSaslException TemporaryAuthFailure(string? message = null) => Create(message, static h => h.TemporaryAuthFailure());
 

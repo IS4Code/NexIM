@@ -98,9 +98,13 @@ public interface ICompressionFailureHandler : IStanzaErrorHandler
 public interface ISaslFailureHandler : IPayloadHandler
 {
     [Name("aborted")] ValueTask Aborted();
+    [Name("account-disabled")] ValueTask AccountDisabled();
+    [Name("credentials-expired")] ValueTask CredentialsExpired();
+    [Name("encryption-required")] ValueTask EncryptionRequired();
     [Name("incorrect-encoding")] ValueTask IncorrectEncoding();
     [Name("invalid-authzid")] ValueTask InvalidAuthzid();
     [Name("invalid-mechanism")] ValueTask InvalidMechanism();
+    [Name("malformed-request")] ValueTask MalformedRequest();
     [Name("mechanism-too-weak")] ValueTask MechanismTooWeak();
     [Name("not-authorized")] ValueTask NotAuthorized();
     [Name("temporary-auth-failure")] ValueTask TemporaryAuthFailure();
