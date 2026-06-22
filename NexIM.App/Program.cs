@@ -48,10 +48,16 @@ internal class Program
 
             if(config.SQLiteConnectionString is not { } sqlite)
             {
-                Console.WriteLine("Warning: SQLite connection string is not set in the configuration. An in-memory database will be used.");
+                throw new ApplicationException("Database configuration does not specify type/connection string.");
+            }
+            if(String.IsNullOrWhiteSpace(sqlite))
+            {
+                Console.WriteLine("Warning: An in-memory SQLite database will be used.");
                 sqlite = "Data Source=:memory:";
             }
-            config.XmppReceiver.Server = new NexServer(sqlite);
+            config.XmppReceiver.Server = new NexServer(new NexDatabase.SQLite {
+                ConnectionString = sqlite
+            });
 
             var tasks = new List<Task>();
 

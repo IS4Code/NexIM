@@ -87,7 +87,7 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IDatabaseHandle
 
     async ValueTask IDatabaseHandler.SQLite(string? configString)
     {
-        SQLiteConnectionString = configString;
+        SQLiteConnectionString = configString ?? "";
     }
 
     async ValueTask<IXmppTcpHandler> IXmppHandler.Tcp()

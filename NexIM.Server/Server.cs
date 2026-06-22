@@ -2,15 +2,30 @@
 
 public sealed partial class NexServer
 {
-    internal string SQLiteConnectionString { get; }
+    internal NexDatabase DatabaseConfig { get; }
 
-    public NexServer(string sqliteConnectionString)
+    public NexServer(NexDatabase database)
     {
-        SQLiteConnectionString = sqliteConnectionString;
+        DatabaseConfig = database;
 
         Database = default;
         Accounts = default;
         Authentication = default;
         Delivery = default;
+    }
+}
+
+public abstract record NexDatabase
+{
+    public required string ConnectionString { get; init; }
+
+    internal NexDatabase()
+    {
+
+    }
+
+    public sealed record SQLite : NexDatabase
+    {
+
     }
 }

@@ -54,7 +54,18 @@ internal abstract class DatabaseContext : DbContext
             }
         }, Microsoft.Extensions.Logging.LogLevel.Information);
 #endif
-        options.UseSqlite(Server.SQLiteConnectionString);
+
+        var config = Server.DatabaseConfig;
+        switch(config)
+        {
+            case null:
+                throw new NotSupportedException("Database configuration is missing.");
+            case NexDatabase.SQLite:
+                options.UseSqlite(config.ConnectionString);
+                break;
+            default:
+                throw new NotSupportedException($"Unrecognized database type '{config.GetType().Name}'.");
+        }
     }
 
     protected sealed override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
