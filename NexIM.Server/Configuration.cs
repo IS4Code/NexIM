@@ -13,6 +13,8 @@ namespace NexIM.Server;
 
 public class Configuration
 {
+    public static bool HttpListenerIsManaged { get; set; }
+
     public static readonly bool PreserveUnavailableStatus = false;
 
     public static readonly TimeSpan XmppMinDelayTime = TimeSpan.FromSeconds(1);
@@ -47,7 +49,7 @@ public class Configuration
 
     public static IHttpListener CreateHttpListener()
     {
-        return new ManagedHttpListener();
+        return HttpListenerIsManaged ? new ManagedHttpListener() : new NativeHttpListener();
     }
 
     static readonly ConcurrentDictionary<string, X509Certificate2> selfSignedTemporaryCertificates = new(StringComparer.OrdinalIgnoreCase);

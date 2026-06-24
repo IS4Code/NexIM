@@ -11,6 +11,9 @@ public interface IServerHandler : IPayloadHandler
     [Name("Database")]
     ValueTask<IDatabaseHandler> Database();
 
+    [Name("HTTP")]
+    ValueTask<IHttpHandler> Http();
+
     [Name("Certificates")]
     ValueTask<ICertificatesHandler> Certificates();
 

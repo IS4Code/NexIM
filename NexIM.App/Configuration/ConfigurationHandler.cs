@@ -27,9 +27,10 @@ abstract class BaseHandler : PayloadHandler<EmptyPayloadHandlerContext>
     }
 }
 
-sealed class ConfigurationHandler : BaseHandler, IServerHandler, IDatabaseHandler, ICertificatesHandler, IXmppHandler
+sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, IDatabaseHandler, ICertificatesHandler, IXmppHandler
 {
     public string? SQLiteConnectionString { get; private set; }
+    public bool? HttpListenerIsManaged { get; private set; }
     public XmppServerReceiver XmppReceiver { get; } = new();
     public XmppTcpListener? XmppTcp { get; private set; }
     public XmppWebSocketListener? XmppWebSocket { get; private set; }
@@ -38,6 +39,7 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IDatabaseHandle
     public List<X509Certificate2>? Certificates { get; private set; }
 
     async ValueTask<IDatabaseHandler> IServerHandler.Database() => this;
+    async ValueTask<IHttpHandler> IServerHandler.Http() => this;
     async ValueTask<ICertificatesHandler> IServerHandler.Certificates() => this;
     async ValueTask<IXmppHandler> IServerHandler.Xmpp() => this;
 
@@ -88,6 +90,11 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IDatabaseHandle
     async ValueTask IDatabaseHandler.SQLite(string? configString)
     {
         SQLiteConnectionString = configString ?? "";
+    }
+
+    async ValueTask IHttpHandler.ManagedListener(bool? isManaged)
+    {
+        HttpListenerIsManaged = isManaged ?? true;
     }
 
     async ValueTask<IXmppTcpHandler> IXmppHandler.Tcp()

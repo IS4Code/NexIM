@@ -4,6 +4,10 @@
     <SQLite>Data Source=accounts.db</SQLite>
   </Database>
 
+  <HTTP>
+    <ManagedListener>true</ManagedListener>
+  </HTTP>
+
   <Certificates>
 
     <SelfSigned>
