@@ -25,6 +25,7 @@ public abstract class XmlEncoder :
     IValueXmlEncoder<LanguageTaggedString>,
     IValueXmlEncoder<DateTime>,
     IValueXmlEncoder<DateTimeOffset>,
+    IValueXmlEncoder<TimeSpan>,
     IValueXmlEncoder<DateComponents>,
     IValueXmlEncoder<TimeZoneOffset>,
     IValueXmlEncoder<ValueUri>,
@@ -176,6 +177,11 @@ public abstract class XmlEncoder :
     }
 
     ValueTask IValueXmlEncoder<DateTimeOffset>.Encode(XmlWriter writer, DateTimeOffset value)
+    {
+        return new(writer.WriteStringAsync(XmlConvert.ToString(value)));
+    }
+
+    ValueTask IValueXmlEncoder<TimeSpan>.Encode(XmlWriter writer, TimeSpan value)
     {
         return new(writer.WriteStringAsync(XmlConvert.ToString(value)));
     }

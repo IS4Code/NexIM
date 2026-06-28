@@ -113,6 +113,7 @@ public sealed partial class GrammarGenerator : IIncrementalGenerator
     static readonly HashSet<string> systemTypesWithEncodings = new(StringComparer.Ordinal) {
         typeof(DateTime).FullName,
         typeof(DateTimeOffset).FullName,
+        typeof(TimeSpan).FullName,
         typeof(Uri).FullName,
         typeof(MailAddress).FullName,
         typeof(IReadOnlyList<>).FullName

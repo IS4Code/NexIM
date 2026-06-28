@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net.Mail;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ public abstract class XmlDecoder :
     IValueXmlDecoder<LanguageTaggedString>,
     IValueXmlDecoder<DateTime>,
     IValueXmlDecoder<DateTimeOffset>,
+    IValueXmlDecoder<TimeSpan>,
     IValueXmlDecoder<DateComponents>,
     IValueXmlDecoder<TimeZoneOffset>,
     IValueXmlDecoder<ValueUri>,
@@ -385,6 +387,16 @@ public abstract class XmlDecoder :
     async ValueTask<DateTimeOffset> IValueXmlDecoder<DateTimeOffset>.Decode(XmlReader reader)
     {
         return XmlConvert.ToDateTimeOffset(await reader.ReadContentAsStringAsync());
+    }
+
+    async ValueTask<TimeSpan> IValueXmlDecoder<TimeSpan>.Decode(XmlReader reader)
+    {
+        var content = await reader.ReadContentAsStringAsync();
+        if(content.IndexOf('P') == -1 && TimeSpan.TryParseExact(content, "c", CultureInfo.InvariantCulture, out var timeSpan))
+        {
+            return timeSpan;
+        }
+        return XmlConvert.ToTimeSpan(content);
     }
 
     async ValueTask<DateComponents> IValueXmlDecoder<DateComponents>.Decode(XmlReader reader)

@@ -16,6 +16,7 @@ public abstract class JsonEncoder :
     IValueJsonEncoder<Token<Enum>>,
     IValueJsonEncoder<DateTime>,
     IValueJsonEncoder<DateTimeOffset>,
+    IValueJsonEncoder<TimeSpan>,
     IValueJsonEncoder<DateComponents>,
     IValueJsonEncoder<TimeZoneOffset>,
     IValueJsonEncoder<ValueUri>,
@@ -50,6 +51,11 @@ public abstract class JsonEncoder :
     }
 
     ValueTask IValueJsonEncoder<DateTimeOffset>.Encode(JsonWriter writer, DateTimeOffset value)
+    {
+        return new(writer.WriteValueAsync(XmlConvert.ToString(value)));
+    }
+
+    ValueTask IValueJsonEncoder<TimeSpan>.Encode(JsonWriter writer, TimeSpan value)
     {
         return new(writer.WriteValueAsync(XmlConvert.ToString(value)));
     }
