@@ -14,8 +14,8 @@ public interface IServerHandler : IPayloadHandler
     [Name("HTTP")]
     ValueTask<IHttpHandler> Http();
 
-    [Name("Certificates")]
-    ValueTask<ICertificatesHandler> Certificates();
+    [Name("TLS")]
+    ValueTask<ITlsHandler> Tls();
 
     [Name("XMPP")]
     ValueTask<IXmppHandler> Xmpp();

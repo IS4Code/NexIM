@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,9 +21,10 @@ public class TemporaryString : TemporaryArray<char>
 
     }
 
-    public static new TemporaryString MoveFrom(TemporaryArray<char> original)
+    [return: NotNullIfNotNull(nameof(original))]
+    public static new TemporaryString? MoveFrom(TemporaryArray<char>? original)
     {
-        return new(original);
+        return original is null ? null : new(original);
     }
 }
 
@@ -153,13 +155,15 @@ public class TemporaryUtf8String : TemporaryEncodedString
 
     }
 
-    public static TemporaryUtf8String MoveFrom(TemporaryArray<char> original, ITemporaryArraySource<byte>? byteArraySource = null)
+    [return: NotNullIfNotNull(nameof(original))]
+    public static TemporaryUtf8String? MoveFrom(TemporaryArray<char>? original, ITemporaryArraySource<byte>? byteArraySource = null)
     {
-        return new(byteArraySource, original);
+        return original is null ? null : new(byteArraySource, original);
     }
 
-    public static TemporaryUtf8String MoveFrom(TemporaryEncodedString original)
+    [return: NotNullIfNotNull(nameof(original))]
+    public static TemporaryUtf8String? MoveFrom(TemporaryEncodedString? original)
     {
-        return new(original);
+        return original is null ? null : new(original);
     }
 }

@@ -6,10 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using NexIM.Server;
 using NexIM.Server.Net;
+using NexIM.Server.Security;
 
 namespace NexIM.Metadata;
 
-public partial class WellKnownServices
+public partial class WellKnownServices : ICertificateTarget
 {
     readonly IHttpListener listener;
 
@@ -17,6 +18,8 @@ public partial class WellKnownServices
     public X509Certificate2 Certificate {
         set => listener.Certificate = value;
     }
+
+    IEnumerable<EndPoint> ICertificateTarget.EndPoints => CertificateHelper.PrefixesToEndPoints(Prefixes);
 
     public WellKnownServices()
     {

@@ -67,9 +67,10 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
         }
     }
 
-    public static TemporaryArray<T> MoveFrom(TemporaryArray<T> original)
+    [return: NotNullIfNotNull(nameof(original))]
+    public static TemporaryArray<T>? MoveFrom(TemporaryArray<T>? original)
     {
-        return new(original);
+        return original is null ? null : new(original);
     }
 
     public void Clear()

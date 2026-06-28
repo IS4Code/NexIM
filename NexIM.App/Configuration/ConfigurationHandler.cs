@@ -10,6 +10,7 @@ using NexIM.App.Configuration.Handlers;
 using NexIM.Metadata;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
+using NexIM.Server.Security;
 using NexIM.Xmpp.Server;
 using NexIM.Xmpp.Server.Communication;
 
@@ -27,7 +28,7 @@ abstract class BaseHandler : PayloadHandler<EmptyPayloadHandlerContext>
     }
 }
 
-sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, IDatabaseHandler, ICertificatesHandler, IXmppHandler
+sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, IDatabaseHandler, ITlsHandler, IXmppHandler
 {
     public string? SQLiteConnectionString { get; private set; }
     public bool? HttpListenerIsManaged { get; private set; }
@@ -36,11 +37,12 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
     public XmppWebSocketListener? XmppWebSocket { get; private set; }
     public XmppWebServer? XmppHtml { get; private set; }
     public WellKnownServices? Metadata { get; private set; }
-    public List<X509Certificate2>? Certificates { get; private set; }
+    public CertificateManager? CertificateManager { get; private set; }
+    public List<CertificateSource>? CertificateSources { get; private set; }
 
     async ValueTask<IDatabaseHandler> IServerHandler.Database() => this;
     async ValueTask<IHttpHandler> IServerHandler.Http() => this;
-    async ValueTask<ICertificatesHandler> IServerHandler.Certificates() => this;
+    async ValueTask<ITlsHandler> IServerHandler.Tls() => this;
     async ValueTask<IXmppHandler> IServerHandler.Xmpp() => this;
 
     internal async ValueTask ReadFrom(XmlReader reader)
@@ -52,23 +54,15 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
         }
 
         // Finish configuration
-
-        if(Certificates is { Count: > 0 } certificates)
+        if(CertificateSources is { Count: > 0 } sources)
         {
-            // Link primary certificate to HTTP-based services
-            var certificate = certificates[0];
-            if(XmppHtml != null)
-            {
-                XmppHtml.Certificate = certificate;
-            }
-            if(XmppWebSocket != null)
-            {
-                XmppWebSocket.Certificate = certificate;
-            }
-            if(Metadata != null)
-            {
-                Metadata.Certificate = certificate;
-            }
+            CertificateManager = new(sources);
+
+            // Register certificate-taking services
+            CertificateManager.Register(XmppTcp);
+            CertificateManager.Register(XmppWebSocket);
+            CertificateManager.Register(XmppHtml);
+            CertificateManager.Register(Metadata);
         }
 
         if(XmppHtml != null)
@@ -160,28 +154,114 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
         }
     }
 
-    async ValueTask<ISelfSignedHandler> ICertificatesHandler.SelfSigned()
+    async ValueTask<ICertificateHandler> ITlsHandler.Certificate(Token<CertificateType>? type)
     {
-        return new SelfSignedHandler(Certificates ??= new());
+        var sources = CertificateSources ??= new();
+        return type?.ToEnum() switch {
+            CertificateType.SelfSigned => new SelfSignedHandler(type, sources),
+            CertificateType.File => new FileHandler(type, sources),
+            CertificateType.Store => new StoreHandler(type, sources),
+            CertificateType.Pem => new PemHandler(type, sources),
+            CertificateType.Pkcs12 => new Pkcs12Handler(type, sources),
+            _ => throw new ApplicationException($"Certificate type '{type?.Value}' is not recognized.")
+        };
     }
 
-    sealed class SelfSignedHandler(List<X509Certificate2> certificates) : BaseHandler, ISelfSignedHandler
+    abstract class CertificateHandler(Token<CertificateType>? type, List<CertificateSource> sources) : BaseHandler, ICertificateHandler
+    {
+        TimeSpan? refreshDelay;
+        protected TimeSpan RefreshDelay => refreshDelay ?? TimeSpan.FromDays(1);
+
+        protected void NotSupported(string elementName)
+        {
+            throw new ApplicationException($"The '{elementName}' element is not supported for a certificate of type '{type?.Value}'.");
+        }
+
+        protected T Missing<T>(string elementName)
+        {
+            throw new ApplicationException($"The '{elementName}' element is required for a certificate of type '{type?.Value}'.");
+        }
+
+        public async virtual ValueTask Endpoint(IReadOnlyList<string>? endpoints)
+        {
+            NotSupported("Endpoint");
+        }
+
+        public async virtual ValueTask Issued(TimeSpan? duration)
+        {
+            NotSupported("Issued");
+        }
+
+        public async virtual ValueTask Expires(TimeSpan? duration)
+        {
+            NotSupported("Expires");
+        }
+
+        public async virtual ValueTask SubjectName(string? value)
+        {
+            NotSupported("SubjectName");
+        }
+
+        public async virtual ValueTask StoreName(string? value)
+        {
+            NotSupported("StoreName");
+        }
+
+        public async virtual ValueTask StoreLocation(string? value)
+        {
+            NotSupported("StoreLocation");
+        }
+
+        public async virtual ValueTask CertificatePath(string? path)
+        {
+            NotSupported("CertificatePath");
+        }
+
+        public async virtual ValueTask KeyPath(string? path)
+        {
+            NotSupported("KeyPath");
+        }
+
+        public async virtual ValueTask Password(TemporaryString? password)
+        {
+            NotSupported("Password");
+        }
+
+        public async ValueTask RefreshAfter(TimeSpan? duration)
+        {
+            refreshDelay = duration;
+        }
+
+        protected abstract CertificateSource CreateSource();
+
+        public async override ValueTask DisposeAsync()
+        {
+            sources.Add(CreateSource());
+        }
+    }
+
+    sealed class SelfSignedHandler(Token<CertificateType>? type, List<CertificateSource> sources) : CertificateHandler(type, sources)
     {
         string? subjectName;
-        TimeSpan? expires;
+        TimeSpan? issued, expires;
         HashSet<EndPoint>? endPoints;
 
-        async ValueTask ISelfSignedHandler.SubjectName(string? value)
+        public async override ValueTask SubjectName(string? value)
         {
             subjectName = value;
         }
 
-        async ValueTask ISelfSignedHandler.Expires(TimeSpan? duration)
+        public async override ValueTask Issued(TimeSpan? duration)
+        {
+            issued = duration;
+        }
+
+        public async override ValueTask Expires(TimeSpan? duration)
         {
             expires = duration;
         }
 
-        async ValueTask IServiceHandler.Endpoint(IReadOnlyList<string>? endpoints)
+        public async override ValueTask Endpoint(IReadOnlyList<string>? endpoints)
         {
             foreach(var endpoint in endpoints ?? Array.Empty<string>())
             {
@@ -196,9 +276,126 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
             }
         }
 
-        public async override ValueTask DisposeAsync()
+        protected override CertificateSource CreateSource()
         {
-            certificates.Add(Server.Configuration.GetCertificate(subjectName ?? "", expires, endPoints));
+            return new CertificateSource.SelfSigned(
+                subjectName ?? Missing<string>("SubjectName"),
+                issued ?? TimeSpan.Zero,
+                expires ?? TimeSpan.FromDays(7),
+                endPoints
+            ) {
+                RefreshDelay = RefreshDelay
+            };
+        }
+    }
+
+    sealed class StoreHandler(Token<CertificateType>? type, List<CertificateSource> sources) : CertificateHandler(type, sources)
+    {
+        StoreName? storeName;
+        StoreLocation? storeLocation;
+        string? subjectName;
+
+        public async override ValueTask SubjectName(string? value)
+        {
+            subjectName = value;
+        }
+
+        public async override ValueTask StoreName(string? value)
+        {
+            storeName = Enum.Parse<StoreName>(value ?? "");
+        }
+
+        public async override ValueTask StoreLocation(string? value)
+        {
+            storeLocation = Enum.Parse<StoreLocation>(value ?? "");
+        }
+
+        protected override CertificateSource CreateSource()
+        {
+            return new CertificateSource.FromStore(
+                storeName ?? Missing<StoreName>("StoreName"),
+                storeLocation ?? Missing<StoreLocation>("StoreLocation"),
+                subjectName ?? Missing<string>("SubjectName")
+            ) {
+                RefreshDelay = RefreshDelay
+            };
+        }
+    }
+
+    sealed class FileHandler(Token<CertificateType>? type, List<CertificateSource> sources) : CertificateHandler(type, sources)
+    {
+        string? path;
+
+        public async override ValueTask CertificatePath(string? path)
+        {
+            this.path = path;
+        }
+
+        protected override CertificateSource CreateSource()
+        {
+            return new CertificateSource.FromFile(
+                path ?? Missing<string>("CertificatePath")
+            ) {
+                RefreshDelay = RefreshDelay
+            };
+        }
+    }
+
+    sealed class Pkcs12Handler(Token<CertificateType>? type, List<CertificateSource> sources) : CertificateHandler(type, sources)
+    {
+        string? path;
+        TemporaryString? password;
+
+        public async override ValueTask CertificatePath(string? path)
+        {
+            this.path = path;
+        }
+
+        public async override ValueTask Password(TemporaryString? password)
+        {
+            this.password = TemporaryString.MoveFrom(password);
+        }
+
+        protected override CertificateSource CreateSource()
+        {
+            return new CertificateSource.FromPkcs12File(
+                path ?? Missing<string>("CertificatePath"),
+                password ?? Missing<TemporaryString>("Password")
+            ) {
+                RefreshDelay = RefreshDelay
+            };
+        }
+    }
+
+    sealed class PemHandler(Token<CertificateType>? type, List<CertificateSource> sources) : CertificateHandler(type, sources)
+    {
+        string? path, keyPath;
+        TemporaryString? password;
+
+        public async override ValueTask CertificatePath(string? path)
+        {
+            this.path = path;
+        }
+
+        public async override ValueTask KeyPath(string? path)
+        {
+            keyPath = path;
+        }
+
+        public async override ValueTask Password(TemporaryString? password)
+        {
+            this.password = TemporaryString.MoveFrom(password);
+        }
+
+        protected override CertificateSource CreateSource()
+        {
+            return new CertificateSource.FromPemFile(
+                path ?? Missing<string>("CertificatePath"),
+                keyPath,
+                password
+            ) {
+                RefreshDelay = RefreshDelay
+            };
         }
     }
 

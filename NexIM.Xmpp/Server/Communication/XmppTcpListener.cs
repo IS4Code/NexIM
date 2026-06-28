@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Server;
+using NexIM.Server.Security;
 
 namespace NexIM.Xmpp.Server.Communication;
 
 /// <summary>
 /// Listens to TCP XMPP connections.
 /// </summary>
-public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
+public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>, ICertificateTarget
 {
     protected override bool PrettyOutput => true;
 
@@ -22,6 +24,10 @@ public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
     new XmppServerReceiver Receiver => (XmppServerReceiver)base.Receiver;
 
     public ICollection<IPEndPoint> EndPoints { get; } = new HashSet<IPEndPoint>();
+
+    X509Certificate2? serverCertificate;
+    X509Certificate2 ICertificateTarget.Certificate { set => serverCertificate = value; }
+    IEnumerable<EndPoint> ICertificateTarget.EndPoints => EndPoints;
 
     public XmppTcpListener(XmppServerReceiver receiver) : base(receiver)
     {
@@ -59,7 +65,7 @@ public class XmppTcpListener : XmppServerListener<TcpClient, XmppStreamSession>
 
     protected override ValueTask<XmppStreamSession> CreateSession(TcpClient client, CancellationToken cancellationToken)
     {
-        return new(new XmppTcpSession(Receiver, client.GetStream(), ReaderSettings, WriterSettings, cancellationToken));
+        return new(new XmppTcpSession(Receiver, client.GetStream(), serverCertificate, ReaderSettings, WriterSettings, cancellationToken));
     }
 
     readonly struct TcpListeners(TcpListener[] listeners, bool[] running, Task<TcpClient>[] tasks, CancellationToken cancellationToken) : IDisposable

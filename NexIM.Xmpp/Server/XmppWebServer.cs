@@ -10,11 +10,12 @@ using System.Web;
 using NexIM.Primitives;
 using NexIM.Server;
 using NexIM.Server.Net;
+using NexIM.Server.Security;
 using NexIM.Xmpp.Server.Communication;
 
 namespace NexIM.Xmpp.Server;
 
-public class XmppWebServer
+public class XmppWebServer : ICertificateTarget
 {
     readonly IHttpListener listener;
 
@@ -27,6 +28,8 @@ public class XmppWebServer
     public LanguageCode Language { get; set; } = new("en");
     public string Title { get; set; } = "XMPP Web Portal";
     public string Converse { get; set; } = "https://cdn.conversejs.org/dist/";
+
+    IEnumerable<EndPoint> ICertificateTarget.EndPoints => CertificateHelper.PrefixesToEndPoints(Prefixes);
 
     public XmppWebServer()
     {

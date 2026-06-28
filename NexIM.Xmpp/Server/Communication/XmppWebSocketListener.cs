@@ -12,6 +12,7 @@ using NexIM.Metadata;
 using NexIM.Primitives;
 using NexIM.Server;
 using NexIM.Server.Net;
+using NexIM.Server.Security;
 using NexIM.Xrd.Protocol;
 
 namespace NexIM.Xmpp.Server.Communication;
@@ -19,7 +20,7 @@ namespace NexIM.Xmpp.Server.Communication;
 /// <summary>
 /// Listens to WebSocket XMPP connections.
 /// </summary>
-public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest request, WebSocketContext context), XmppFrameSession>, IMetadataProvider, IMetadataDescriptor
+public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest request, WebSocketContext context), XmppFrameSession>, IMetadataProvider, IMetadataDescriptor, ICertificateTarget
 {
     readonly IHttpListener listener;
 
@@ -31,6 +32,8 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
     protected override ConformanceLevel ConformanceLevel => ConformanceLevel.Fragment;
 
     new XmppServerReceiver Receiver => (XmppServerReceiver)base.Receiver;
+
+    IEnumerable<EndPoint> ICertificateTarget.EndPoints => CertificateHelper.PrefixesToEndPoints(Prefixes);
 
     public XmppWebSocketListener(XmppServerReceiver serverReceiver) : base(serverReceiver)
     {

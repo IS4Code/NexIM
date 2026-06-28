@@ -8,14 +8,14 @@
     <ManagedListener>true</ManagedListener>
   </HTTP>
 
-  <Certificates>
+  <TLS>
 
-    <SelfSigned>
+    <Certificate Type="SelfSigned">
       <SubjectName>CN=localhost</SubjectName>
       <Expires>P7D</Expires>
-    </SelfSigned>
+    </Certificate>
 
-  </Certificates>
+  </TLS>
   
   <XMPP>
   
