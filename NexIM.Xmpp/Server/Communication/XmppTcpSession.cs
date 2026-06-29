@@ -32,7 +32,9 @@ internal sealed class XmppTcpSession(XmppServerReceiver serverReceiver, NetworkS
 
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
     {
+#if DEBUG
         stream = new ConsoleDebuggingStream(stream, RemoteEndPoint);
+#endif
 
         reader = XmlReader.Create(stream, readerSettings);
         writer = XmlWriter.Create(stream, writerSettings);
