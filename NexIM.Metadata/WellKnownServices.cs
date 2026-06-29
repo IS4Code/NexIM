@@ -38,6 +38,11 @@ public partial class WellKnownServices : ICertificateTarget
                 HandleContext(context, cancellationToken);
             }
         }
+        catch(Exception e) when(Configuration.IsNetException(e) && cancellationToken.IsCancellationRequested)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw;
+        }
         finally
         {
             listener.Stop();

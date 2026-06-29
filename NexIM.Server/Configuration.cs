@@ -29,7 +29,7 @@ public class Configuration
 
     public static bool OnUnexpectedException(Exception e)
     {
-        if(e is SocketException or WebSocketException or SpaceWizards.HttpListener.HttpListenerException or System.Net.HttpListenerException or OperationCanceledException)
+        if(IsNetException(e) || e is OperationCanceledException)
         {
             // Connection closed
             return true;
@@ -41,6 +41,11 @@ public class Configuration
         }
         Debugger.Break();
         return true;
+    }
+
+    public static bool IsNetException(Exception e)
+    {
+        return e is SocketException or WebSocketException or SpaceWizards.HttpListener.HttpListenerException or HttpListenerException;
     }
 
     public static IHttpListener CreateHttpListener()

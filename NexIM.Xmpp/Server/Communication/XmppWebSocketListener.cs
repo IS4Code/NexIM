@@ -52,6 +52,11 @@ public class XmppWebSocketListener : XmppServerListener<(IHttpListenerRequest re
                 HandleContext(context, cancellationToken);
             }
         }
+        catch(Exception e) when(Configuration.IsNetException(e) && cancellationToken.IsCancellationRequested)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw;
+        }
         finally
         {
             listener.Stop();
