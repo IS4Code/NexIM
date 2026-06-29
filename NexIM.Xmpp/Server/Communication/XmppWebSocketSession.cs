@@ -16,7 +16,7 @@ namespace NexIM.Xmpp.Server.Communication;
 /// Provides a final <see cref="IXmppSession"/> implementation
 /// that communicates using WebSocket.
 /// </summary>
-internal sealed class XmppWebSocketSession(XmppServerReceiver serverReceiver, IWebSocketRequest request, WebSocketContext context, WebSocketStream wsStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(wsStream)
+internal sealed class XmppWebSocketSession(XmppServerReceiver serverReceiver, IWebSocketRequest request, WebSocketContext context, Tools.WebSocketStream wsStream, XmlReaderSettings readerSettings, XmlWriterSettings writerSettings, CancellationToken cancellationToken) : XmppFrameSession(wsStream)
 {
     public override string DefaultLanguage => "en";
 
@@ -73,9 +73,9 @@ internal sealed class XmppWebSocketSession(XmppServerReceiver serverReceiver, IW
         }
     }
 
-    static WebSocketStream OpenStream(WebSocketContext context)
+    static Tools.WebSocketStream OpenStream(WebSocketContext context)
     {
-        return WebSocketStream.Create(context.WebSocket, WebSocketMessageType.Text, ArrayPool<byte>.Shared);
+        return Tools.WebSocketStream.Create(context.WebSocket, WebSocketMessageType.Text, ArrayPool<byte>.Shared);
     }
 }
 
