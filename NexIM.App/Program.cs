@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using NexIM.App.Configuration;
 using NexIM.Server;
 
-namespace NexIM.Xmpp;
+namespace NexIM.App;
 
 internal class Program
 {
