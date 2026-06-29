@@ -31,7 +31,6 @@ abstract class BaseHandler : PayloadHandler<EmptyPayloadHandlerContext>
 sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, IDatabaseHandler, ITlsHandler, IXmppHandler
 {
     public string? SQLiteConnectionString { get; private set; }
-    public bool? HttpListenerIsManaged { get; private set; }
     public XmppServerReceiver XmppReceiver { get; } = new();
     public XmppTcpListener? XmppTcp { get; private set; }
     public XmppWebSocketListener? XmppWebSocket { get; private set; }
@@ -88,7 +87,7 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
 
     async ValueTask IHttpHandler.ManagedListener(bool? isManaged)
     {
-        HttpListenerIsManaged = isManaged ?? true;
+        Server.Configuration.HttpListenerIsManaged = isManaged ?? true;
     }
 
     async ValueTask<IXmppTcpHandler> IXmppHandler.Tcp()
