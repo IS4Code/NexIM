@@ -11,6 +11,9 @@ public interface IFeaturesHandler : ICapabilitiesHandler
     [Name("auth", "http://jabber.org/features/iq-auth")]
     ValueTask IqAuth();
 
+    [Name("register", "http://jabber.org/features/iq-register")]
+    ValueTask IqRegister();
+
     [Name("starttls", XmppTls)]
     ValueTask<ITlsFeaturesHandler> StartTls();
 

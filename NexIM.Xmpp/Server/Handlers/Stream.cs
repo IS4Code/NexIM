@@ -64,6 +64,12 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
                     }
                 }
 
+                if(session.IsSecure)
+                {
+                    // Can register
+                    await features.IqRegister();
+                }
+
                 if(session.IsSecure && supportsIqAuth)
                 {
                     // Only plaintext is supported for this method
