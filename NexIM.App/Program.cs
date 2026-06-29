@@ -25,6 +25,8 @@ internal class Program
             var asm = typeof(Program).Assembly;
             var ver = asm.GetName().Version ?? new();
             Console.WriteLine($"NexIM v{ver.Major}.{ver.Minor} starting...");
+            Console.WriteLine("Warning: This is a PRERELASE version. Anything is subject to change. Backwards compatibility is not guaranteed.");
+            Console.WriteLine("Please report all bugs at https://github.com/IS4Code/NexIM");
 
             if(args.Length > 0)
             {
@@ -78,10 +80,11 @@ internal class Program
             }
             if(config.Metadata is { } metadataServer)
             {
-                Console.WriteLine("Starting .host-meta service at: " + String.Join(", ", metadataServer.Prefixes));
+                Console.WriteLine("Starting well-known services at: " + String.Join(", ", metadataServer.Prefixes));
                 tasks.Add(metadataServer.RunAsync(cancellationToken));
             }
 
+            Console.WriteLine("Server is up!");
             await Task.WhenAll(tasks);
         }
         catch(Exception e) when(e is OperationCanceledException or ObjectDisposedException && cancellationToken.IsCancellationRequested)
