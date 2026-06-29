@@ -56,16 +56,11 @@ internal abstract class DatabaseContext : DbContext
 #endif
 
         var config = Server.DatabaseConfig;
-        switch(config)
+        if(config == null)
         {
-            case null:
-                throw new NotSupportedException("Database configuration is missing.");
-            case NexDatabase.SQLite:
-                options.UseSqlite(config.ConnectionString);
-                break;
-            default:
-                throw new NotSupportedException($"Unrecognized database type '{config.GetType().Name}'.");
+            throw new NotSupportedException("Database configuration is missing.");
         }
+        config.Use(options);
     }
 
     protected sealed override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

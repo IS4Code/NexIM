@@ -30,7 +30,8 @@ abstract class BaseHandler : PayloadHandler<EmptyPayloadHandlerContext>
 
 sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, IDatabaseHandler, ITlsHandler, IXmppHandler
 {
-    public string? SQLiteConnectionString { get; private set; }
+    public DatabaseType? DatabaseType { get; private set; }
+    public string ConnectionString { get; private set; } = "";
     public XmppServerReceiver XmppReceiver { get; } = new();
     public XmppTcpListener? XmppTcp { get; private set; }
     public XmppWebSocketListener? XmppWebSocket { get; private set; }
@@ -39,7 +40,6 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
     public CertificateManager? CertificateManager { get; private set; }
     public List<CertificateSource>? CertificateSources { get; private set; }
 
-    async ValueTask<IDatabaseHandler> IServerHandler.Database() => this;
     async ValueTask<IHttpHandler> IServerHandler.Http() => this;
     async ValueTask<ITlsHandler> IServerHandler.Tls() => this;
     async ValueTask<IXmppHandler> IServerHandler.Xmpp() => this;
@@ -80,9 +80,15 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
         }
     }
 
-    async ValueTask IDatabaseHandler.SQLite(string? configString)
+    async ValueTask<IDatabaseHandler> IServerHandler.Database(Token<DatabaseType>? type)
     {
-        SQLiteConnectionString = configString ?? "";
+        DatabaseType = type?.ToEnum() ?? throw new ApplicationException($"Database type '{type?.Value}' is not recognized.");
+        return this;
+    }
+
+    async ValueTask IDatabaseHandler.ConnectionString(string? configString)
+    {
+        ConnectionString = configString ?? "";
     }
 
     async ValueTask IHttpHandler.ManagedListener(bool? isManaged)

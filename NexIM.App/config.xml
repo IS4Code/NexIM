@@ -1,8 +1,8 @@
 <Server>
 
-  <Database>
-    <!-- ADO.NET-style connection string for SQLite. -->
-    <SQLite>Data Source=accounts.db</SQLite>
+  <Database Type="SQLite">
+    <!-- ADO.NET-style connection string. -->
+    <ConnectionString>Data Source=accounts.db</ConnectionString>
   </Database>
 
   <HTTP>

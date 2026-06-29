@@ -48,17 +48,34 @@ internal class Program
                 throw new ApplicationException($"Configuration file '{configPath}' {(File.Exists(configPath) ? $"cannot be read ({e.Message})" : "is missing")}.");
             }
 
-            if(config.SQLiteConnectionString is not { } sqlite)
+            var connectionString = config.ConnectionString;
+            const string memorySqlite = "Data Source=:memory:";
+            if(config.DatabaseType is not { } dbType)
             {
-                throw new ApplicationException("Database configuration does not specify type/connection string.");
+                Console.WriteLine("Warning: Database configuration is missing. An in-memory SQLite database will be used.");
+                dbType = DatabaseType.Sqlite;
+                connectionString = memorySqlite;
             }
-            if(String.IsNullOrWhiteSpace(sqlite))
+            else if(String.IsNullOrEmpty(connectionString))
             {
+                if(dbType != DatabaseType.Sqlite)
+                {
+                    throw new ApplicationException($"{dbType.ToToken().Value} connection string is missing.");
+                }
                 Console.WriteLine("Warning: An in-memory SQLite database will be used.");
-                sqlite = "Data Source=:memory:";
+                connectionString = memorySqlite;
             }
-            config.XmppReceiver.Server = new NexServer(new NexDatabase.SQLite {
-                ConnectionString = sqlite
+            config.XmppReceiver.Server = new NexServer(dbType switch {
+                DatabaseType.Sqlite => new NexDatabase.Sqlite {
+                    ConnectionString = connectionString
+                },
+                DatabaseType.MySQL => new NexDatabase.MySQL {
+                    ConnectionString = connectionString
+                },
+                DatabaseType.PostgreSQL => new NexDatabase.PostgreSQL {
+                    ConnectionString = connectionString
+                },
+                _ => throw new ApplicationException($"{dbType.ToToken().Value} database is not supported.")
             });
 
             var tasks = new List<Task>();

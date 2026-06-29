@@ -7,6 +7,19 @@ namespace NexIM.App.Configuration;
 [ComplexType]
 public interface IDatabaseHandler : IPayloadHandler
 {
+    [Name("ConnectionString")]
+    ValueTask ConnectionString(string? configString);
+}
+
+[SimpleType]
+public enum DatabaseType
+{
     [Name("SQLite")]
-    ValueTask SQLite(string? configString);
+    Sqlite,
+
+    [Name("MySQL")]
+    MySQL,
+
+    [Name("PostgreSQL")]
+    PostgreSQL
 }
