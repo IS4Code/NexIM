@@ -1,15 +1,25 @@
 <Server>
 
   <Database>
+    <!-- ADO.NET-style connection string for SQLite. -->
     <SQLite>Data Source=accounts.db</SQLite>
   </Database>
 
   <HTTP>
+    <!-- Set to `false` to use the system HTTP listener on Windows. -->
     <ManagedListener>true</ManagedListener>
   </HTTP>
 
   <TLS>
 
+    <!-- Uncomment to import from PEM format.
+    <Certificate Type="PEM">
+      <CertificatePath>../path.cert</CertificatePath>
+      <KeyPath>../path.key</KeyPath>
+    </Certificate>
+    -->
+
+    <!-- In-memory self-signed certificate (for reverse proxy or testing). -->
     <Certificate Type="SelfSigned">
       <SubjectName>CN=localhost</SubjectName>
       <Expires>P7D</Expires>
@@ -17,17 +27,21 @@
 
   </TLS>
   
+  <!-- Configuration sections for XMPP. Remove any to disable the option. -->
   <XMPP>
   
+    <!-- TCP listener for XMPP streams. -->
     <TCP>
       <Endpoint>0.0.0.0:5222</Endpoint>
     </TCP>
     
+    <!-- WebSocket listener for XMPP frames. -->
     <WebSocket>
       <Endpoint>http://+:800/xmpp/</Endpoint>
       <Endpoint>https://+:4430/xmpp/</Endpoint>
     </WebSocket>
     
+    <!-- Web front-end running on Converse.js. -->
     <HTML>
       <Endpoint>http://+:800/</Endpoint>
       <Endpoint>https://+:4430/</Endpoint>
@@ -38,6 +52,7 @@
     
   </XMPP>
   
+  <!-- Well-known services (host-meta). -->
   <Metadata>
     <Endpoint>http://+:800/.well-known/</Endpoint>
     <Endpoint>https://+:4430/.well-known/</Endpoint>
