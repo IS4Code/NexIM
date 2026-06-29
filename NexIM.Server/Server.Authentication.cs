@@ -67,13 +67,15 @@ partial class NexServer
             return null;
         }
 
-#if DEBUG
         if(await FindIdentity(accountName) is not { Owned: true } identity)
         {
+#if DEBUG
             // Auto-register when not registered already
             return await Register(accountName, password, memoryHandle, new("placeholder@example.org"), new());
-        }
+#else
+            return null;
 #endif
+        }
 
         try
         {
