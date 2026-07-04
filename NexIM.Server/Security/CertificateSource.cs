@@ -95,7 +95,7 @@ public abstract class CertificateSource
         }
     }
 
-    public sealed class FromFile(string certificatePath) : CertificateSource
+    public sealed class FromBinary(string certificatePath) : CertificateSource
     {
         public override X509Certificate2 Load()
         {

@@ -164,7 +164,7 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
         var sources = CertificateSources ??= new();
         return type?.ToEnum() switch {
             CertificateType.SelfSigned => new SelfSignedHandler(type, sources),
-            CertificateType.File => new FileHandler(type, sources),
+            CertificateType.Binary => new BinaryHandler(type, sources),
             CertificateType.Store => new StoreHandler(type, sources),
             CertificateType.Pem => new PemHandler(type, sources),
             CertificateType.Pkcs12 => new Pkcs12Handler(type, sources),
@@ -327,7 +327,7 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
         }
     }
 
-    sealed class FileHandler(Token<CertificateType>? type, List<CertificateSource> sources) : CertificateHandler(type, sources)
+    sealed class BinaryHandler(Token<CertificateType>? type, List<CertificateSource> sources) : CertificateHandler(type, sources)
     {
         string? path;
 
@@ -338,7 +338,7 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
 
         protected override CertificateSource CreateSource()
         {
-            return new CertificateSource.FromFile(
+            return new CertificateSource.FromBinary(
                 path ?? Missing<string>("CertificatePath")
             ) {
                 RefreshDelay = RefreshDelay

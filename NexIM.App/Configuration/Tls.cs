@@ -50,8 +50,8 @@ public enum CertificateType
     [Name("SelfSigned")]
     SelfSigned,
 
-    [Name("File")]
-    File,
+    [Name("Binary")]
+    Binary,
 
     [Name("Store")]
     Store,
