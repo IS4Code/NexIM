@@ -35,4 +35,6 @@ static class Constants
     public const string XOob = "jabber:x:oob";
     public const string IqRegister = "jabber:iq:register";
     public const string VCardTempUpdate = "vcard-temp:x:update";
+    public const string XHtmlIM = "http://jabber.org/protocol/xhtml-im";
+    public const string XHtml = "http://www.w3.org/1999/xhtml";
 }

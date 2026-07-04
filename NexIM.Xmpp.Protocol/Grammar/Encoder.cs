@@ -9,7 +9,11 @@ using NexIM.Primitives.Xml.Handlers;
 
 namespace NexIM.Xmpp.Protocol.Grammar;
 
-public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHandler, IValueXmlEncoder<XmppAddress>, IValueXmlEncoder<XmppResource>
+public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHandler,
+    IValueXmlEncoder<XmppAddress>,
+    IValueXmlEncoder<XmppResource>,
+    IValueXmlEncoder<Number>,
+    IValueXmlEncoder<InlineStyle>
 {
     protected abstract CancellationToken CancellationToken { get; }
     protected abstract ValueTask<Encoder> ForkInner();
@@ -30,6 +34,16 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
     }
 
     async ValueTask IValueXmlEncoder<XmppResource>.Encode(XmlWriter writer, XmppResource value)
+    {
+        await writer.WriteStringAsync(value.ToString());
+    }
+
+    async ValueTask IValueXmlEncoder<Number>.Encode(XmlWriter writer, Number value)
+    {
+        await writer.WriteStringAsync(value.ToString());
+    }
+
+    async ValueTask IValueXmlEncoder<InlineStyle>.Encode(XmlWriter writer, InlineStyle value)
     {
         await writer.WriteStringAsync(value.ToString());
     }

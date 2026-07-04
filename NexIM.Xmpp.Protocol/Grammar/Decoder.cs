@@ -6,7 +6,11 @@ using NexIM.Primitives.Xml.Handlers;
 
 namespace NexIM.Xmpp.Protocol.Grammar;
 
-public abstract partial class Decoder : XmlDecoder, IValueXmlDecoder<XmppAddress>, IValueXmlDecoder<XmppResource>
+public abstract partial class Decoder : XmlDecoder,
+    IValueXmlDecoder<XmppAddress>,
+    IValueXmlDecoder<XmppResource>,
+    IValueXmlDecoder<Number>,
+    IValueXmlDecoder<InlineStyle>
 {
     public readonly record struct Result(bool Success, IPayloadHandler? InnerHandler);
 
@@ -32,6 +36,18 @@ public abstract partial class Decoder : XmlDecoder, IValueXmlDecoder<XmppAddress
     {
         var token = await DecodeTokenAsync(reader);
         return XmppResource.Parse(token.AsMemory(), reader.NameTable);
+    }
+
+    async ValueTask<Number> IValueXmlDecoder<Number>.Decode(XmlReader reader)
+    {
+        var value = await reader.ReadContentAsStringAsync();
+        return new(value);
+    }
+
+    async ValueTask<InlineStyle> IValueXmlDecoder<InlineStyle>.Decode(XmlReader reader)
+    {
+        var value = await reader.ReadContentAsStringAsync();
+        return new(value);
     }
 }
 
