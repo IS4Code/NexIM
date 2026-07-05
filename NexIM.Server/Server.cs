@@ -15,6 +15,11 @@ public sealed partial class NexServer
         Authentication = default;
         Delivery = default;
     }
+
+    public void Close()
+    {
+        DatabaseClose();
+    }
 }
 
 public abstract record NexDatabase

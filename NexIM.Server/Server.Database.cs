@@ -30,6 +30,12 @@ partial class NexServer
         }
     }
 
+    private void DatabaseClose()
+    {
+        globalDatabase.Database.CloseConnection();
+        globalDatabase.Dispose();
+    }
+
     /// <summary>
     /// Performs a lookup for a previously uploaded file by its identifier.
     /// </summary>
