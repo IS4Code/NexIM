@@ -1,0 +1,5 @@
+﻿<iq type="set" id="session_1">
+<session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>
+</iq>
+##
+<iq type="result" from="localhost" to="test@localhost/res" id="session_1" />

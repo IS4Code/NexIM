@@ -116,7 +116,7 @@ public abstract class TestHelper
         testCts = new();
 
         // Provide auth message
-        Send("Prologue1.txt");
+        Send("Prologue1");
 
         // Create session over the two channels
         session = new(
@@ -136,13 +136,13 @@ public abstract class TestHelper
         sessionTask = session.Run(handler, testCts.Token).AsTask();
 
         // Check auth response
-        Receive("Prologue1.txt");
+        Receive("Prologue1");
 
         // Bind
-        Send("Prologue2.txt");
+        Send("Prologue2");
 
         // Check bound
-        Receive("Prologue2.txt");
+        Receive("Prologue2");
 
         // Ignore anything else
         FlushReceive();
@@ -176,7 +176,7 @@ public abstract class TestHelper
 
     private static IEnumerable<string> LoadResource(string name, bool isInput)
     {
-        using var stream = LoadResourceStream(name);
+        using var stream = LoadResourceStream(name + ".txt");
         using var reader = new StreamReader(stream!);
         while(reader.ReadLine() is { } line)
         {
@@ -205,7 +205,7 @@ public abstract class TestHelper
         }
     }
 
-    void Send(string file)
+    protected void Send(string file)
     {
         using(var writer = new StreamWriter(clientToServerPipe.Writer.AsStream(leaveOpen: true)))
         {
@@ -217,7 +217,7 @@ public abstract class TestHelper
         }
     }
 
-    void Receive(string file)
+    protected void Receive(string file)
     {
         if(sessionTask.Wait(5))
         {
@@ -232,13 +232,19 @@ public abstract class TestHelper
         }
     }
 
-    void FlushReceive()
+    protected void FlushReceive()
     {
         var reader = serverToClientPipe.Reader;
         while(reader.TryRead(out _))
         {
             // Move past all remaining data
         }
+    }
+
+    protected void FinishReceive()
+    {
+        var reader = serverToClientPipe.Reader;
+        Assert.IsFalse(reader.TryRead(out _), "Unexpected data remaining in the stream.");
     }
 
     private static void AssertEqualXml(XmlReader expected, XmlReader actual, Func<bool> isFinished)
