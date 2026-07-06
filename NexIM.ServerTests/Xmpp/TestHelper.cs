@@ -174,7 +174,7 @@ public abstract class TestHelper
             ?? throw new FileNotFoundException();
     }
 
-    private static IEnumerable<string> LoadResource(string name, bool isInput)
+    public static IEnumerable<string> LoadResource(string name, bool isInput)
     {
         using var stream = LoadResourceStream(name + ".txt");
         using var reader = new StreamReader(stream!);

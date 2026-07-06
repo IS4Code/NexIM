@@ -16,6 +16,10 @@ public sealed class ConsoleDebuggingStream : NonSeekableStream
 
     StreamReader? readReader, writeReader;
 
+    public string SendIndicator { get; set; } = "<-";
+    public string ReceiveIndicator { get; set; } = "->";
+    public string IndicatorSeparator { get; set; } = " ";
+
     public ConsoleDebuggingStream(Stream inner, ConsoleColor color)
     {
         this.inner = inner;
@@ -135,18 +139,18 @@ public sealed class ConsoleDebuggingStream : NonSeekableStream
                 {
                     Console.BackgroundColor = bg;
                     Console.ForegroundColor = color;
-                    Console.Write("<-");
+                    Console.Write(SendIndicator);
                 }
                 else
                 {
                     Console.BackgroundColor = color;
                     Console.ForegroundColor = bg;
-                    Console.Write("->");
+                    Console.Write(ReceiveIndicator);
                     Console.BackgroundColor = bg;
                     Console.ForegroundColor = color;
                 }
 
-                Console.Write(" ");
+                Console.Write(IndicatorSeparator);
                 Console.WriteLine(line);
             }
             finally
