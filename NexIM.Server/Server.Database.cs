@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mail;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
@@ -22,6 +24,11 @@ partial class NexServer
     readonly GlobalContext globalDatabase;
     // TODO Possibly pool these contexts to establish multiple connections when the lock becomes a bottleneck
 
+    /// <summary>
+    /// Used to keep track of per-account contexts before collection.
+    /// </summary>
+    readonly ConditionalWeakTable<AccountContext, object?> accountContexts = new();
+
     private ValueTuple Database {
         [MemberNotNull(nameof(globalDatabase))]
         init {
@@ -32,8 +39,19 @@ partial class NexServer
 
     private void DatabaseClose()
     {
-        globalDatabase.Database.CloseConnection();
         globalDatabase.Dispose();
+
+        foreach(var pair in accountContexts)
+        {
+            var context = pair.Key;
+            context.Dispose();
+        }
+
+        if(DatabaseConfig is NexDatabase.Sqlite)
+        {
+            // Clear pools for past connections
+            SqliteConnection.ClearAllPools();
+        }
     }
 
     /// <summary>
@@ -272,6 +290,7 @@ partial class NexServer
     {
         // Prepare an isolated context for the account
         var context = new AccountContext(this);
+        accountContexts.Add(context, null);
 
         return await context.FullAccounts.FirstOrDefaultAsync(x => x.Identifier == identityGuid, cancellationToken);
     }
@@ -280,6 +299,7 @@ partial class NexServer
     {
         // Work in an isolated context to ensure everything happens as a transaction
         var context = new AccountContext(this);
+        accountContexts.Add(context, null);
 
         // Identity from the timestamp
         var identity = new Identity(IdentifierHelper.CreateGuid(out var timestamp), name);

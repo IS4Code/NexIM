@@ -92,14 +92,7 @@ public abstract class TestHelper
         }
 
         receiver.Server.Close();
-        try
-        {
-            File.Delete(dbPath);
-        }
-        catch
-        {
-
-        }
+        File.Delete(dbPath);
     }
 
     XmppManualSession session = null!;
