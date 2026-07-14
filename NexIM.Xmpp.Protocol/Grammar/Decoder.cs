@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Xml;
+using NexIM.Primitives;
 using NexIM.Primitives.Xml;
 using NexIM.Primitives.Xml.Handlers;
 
