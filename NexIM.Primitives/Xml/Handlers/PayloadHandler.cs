@@ -9,6 +9,16 @@ public interface IPayloadHandler : IAsyncDisposable
     ValueTask Other(XmlReader payloadReader);
 }
 
+public interface IMixedPayloadHandler : IPayloadHandler
+{
+    ValueTask TextContent(XmlReader textReader);
+}
+
+public interface ICustomPayloadHandler : IPayloadHandler
+{
+    ValueTask<IPayloadHandler> CustomContent(XmlReader attributesReader);
+}
+
 public interface IPayloadHandler<TContext> : IPayloadHandler where TContext : IPayloadHandlerContext
 {
     TContext? Context { get; init; }

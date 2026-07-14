@@ -166,8 +166,25 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         }
     }
 
-    private static async ValueTask ReadUnknown(IPayloadHandler handler, XmlReader reader)
+    protected async ValueTask ReadText(XmlReader reader)
     {
+        if(handlers.TryPeek(out var top) && top is IMixedPayloadHandler handler)
+        {
+            // The handler is capable of accepting mixed text content
+            await handler.TextContent(reader);
+        }
+    }
+
+    private async ValueTask ReadUnknown(IPayloadHandler handler, XmlReader reader)
+    {
+        if(handler is ICustomPayloadHandler customHandler)
+        {
+            // The handler is capable of accepting arbitrary tags
+            bool isEmpty = reader.IsEmptyElement;
+            await EnterHandler(await customHandler.CustomContent(reader), isEmpty);
+            return;
+        }
+
         using var subtreeReader = reader.ReadSubtree();
         // The reader is deliberately not positioned at an element because it was already decoded
         await handler.Other(subtreeReader);
