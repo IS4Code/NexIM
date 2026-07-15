@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,9 +97,44 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IMixedPaylo
         await writer.WriteStringAsync(value.ToString());
     }
 
-    async ValueTask IValueXmlEncoder<InlineStyle>.Encode(XmlWriter writer, InlineStyle value)
+    ValueTask IValueXmlEncoder<InlineStyle>.Encode(XmlWriter writer, InlineStyle value)
     {
-        await writer.WriteStringAsync(value.ToString());
+        return value.WriteToAsync(new XmlWriterFormatter(writer));
+    }
+
+    readonly struct XmlWriterFormatter(XmlWriter writer) : InlineStyle.IFormatter
+    {
+        static readonly ConcurrentDictionary<string, string> nameCacheFirst = new();
+        static readonly ConcurrentDictionary<string, string> nameCacheMiddle = new();
+
+        static readonly Func<string, string> nameFirst = n => $"{n}:";
+        static readonly Func<string, string> nameMiddle = n => $";{n}:";
+
+        public void WriteDeclaration(string name, string value, int index)
+        {
+            if(index > 0)
+            {
+                writer.WriteString(nameCacheMiddle.GetOrAdd(name, nameMiddle));
+            }
+            else
+            {
+                writer.WriteString(nameCacheFirst.GetOrAdd(name, nameFirst));
+            }
+            writer.WriteString(value);
+        }
+
+        public async ValueTask WriteDeclarationAsync(string name, string value, int index)
+        {
+            if(index > 0)
+            {
+                await writer.WriteStringAsync(nameCacheMiddle.GetOrAdd(name, nameMiddle));
+            }
+            else
+            {
+                await writer.WriteStringAsync(nameCacheFirst.GetOrAdd(name, nameFirst));
+            }
+            await writer.WriteStringAsync(value);
+        }
     }
 
     public virtual ValueTask DisposeAsync()

@@ -2,8 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using ExCSS;
 using Microsoft.Extensions.ObjectPool;
+using Newtonsoft.Json.Linq;
 
 namespace NexIM.Xmpp.Protocol.Grammar;
 
@@ -68,9 +71,56 @@ public readonly struct InlineStyle : IDisposable, IReadOnlyDictionary<string, st
         this.declarations = declaration;
     }
 
+    public void WriteTo<TFormatter>(TFormatter formatter) where TFormatter : struct, IFormatter
+    {
+        int index = 0;
+        foreach(var prop in properties)
+        {
+            var (original, value) = (prop.Original, prop.Value);
+            formatter.WriteDeclaration(prop.Name, value.Length < original.Length ? value : original, index++);
+        }
+    }
+
+    public async ValueTask WriteToAsync<TFormatter>(TFormatter formatter) where TFormatter : struct, IFormatter
+    {
+        int index = 0;
+        foreach(var prop in properties)
+        {
+            var (original, value) = (prop.Original, prop.Value);
+            await formatter.WriteDeclarationAsync(prop.Name, value.Length < original.Length ? value : original, index++);
+        }
+    }
+
     public override string ToString()
     {
-        return declarations?.CssText ?? "";
+        if(declarations is not { Length: > 0 })
+        {
+            return "";
+        }
+
+        var sb = new StringBuilder();
+        WriteTo(new StringBuilderFormatter(sb));
+        return sb.ToString();
+    }
+
+    readonly struct StringBuilderFormatter(StringBuilder sb) : IFormatter
+    {
+        public void WriteDeclaration(string name, string value, int index)
+        {
+            if(index > 0)
+            {
+                sb.Append(';');
+            }
+            sb.Append(name);
+            sb.Append(':');
+            sb.Append(value);
+        }
+
+        public ValueTask WriteDeclarationAsync(string name, string value, int index)
+        {
+            WriteDeclaration(name, value, index);
+            return default;
+        }
     }
 
     public void Dispose()
@@ -142,5 +192,11 @@ public readonly struct InlineStyle : IDisposable, IReadOnlyDictionary<string, st
             obj.Clear();
             return true;
         }
+    }
+
+    public interface IFormatter
+    {
+        void WriteDeclaration(string name, string value, int index);
+        ValueTask WriteDeclarationAsync(string name, string value, int index);
     }
 }
