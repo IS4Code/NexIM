@@ -14,6 +14,11 @@ public readonly struct ValueUri : IEquatable<ValueUri>
         _uri = value;
     }
 
+    public ValueUri(string value) : this(new Uri(value, UriKind.RelativeOrAbsolute))
+    {
+        // TODO Should not parse
+    }
+
     public static ValueUri Parse(string str)
     {
         return new(new Uri(str, UriKind.RelativeOrAbsolute));

@@ -17,7 +17,7 @@ public interface IXHtmlHandler : IPayloadHandler
 public interface IXHtmlContentHandler : IPayloadHandler
 {
     [Name("a")]
-    ValueTask<IXHtmlContentHandler> Anchor([Name("href")] ValueUri? href, [Name("type")] string? type, [Name("style")] InlineStyle? style);
+    ValueTask<IXHtmlContentHandler> Anchor([Name("href")] ValueUri? href, [Name("style")] InlineStyle? style);
 
     [Name("blockquote")]
     ValueTask<IXHtmlContentHandler> BlockQuote([Name("style")] InlineStyle? style);
@@ -58,13 +58,22 @@ public interface IXHtmlContentHandler : IPayloadHandler
     ValueTask<IXHtmlContentHandler> Code([Name("style")] InlineStyle? style);
 
     [Name("pre")]
-    ValueTask<IXHtmlContentHandler> CodeBlock([Name("style")] InlineStyle? style);
+    ValueTask<IXHtmlContentHandler> BlockCode([Name("style")] InlineStyle? style);
 
     [Name("ins")]
     ValueTask<IXHtmlContentHandler> Inserted([Name("style")] InlineStyle? style);
 
     [Name("del")]
     ValueTask<IXHtmlContentHandler> Deleted([Name("style")] InlineStyle? style);
+
+    [Name("sub")]
+    ValueTask<IXHtmlContentHandler> Subscript([Name("style")] InlineStyle? style);
+
+    [Name("sup")]
+    ValueTask<IXHtmlContentHandler> Superscript([Name("style")] InlineStyle? style);
+
+    [Name("q")]
+    ValueTask<IXHtmlContentHandler> Quote([Name("style")] InlineStyle? style);
 
     [Name("h1")]
     ValueTask<IXHtmlContentHandler> Heading1([Name("style")] InlineStyle? style);

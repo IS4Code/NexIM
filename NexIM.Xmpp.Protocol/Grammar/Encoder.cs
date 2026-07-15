@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Buffers;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -9,7 +11,7 @@ using NexIM.Primitives.Xml.Handlers;
 
 namespace NexIM.Xmpp.Protocol.Grammar;
 
-public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHandler,
+public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IMixedPayloadHandler, IStreamHandler,
     IValueXmlEncoder<XmppAddress>,
     IValueXmlEncoder<XmppResource>,
     IValueXmlEncoder<Number>,
@@ -26,6 +28,57 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IStreamHand
         // with the parent, however this does not happen directly
         // in a stanza, because stanza language is always replicated.
         await Writer.WriteNodeWithLanguageAsync(payloadReader, false);
+    }
+
+    async ValueTask IMixedPayloadHandler.TextContent(XmlReader textReader)
+    {
+        var pool = ArrayPool<char>.Shared;
+        var array = pool.Rent(16);
+        try
+        {
+            int read;
+            while((read = await textReader.ReadValueChunkAsync(array, 0, array.Length)) != 0)
+            {
+                // Write chunk
+                await Writer.WriteCharsAsync(array, 0, read);
+            }
+        }
+        finally
+        {
+            pool.Return(array);
+        }
+    }
+
+    async ValueTask IMixedPayloadHandler.TextContent(ReadOnlyMemory<char> text)
+    {
+        if(text.Length == 0)
+        {
+            return;
+        }
+
+        if(MemoryMarshal.TryGetArray(text, out var segment))
+        {
+            await Writer.WriteCharsAsync(segment.Array!, segment.Offset, segment.Count);
+            return;
+        }
+        if(MemoryMarshal.TryGetString(text, out var str, out var start, out var length) && start == 0 && length == str.Length)
+        {
+            await Writer.WriteStringAsync(str);
+            return;
+        }
+
+        length = text.Length;
+        var pool = ArrayPool<char>.Shared;
+        var array = pool.Rent(length);
+        try
+        {
+            text.CopyTo(array.AsMemory());
+            await Writer.WriteCharsAsync(array, 0, length);
+        }
+        finally
+        {
+            pool.Return(array);
+        }
     }
 
     async ValueTask IValueXmlEncoder<XmppAddress>.Encode(XmlWriter writer, XmppAddress value)

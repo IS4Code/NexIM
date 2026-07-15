@@ -28,6 +28,9 @@ public interface IMessageHandler : IStanzaHandler, IPresentationHandler, IDelive
     [Name("thread")]
     ValueTask Thread(string? identifier, [Name("parent")] string? parent);
 
+    [Name("html", XHtmlIM)]
+    ValueTask<IXHtmlHandler> Html();
+
     [Name("active", ChatStates)] ValueTask Active();
     [Name("inactive", ChatStates)] ValueTask Inactive();
     [Name("composing", ChatStates)] ValueTask Composing();

@@ -12,6 +12,7 @@ public interface IPayloadHandler : IAsyncDisposable
 public interface IMixedPayloadHandler : IPayloadHandler
 {
     ValueTask TextContent(XmlReader textReader);
+    ValueTask TextContent(ReadOnlyMemory<char> text);
 }
 
 public interface ICustomPayloadHandler : IPayloadHandler

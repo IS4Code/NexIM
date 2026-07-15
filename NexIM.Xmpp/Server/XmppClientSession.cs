@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives;
+using NexIM.Primitives.Text;
 using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server;
 using NexIM.Server.Accounts;
@@ -67,12 +68,29 @@ public class XmppClientSession : ClientSession
 
         await output.SubjectLocalizedNotNull(data.Subject);
 
+        bool hasFormatted = false;
         foreach(var ((format, language), body) in data.Body.Data)
         {
-            if(format is MessageFormat.Plain)
+            switch(format)
             {
                 // TODO Other formats
-                await output.Body(new((string)body, language));
+                case MessageFormat.Plain:
+                    await output.Body(new((string)body, language));
+                    break;
+                case MessageFormat.Formatted:
+                    hasFormatted = true;
+                    break;
+            }
+        }
+        if(hasFormatted)
+        {
+            await using var html = await output.Html();
+            foreach(var ((format, language), body) in data.Body.Data)
+            {
+                if(format == MessageFormat.Formatted)
+                {
+                    await XHtmlFormatter.WriteTo((StructuredString)body, html, language == evnt.Origin.TransactionLanguage ? null : language);
+                }
             }
         }
 

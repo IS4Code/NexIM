@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives.Events;
 using NexIM.Primitives.Xml;
@@ -7,7 +9,7 @@ using NexIM.Primitives.Xml.Handlers;
 namespace NexIM.Xmpp.Protocol.Handlers;
 
 /// <inheritdoc/>
-public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>, IPayloadHandler, IStreamHandler, IEventExtension where THandler : IPayloadHandler
+public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>, IPayloadHandler, IMixedPayloadHandler, IStreamHandler, IEventExtension where THandler : IPayloadHandler
 {
     EventExtensionType IEventExtension.Type => EventExtensionType.Xmpp;
 
@@ -47,6 +49,23 @@ public partial class CapturingHandler<THandler> : BaseCapturingHandler<THandler>
             await inner.Replay(handler);
         });
         return new(inner);
+    }
+
+    async ValueTask IMixedPayloadHandler.TextContent(XmlReader textReader)
+    {
+        var text = await textReader.GetValueAsync();
+        Capture<IMixedPayloadHandler>(h => h.TextContent(text.AsMemory()));
+    }
+
+    ValueTask IMixedPayloadHandler.TextContent(ReadOnlyMemory<char> text)
+    {
+        if(!MemoryMarshal.TryGetString(text, out _, out _, out _))
+        {
+            // Preserve
+            text = text.ToString().AsMemory();
+        }
+        Capture<IMixedPayloadHandler>(h => h.TextContent(text));
+        return default;
     }
 
     async ValueTask IPayloadHandler.Other(XmlReader payloadReader)

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NexIM.Primitives;
+using NexIM.Primitives.Text;
 using NexIM.Primitives.Xml.Handlers;
 using NexIM.Server.Events;
 using NexIM.Tools;
@@ -16,6 +18,7 @@ namespace NexIM.Xmpp.Server.Handlers;
 internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageHandler>, EmptyDisposable, ICommandContext>, ICommandHandler
 {
     LocalizedString.Builder subjectBuilder, bodyBuilder;
+    Dictionary<LanguageCode, StructuredString>? htmlBodies;
     string? nick;
     (string? identifier, string? parent)? thread;
     ConversationState? state;
@@ -46,6 +49,13 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     protected async sealed override ValueTask OnNickname(string? text)
     {
         this.SetOnce(ref nick, text);
+    }
+
+    protected async override ValueTask<IXHtmlHandler> OnHtml()
+    {
+        // TODO Expose language through XmlReader
+        var language = this.GetStanza().Language ?? default;
+        return new XHtmlParser<ICommandContext>(language, this.SetOnce(ref htmlBodies, new())) { Context = Context };
     }
 
     protected async sealed override ValueTask OnDelay(DateTime? timestamp, XmppResource? from, LanguageTaggedString? reason)
@@ -172,8 +182,15 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
         {
             foreach(var body in bodyString)
             {
-                // TODO XHTML
                 content[(MessageFormat.Plain, body.Language)] = body.Value;
+            }
+        }
+        if(this.htmlBodies is { } htmlBodies)
+        {
+            // TODO Unify with text bodies
+            foreach(var body in htmlBodies)
+            {
+                content[(MessageFormat.Formatted, body.Key)] = body.Value;
             }
         }
 

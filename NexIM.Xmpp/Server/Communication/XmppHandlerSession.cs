@@ -12,6 +12,7 @@ using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Grammar;
 using NexIM.Xmpp.Protocol.Handlers;
 using NexIM.Xmpp.Server.Handlers;
+using NexIM.Xmpp.Tools;
 
 namespace NexIM.Xmpp.Server.Communication;
 
@@ -33,7 +34,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
     IXmppSession ICommandContext.Session => this;
 
     IXmppReceivingHandler mainHandler = NullHandler.Instance;
-    readonly PayloadHandlers handlers = new();
+    readonly PayloadHandlers<IPayloadHandler> handlers = new();
     readonly List<Event> eventsToSend = new();
 
     StanzaKind? lastStanzaKind;
@@ -195,13 +196,9 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
         }
     }
 
-    protected async ValueTask ExitPayload()
+    protected ValueTask ExitPayload()
     {
-        if(!handlers.TryPop(out var top))
-        {
-            return;
-        }
-        await top.DisposeAsync();
+        return handlers.PopDisposeAsync();
     }
 
     ValueTask EnterHandler(IPayloadHandler? handler, bool isEmpty)
@@ -375,14 +372,7 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
     void AbortCommand()
     {
         int count = handlers.Count;
-        while(handlers.TryPop(out var top))
-        {
-            if(top is IDisposable disposable)
-            {
-                // Aborting cleanup
-                disposable.Dispose();
-            }
-        }
+        handlers.PopDisposeAll();
 
         // Created events are discarded
         eventsToSend.Clear();
@@ -507,29 +497,6 @@ public abstract class XmppHandlerSession : XmppXmlSession, ICommandContext
             default:
                 xmppException = null;
                 return false;
-        }
-    }
-
-    sealed class PayloadHandlers : Stack<IPayloadHandler>, IDisposable
-    {
-        public THandler Get<THandler>() where THandler : IPayloadHandler
-        {
-            if(!this.TryPeek(out var top) || top is not THandler handler)
-            {
-                throw new NotSupportedException("The current payload handler does not support this element.");
-            }
-            return handler;
-        }
-
-        public void Dispose()
-        {
-            while(this.TryPop(out var top))
-            {
-                if(top is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-            }
         }
     }
 }

@@ -67,7 +67,7 @@ public readonly partial struct StructuredString
 
     public enum InstructionCommand : byte
     {
-        Zero = 0,
+        None = 0,
         NewBody = 1,
         MePlaceholder = 2,
 

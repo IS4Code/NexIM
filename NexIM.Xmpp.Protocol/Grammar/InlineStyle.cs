@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using ExCSS;
@@ -6,17 +7,21 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace NexIM.Xmpp.Protocol.Grammar;
 
-public readonly struct InlineStyle : IDisposable
+public readonly struct InlineStyle : IDisposable, IReadOnlyDictionary<string, string>
 {
     static readonly StylesheetParser parser = new(tolerateInvalidValues: true);
 
     static readonly DefaultObjectPool<StyleDeclaration> declarationPool = new(DeclarationPoolPolicy.Instance, DeclarationPoolPolicy.BatchSize * 2);
 
     readonly StyleDeclaration? declarations;
+    IEnumerable<Property> properties => declarations?.Declarations ?? Array.Empty<Property>();
 
-    public IEnumerable<KeyValuePair<string, string>> Properties =>
-        (declarations?.Declarations ?? Array.Empty<Property>())
-        .Select(d => new KeyValuePair<string, string>(d.Name, d.Value));
+    public string this[string key] => declarations?[key] ?? "";
+
+    public IEnumerable<string> Keys => properties.Select(static p => p.Name);
+    public IEnumerable<string> Values => properties.Select(static p => p.Value);
+
+    public int Count => declarations?.Length ?? 0;
 
     public InlineStyle(string style)
     {
@@ -24,18 +29,14 @@ public readonly struct InlineStyle : IDisposable
 
         try
         {
-            // Parse
+            // Try parse
             declaration.CssText = style;
         }
-        catch when(Return())
+        catch
         {
-            // Return back on error
-            throw;
-        }
-        bool Return()
-        {
+            // Return on exception
             declarationPool.Return(declaration);
-            return false;
+            return;
         }
 
         this.declarations = declaration;
@@ -78,6 +79,27 @@ public readonly struct InlineStyle : IDisposable
         {
             declarationPool.Return(declarations);
         }
+    }
+
+    public bool ContainsKey(string key)
+    {
+        return !String.IsNullOrEmpty(declarations?[key]);
+    }
+
+    public bool TryGetValue(string key, out string value)
+    {
+        value = declarations?[key] ?? "";
+        return !String.IsNullOrEmpty(value);
+    }
+
+    public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+    {
+        return properties.Select(static p => new KeyValuePair<string, string>(p.Name, p.Value)).GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
     }
 
     sealed class DeclarationPoolPolicy : IPooledObjectPolicy<StyleDeclaration>
