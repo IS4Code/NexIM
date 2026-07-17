@@ -42,6 +42,42 @@ public readonly partial struct StructuredString
         return hash.ToHashCode();
     }
 
+    public static StructuredString Concat(StructuredString a, StructuredString b)
+    {
+        // Concatenate instructions
+        var combinedInstructions = new byte[a.RawInstructions.Count + b.RawInstructions.Count];
+        Copy(a.RawInstructions, combinedInstructions, 0);
+        Copy(b.RawInstructions, combinedInstructions, a.RawInstructions.Count);
+
+        static void Copy<T>(IReadOnlyList<T> source, T[] destination, int index)
+        {
+            if(source is IList<T> list)
+            {
+                list.CopyTo(destination, index);
+                return;
+            }
+            int count = source.Count;
+            for(int i = 0; i < count; i++)
+            {
+                destination[index++] = source[i];
+            }
+        }
+
+        foreach(var instruction in b.Instructions)
+        {
+            if(instruction is { Command: InstructionCommand.NewBody })
+            {
+                // Second string is a new body, separate with NUL
+                return new(a.Content + "\0" + b.Content, combinedInstructions);
+            }
+            break;
+        }
+        // Concatenate normally
+        return new(a.Content + b.Content, combinedInstructions);
+    }
+
+    public static StructuredString operator +(StructuredString a, StructuredString b) => Concat(a, b);
+
     /// <summary>
     /// Stores information about a structured formatting or styling instruction for text.
     /// If multiple properties are set, they are evaluated according the order of
@@ -60,6 +96,9 @@ public readonly partial struct StructuredString
         StructuredStyle? Style = null,
         Number? Width = null,
         Number? Height = null,
+        int Level = 0,
+        LinkNamespace Namespace = LinkNamespace.Default,
+        bool Reversed = false,
         int AdvanceBy = 0,
         bool CopyCharacters = false,
         int CloseContexts = 0
@@ -71,12 +110,8 @@ public readonly partial struct StructuredString
         NewBody = 1,
         MePlaceholder = 2,
 
-        Heading1 = 4,
-        Heading2,
-        Heading3,
-        Heading4,
-        Heading5,
-        Heading6,
+        Heading = 6,
+        Division,
         Paragraph,
         Span,
         Emphasis,
@@ -92,17 +127,20 @@ public readonly partial struct StructuredString
         BlockCode,
         OrderedList,
         UnorderedList,
-        ListItem = 25,
+        ListItem = 23,
 
-        ImageSrcFirst = 26,
-        ImageAltFirst = 27,
-        AnchorHrefFirst = 28,
-        AnchorContentFirst = 29,
+        Image = 26,
+        Link = 27,
 
         /// <remarks>
         /// Can reuse the code for pop because breaks are not styled.
         /// </remarks>
         Break = 31
+    }
+
+    public enum LinkNamespace : byte
+    {
+        Default
     }
 }
 

@@ -79,10 +79,19 @@ internal static class XHtmlFormatter
                         handlers.Push(top = NullHandler.Instance);
                         break;
 
-                    case InstructionCommand.ImageSrcFirst:
+                    case InstructionCommand.Image:
                     {
-                        var src = ReadString();
-                        var alt = ReadString();
+                        string? src, alt;
+                        if(current.Reversed)
+                        {
+                            alt = ReadString();
+                            src = ReadString();
+                        }
+                        else
+                        {
+                            src = ReadString();
+                            alt = ReadString();
+                        }
                         await using(var img = await top.Image(src != null ? new(src) : null, current.Width, current.Height, alt, style))
                         {
                             // Empty
@@ -90,37 +99,27 @@ internal static class XHtmlFormatter
                     }
                     break;
 
-                    case InstructionCommand.ImageAltFirst:
+                    case InstructionCommand.Link:
                     {
-                        var alt = ReadString();
-                        var src = ReadString();
-                        await using(var img = await top.Image(src != null ? new(src) : null, current.Width, current.Height, alt, style))
+                        if(current.Reversed)
                         {
-                            // Empty
+                            // Content must be captured first
+                            var capture = new CapturingHandler<IXHtmlContentHandler>();
+
+                            handlers.Push(top = new DelegatingXHtmlContentHandler<IXHtmlContentHandler, ActionDisposable, EmptyPayloadHandlerContext>(capture, new(async () => {
+                                // Content popped
+                                var href = ReadString();
+
+                                // Replay content
+                                await using var anchor = await handlers.Peek().Anchor(href != null ? new(href) : null, style);
+                                await capture.Replay(anchor);
+                            })));
                         }
-                    }
-                    break;
-
-                    case InstructionCommand.AnchorHrefFirst:
-                    {
-                        var href = ReadString();
-                        handlers.Push(top = await top.Anchor(href != null ? new(href) : null, style));
-                    }
-                    break;
-
-                    case InstructionCommand.AnchorContentFirst:
-                    {
-                        // Content must be captured first
-                        var capture = new CapturingHandler<IXHtmlContentHandler>();
-
-                        handlers.Push(top = new DelegatingXHtmlContentHandler<IXHtmlContentHandler, ActionDisposable, EmptyPayloadHandlerContext>(capture, new(async () => {
-                            // Content popped
+                        else
+                        {
                             var href = ReadString();
-
-                            // Replay content
-                            await using var anchor = await handlers.Peek().Anchor(href != null ? new(href) : null, style);
-                            await capture.Replay(anchor);
-                        })));
+                            handlers.Push(top = await top.Anchor(href != null ? new(href) : null, style));
+                        }
                     }
                     break;
 
@@ -131,33 +130,26 @@ internal static class XHtmlFormatter
                         }
                         break;
 
+                    case InstructionCommand.Heading:
+                        handlers.Push(top = current.Level switch {
+                            1 => await top.Heading1(style),
+                            2 => await top.Heading2(style),
+                            3 => await top.Heading3(style),
+                            4 => await top.Heading4(style),
+                            5 => await top.Heading5(style),
+                            6 => await top.Heading6(style),
+                            _ => await top.Division(style)
+                        });
+                        break;
+
                     #region Normal elements
-                    case InstructionCommand.Heading1:
-                        handlers.Push(top = await top.Heading1(style));
-                        break;
-
-                    case InstructionCommand.Heading2:
-                        handlers.Push(top = await top.Heading2(style));
-                        break;
-
-                    case InstructionCommand.Heading3:
-                        handlers.Push(top = await top.Heading3(style));
-                        break;
-
-                    case InstructionCommand.Heading4:
-                        handlers.Push(top = await top.Heading4(style));
-                        break;
-
-                    case InstructionCommand.Heading5:
-                        handlers.Push(top = await top.Heading5(style));
-                        break;
-
-                    case InstructionCommand.Heading6:
-                        handlers.Push(top = await top.Heading6(style));
-                        break;
 
                     case InstructionCommand.Paragraph:
                         handlers.Push(top = await top.Paragraph(style));
+                        break;
+
+                    case InstructionCommand.Division:
+                        handlers.Push(top = await top.Division(style));
                         break;
 
                     case InstructionCommand.Span:
@@ -266,10 +258,8 @@ internal static class XHtmlFormatter
                             // No nested level
                             break;
 
-                        case InstructionCommand.ImageSrcFirst:
-                        case InstructionCommand.ImageAltFirst:
-                        case InstructionCommand.AnchorHrefFirst:
-                        case InstructionCommand.AnchorContentFirst:
+                        case InstructionCommand.Image:
+                        case InstructionCommand.Link:
                             // Two nested levels
                             level += 2;
                             break;

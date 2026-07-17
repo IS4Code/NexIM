@@ -257,7 +257,7 @@ internal sealed class XHtmlParser<TContext>(LanguageCode defaultLanguage, Dictio
                 return await OnSpan(style);
             }
 
-            structureEncoder.Encode(new(Command: InstructionCommand.AnchorHrefFirst, Style: GetStyle(style)));
+            structureEncoder.Encode(new(Command: InstructionCommand.Link, Style: GetStyle(style)));
 
             OnStringContent(hrefValue.ToString());
             return EnterNested();
@@ -271,7 +271,7 @@ internal sealed class XHtmlParser<TContext>(LanguageCode defaultLanguage, Dictio
                 return NullHandler.Instance;
             }
 
-            structureEncoder.Encode(new(Command: InstructionCommand.ImageSrcFirst, Width: width, Height: height, Style: GetStyle(style)));
+            structureEncoder.Encode(new(Command: InstructionCommand.Image, Width: width, Height: height, Style: GetStyle(style)));
 
             OnStringContent(srcValue.ToString());
             OnStringContent(alt ?? "");
@@ -284,6 +284,42 @@ internal sealed class XHtmlParser<TContext>(LanguageCode defaultLanguage, Dictio
         {
             structureEncoder.Encode(breakElement);
             return NullHandler.Instance;
+        }
+
+        private async ValueTask<IXHtmlContentHandler> OnHeading(int level, InlineStyle? style)
+        {
+            structureEncoder.Encode(new(Command: InstructionCommand.Heading, Level: level, Style: GetStyle(style)));
+            return EnterNested();
+        }
+
+        protected override ValueTask<IXHtmlContentHandler> OnHeading1(InlineStyle? style)
+        {
+            return OnHeading(1, style);
+        }
+
+        protected override ValueTask<IXHtmlContentHandler> OnHeading2(InlineStyle? style)
+        {
+            return OnHeading(2, style);
+        }
+
+        protected override ValueTask<IXHtmlContentHandler> OnHeading3(InlineStyle? style)
+        {
+            return OnHeading(3, style);
+        }
+
+        protected override ValueTask<IXHtmlContentHandler> OnHeading4(InlineStyle? style)
+        {
+            return OnHeading(4, style);
+        }
+
+        protected override ValueTask<IXHtmlContentHandler> OnHeading5(InlineStyle? style)
+        {
+            return OnHeading(5, style);
+        }
+
+        protected override ValueTask<IXHtmlContentHandler> OnHeading6(InlineStyle? style)
+        {
+            return OnHeading(6, style);
         }
 
         #region Simple commands
@@ -315,6 +351,11 @@ internal sealed class XHtmlParser<TContext>(LanguageCode defaultLanguage, Dictio
         protected override ValueTask<IXHtmlContentHandler> OnUnorderedList(InlineStyle? style)
         {
             return OnSimpleCommand(InstructionCommand.UnorderedList, style);
+        }
+
+        protected override ValueTask<IXHtmlContentHandler> OnDivision(InlineStyle? style)
+        {
+            return OnSimpleCommand(InstructionCommand.Division, style);
         }
 
         protected override ValueTask<IXHtmlContentHandler> OnParagraph(InlineStyle? style)
@@ -365,36 +406,6 @@ internal sealed class XHtmlParser<TContext>(LanguageCode defaultLanguage, Dictio
         protected override ValueTask<IXHtmlContentHandler> OnQuote(InlineStyle? style)
         {
             return OnSimpleCommand(InstructionCommand.Quote, style);
-        }
-
-        protected override ValueTask<IXHtmlContentHandler> OnHeading1(InlineStyle? style)
-        {
-            return OnSimpleCommand(InstructionCommand.Heading1, style);
-        }
-
-        protected override ValueTask<IXHtmlContentHandler> OnHeading2(InlineStyle? style)
-        {
-            return OnSimpleCommand(InstructionCommand.Heading2, style);
-        }
-
-        protected override ValueTask<IXHtmlContentHandler> OnHeading3(InlineStyle? style)
-        {
-            return OnSimpleCommand(InstructionCommand.Heading3, style);
-        }
-
-        protected override ValueTask<IXHtmlContentHandler> OnHeading4(InlineStyle? style)
-        {
-            return OnSimpleCommand(InstructionCommand.Heading4, style);
-        }
-
-        protected override ValueTask<IXHtmlContentHandler> OnHeading5(InlineStyle? style)
-        {
-            return OnSimpleCommand(InstructionCommand.Heading5, style);
-        }
-
-        protected override ValueTask<IXHtmlContentHandler> OnHeading6(InlineStyle? style)
-        {
-            return OnSimpleCommand(InstructionCommand.Heading6, style);
         }
         #endregion
 

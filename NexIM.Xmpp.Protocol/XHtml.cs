@@ -54,6 +54,9 @@ public interface IXHtmlContentHandler : IPayloadHandler
 
     // Not recommended but sensible
 
+    [Name("div")]
+    ValueTask<IXHtmlContentHandler> Division([Name("style")] InlineStyle? style);
+
     [Name("code")]
     ValueTask<IXHtmlContentHandler> Code([Name("style")] InlineStyle? style);
 

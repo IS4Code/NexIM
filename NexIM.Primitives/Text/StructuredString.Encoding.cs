@@ -156,15 +156,20 @@ partial struct StructuredString
 
             var command = (InstructionCommand)(instruction & (byte)(~InstructionFlags.HasStyle));
             Number? width = null, height = null;
+            int level = 0;
+            bool reversed = false;
+            LinkNamespace linkNamespace = LinkNamespace.Default;
 
             switch(command)
             {
-                case InstructionCommand.ImageSrcFirst:
-                case InstructionCommand.ImageAltFirst:
-                    // Followed by attribute selectors
+                case InstructionCommand.Image:
+                    // Followed by attributes
                     var imageAttributes = (ImageAttributes)instructions[index++];
-                    var widthUnit = (Number.Unit)(imageAttributes & ImageAttributes.WidthMask);
-                    var heightUnit = (Number.Unit)((byte)(imageAttributes & ImageAttributes.HeightMask) >> 2);
+                    reversed = (imageAttributes & ImageAttributes.AltFirst) != 0;
+                    linkNamespace = (LinkNamespace)(imageAttributes & ImageAttributes.NamespaceMask);
+
+                    var widthUnit = (Number.Unit)((byte)(imageAttributes & ImageAttributes.WidthMask) >> 3);
+                    var heightUnit = (Number.Unit)((byte)(imageAttributes & ImageAttributes.HeightMask) >> 5);
                     // Zero indicates not present, not exact zero
                     if(widthUnit != Number.Unit.Zero)
                     {
@@ -186,9 +191,21 @@ partial struct StructuredString
                         static float Int32ToSingle(int value) => Unsafe.As<int, float>(ref value);
                     }
                     break;
+
+                case InstructionCommand.Link:
+                    // Followed by attributes
+                    var linkAttributes = (LinkAttributes)instructions[index++];
+                    reversed = (linkAttributes & LinkAttributes.ContentFirst) != 0;
+                    linkNamespace = (LinkNamespace)(linkAttributes & LinkAttributes.NamespaceMask);
+                    break;
+
+                case InstructionCommand.Heading:
+                    // Followed by level
+                    level = instructions[index++];
+                    break;
             }
 
-            yield return new(Style: style, Command: command, Width: width, Height: height);
+            yield return new(Style: style, Command: command, Width: width, Height: height, Level: level, Reversed: reversed, Namespace: linkNamespace);
         }
     }
 
@@ -252,6 +269,8 @@ partial struct StructuredString
             if(command != 0)
             {
                 // Command is given
+                bool hasDimensions = false, hasLevel = false, hasNamespaceOrReversed = false;
+
                 switch(command)
                 {
                     case InstructionCommand.Break:
@@ -259,18 +278,44 @@ partial struct StructuredString
                         {
                             throw new ArgumentException("The Break command must not have an attached style.", nameof(instruction));
                         }
-                        goto default;
-                    case InstructionCommand.ImageAltFirst:
-                    case InstructionCommand.ImageSrcFirst:
+                        break;
+                    case InstructionCommand.Image:
+                        hasDimensions = true;
+                        hasNamespaceOrReversed = true;
+                        break;
+                    case InstructionCommand.Link:
+                        hasNamespaceOrReversed = true;
+                        break;
+                    case InstructionCommand.Heading:
+                        hasLevel = true;
                         break;
                     case > InstructionCommand.Break:
                         throw new ArgumentOutOfRangeException(nameof(instruction));
-                    default:
-                        if(instruction.Width != null || instruction.Height != null)
-                        {
-                            throw new ArgumentException("Dimensions must not be given for a non-image command.", nameof(instruction));
-                        }
-                        break;
+                }
+                if(!hasDimensions)
+                {
+                    if(instruction.Width != null || instruction.Height != null)
+                    {
+                        throw new ArgumentException("Dimensions must not be given for a non-image command.", nameof(instruction));
+                    }
+                }
+                if(!hasLevel)
+                {
+                    if(instruction.Level != 0)
+                    {
+                        throw new ArgumentException("Level must not be given for a non-heading command.", nameof(instruction));
+                    }
+                }
+                if(!hasNamespaceOrReversed)
+                {
+                    if(instruction.Namespace != LinkNamespace.Default)
+                    {
+                        throw new ArgumentException("Namespace must not be given for a non-link or non-image command.", nameof(instruction));
+                    }
+                    if(instruction.Reversed)
+                    {
+                        throw new ArgumentException("Reverse content must not be given for a non-link or non-image command.", nameof(instruction));
+                    }
                 }
 
                 if(advancingCount != 0)
@@ -355,14 +400,14 @@ partial struct StructuredString
 
                 switch(command)
                 {
-                    case InstructionCommand.ImageAltFirst:
-                    case InstructionCommand.ImageSrcFirst:
+                    case InstructionCommand.Image:
                         // Followed by attributes byte
-                        var attributes = (ImageAttributes)(
-                            (int)(instruction.Width?.Kind ?? 0) |
-                            ((int)(instruction.Height?.Kind ?? 0) << 2)
-                        );
-                        buffer.Add((byte)attributes);
+                        var imageAttributes = ((ImageAttributes)(
+                            (int)instruction.Namespace |
+                            ((int)(instruction.Width?.Kind ?? 0) << 3) |
+                            ((int)(instruction.Height?.Kind ?? 0) << 5)
+                        )) | (instruction.Reversed ? ImageAttributes.AltFirst : 0);
+                        buffer.Add((byte)imageAttributes);
 
                         if(instruction.Width is { } width)
                         {
@@ -385,6 +430,19 @@ partial struct StructuredString
                             buffer.Add((byte)(bits & 0xFF));
                         }
 
+                        break;
+
+                    case InstructionCommand.Link:
+                        // Followed by attributes byte
+                        var linkAttributes =
+                            (LinkAttributes)instruction.Namespace |
+                            (instruction.Reversed ? LinkAttributes.ContentFirst : 0);
+                        buffer.Add((byte)linkAttributes);
+                        break;
+
+                    case InstructionCommand.Heading:
+                        // Followed by level
+                        buffer.Add(checked((byte)instruction.Level));
                         break;
                 }
 
@@ -480,7 +538,17 @@ partial struct StructuredString
     enum ImageAttributes : byte
     {
         None = 0,
-        WidthMask = 3,
-        HeightMask = 3 << 2
+        NamespaceMask = 7,
+        WidthMask = 3 << 3,
+        HeightMask = 3 << 5,
+        AltFirst = 1 << 7
+    }
+
+    [Flags]
+    enum LinkAttributes : byte
+    {
+        None = 0,
+        NamespaceMask = 7,
+        ContentFirst = 1 << 7
     }
 }
