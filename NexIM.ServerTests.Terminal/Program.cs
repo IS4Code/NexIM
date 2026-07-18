@@ -87,8 +87,8 @@ class Program
             // Create session over the two channels
             await using var session = new XmppManualSession(
                 new BidirectionalStream(
-                    clientToServerPipe.Reader.AsStream(leaveOpen: true),
-                    serverToClientPipe.Writer.AsStream(leaveOpen: true)
+                    clientToServerPipe.Reader.AsStream(),
+                    serverToClientPipe.Writer.AsStream()
                 ),
                 receiver,
                 xmppReaderSettings,
@@ -104,22 +104,28 @@ class Program
             try
             {
                 // Wait a bit for initialization
-                await sessionTask.WaitAsync(TimeSpan.FromMilliseconds(200));
+                await sessionTask.WaitAsync(TimeSpan.FromMilliseconds(1000));
             }
             catch(TimeoutException)
             {
+                // Should always happen
+            }
 
+            var reader = serverToClientPipe.Reader;
+            while(reader.TryRead(out var result))
+            {
+                // Skip all initial messages
+                reader.AdvanceTo(result.Buffer.End);
             }
 
             // Redirect output to console now
-            session.Reopen(new BidirectionalStream(
-                clientToServerPipe.Reader.AsStream(),
-                new ConsoleDebuggingStream(Stream.Null, Console.ForegroundColor) {
-                    SendIndicator = "",
-                    ReceiveIndicator = "",
-                    IndicatorSeparator = ""
-                }
-            ));
+            using var readerStream = serverToClientPipe.Reader.AsStream();
+            using var outputStream = new ConsoleDebuggingStream(Stream.Null, Console.ForegroundColor) {
+                SendIndicator = "",
+                ReceiveIndicator = "",
+                IndicatorSeparator = ""
+            };
+            _ = readerStream.CopyToAsync(outputStream, cancellationToken);
 
             using(var writer = new StreamWriter(clientToServerPipe.Writer.AsStream()))
             {

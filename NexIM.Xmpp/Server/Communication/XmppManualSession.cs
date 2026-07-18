@@ -28,11 +28,6 @@ public sealed class XmppManualSession(Stream stream, XmppServerReceiver receiver
 
     public override string DefaultLanguage => defaultLanguage;
 
-    public void Reopen(Stream newStream)
-    {
-        Initialize(newStream);
-    }
-
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
     {
         reader = XmlReader.Create(stream, readerSettings);

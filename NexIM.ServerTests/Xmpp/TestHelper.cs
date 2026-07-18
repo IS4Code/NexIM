@@ -228,9 +228,10 @@ public abstract class TestHelper
     protected void FlushReceive()
     {
         var reader = serverToClientPipe.Reader;
-        while(reader.TryRead(out _))
+        while(reader.TryRead(out var result))
         {
             // Move past all remaining data
+            reader.AdvanceTo(result.Buffer.End);
         }
     }
 
