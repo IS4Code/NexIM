@@ -7,15 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Xmpp\Data\SessionStartNormal.txt" />
-    <None Remove="Xmpp\Prologue1.txt" />
-    <None Remove="Xmpp\Prologue2.txt" />
+    <None Remove="Xmpp\Data\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Xmpp\Data\Prologue1.txt" />
-    <EmbeddedResource Include="Xmpp\Data\Prologue2.txt" />
-    <EmbeddedResource Include="Xmpp\Data\SessionStartNormal.txt" />
+    <EmbeddedResource Include="Xmpp\Data\**" />
   </ItemGroup>
 
   <ItemGroup>
