@@ -81,6 +81,8 @@ internal static class XHtmlFormatter
 
                     case InstructionCommand.Image:
                     {
+                        var width = current.Width;
+                        var height = current.Height;
                         string? src, alt;
                         if(current.Reversed)
                         {
@@ -92,7 +94,7 @@ internal static class XHtmlFormatter
                             src = ReadString();
                             alt = ReadString();
                         }
-                        await using(var img = await top.Image(src != null ? new(src) : null, current.Width, current.Height, alt, style))
+                        await using(var img = await top.Image(src != null ? new(src) : null, width, height, alt, style))
                         {
                             // Empty
                         }
