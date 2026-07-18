@@ -54,7 +54,7 @@ public abstract class XmppFrameSession(Stream stream) : XmppAuthSession(stream)
                 await EnterPayload(reader);
                 break;
 
-            case (XmlNodeType.Text or XmlNodeType.SignificantWhitespace, not 0):
+            case (XmlNodeType.Text or XmlNodeType.SignificantWhitespace or XmlNodeType.Whitespace, not 0):
                 await ReadText(reader);
                 break;
 

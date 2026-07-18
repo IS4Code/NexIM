@@ -132,7 +132,7 @@ public abstract class XmppStreamSession : XmppHandlerSession
                 await EnterPayload(reader);
                 break;
 
-            case (XmlNodeType.Text or XmlNodeType.SignificantWhitespace, not 1):
+            case (XmlNodeType.Text or XmlNodeType.SignificantWhitespace or XmlNodeType.Whitespace, not 1):
                 await ReadText(reader);
                 break;
 

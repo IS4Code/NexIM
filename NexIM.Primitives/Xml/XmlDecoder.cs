@@ -47,6 +47,11 @@ public abstract class XmlDecoder :
         }
 
         await reader.ReadAsync();
+        while(reader.NodeType is XmlNodeType.Whitespace or XmlNodeType.SignificantWhitespace)
+        {
+            // Skip any whitespace
+            await reader.ReadAsync();
+        }
         if(reader.NodeType != XmlNodeType.EndElement)
         {
             ThrowElementNotEmpty();

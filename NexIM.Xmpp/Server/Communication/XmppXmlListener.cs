@@ -33,7 +33,7 @@ public abstract class XmppXmlListener<TSession> : XmppListener<TSession> where T
             DtdProcessing = DtdProcessing.Ignore,
             IgnoreComments = true,
             IgnoreProcessingInstructions = true,
-            IgnoreWhitespace = true,
+            IgnoreWhitespace = false,
             NameTable = nametable,
             ValidationType = ValidationType.None,
             XmlResolver = XmlResolver.ThrowingResolver

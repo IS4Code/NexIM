@@ -22,7 +22,7 @@ partial class EventExtensionsFormatter
         DtdProcessing = DtdProcessing.Ignore,
         IgnoreComments = true,
         IgnoreProcessingInstructions = true,
-        IgnoreWhitespace = true,
+        IgnoreWhitespace = false,
         // TODO Shared name table
         ValidationType = ValidationType.None,
         XmlResolver = XmlResolver.ThrowingResolver

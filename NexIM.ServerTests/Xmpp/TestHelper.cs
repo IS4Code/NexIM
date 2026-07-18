@@ -29,7 +29,7 @@ public abstract class TestHelper
         DtdProcessing = DtdProcessing.Ignore,
         IgnoreComments = true,
         IgnoreProcessingInstructions = true,
-        IgnoreWhitespace = true,
+        IgnoreWhitespace = false,
         NameTable = NexIM.Xmpp.Protocol.Grammar.Vocabulary.Instance.CreateNameTable<XmlWeakNameTable>(),
         ValidationType = ValidationType.None,
         XmlResolver = XmlResolver.ThrowingResolver
@@ -55,7 +55,7 @@ public abstract class TestHelper
         ConformanceLevel = ConformanceLevel.Fragment,
         DtdProcessing = DtdProcessing.Ignore,
         IgnoreComments = true,
-        IgnoreWhitespace = true,
+        IgnoreWhitespace = false,
         ValidationType = ValidationType.None,
         XmlResolver = XmlResolver.ThrowingResolver
     };
