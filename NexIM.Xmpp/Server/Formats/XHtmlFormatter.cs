@@ -375,7 +375,7 @@ internal static class XHtmlFormatter
                 _ => null
             } is { } textAlignment)
             {
-                yield return new("text-alignment", textAlignment);
+                yield return new("text-align", textAlignment);
             }
 
             if(value.TextDecoration switch {
