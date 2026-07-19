@@ -55,6 +55,8 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract X509Certificate? RemoteCertificate { get; }
     public abstract CancellationToken CancellationToken { get; }
 
+    public virtual IdentifierGenerationMode StanzaIdentifierMode => IdentifierGenerationMode.Random;
+
     public AccountName AccountName => ClientSession?.Account.Name ?? RemoteResource?.Address.ToAccountName() ?? throw new InvalidOperationException("This session has not been authenticated.");
     public XmppClientSession? ClientSession { get; set; }
     public bool IsAuthenticated => ClientSession != null;
@@ -63,9 +65,15 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract Token<T> GetToken<T>(ReadOnlyMemory<char> value) where T : Enum;
     public abstract Token<T> GetToken<T>(ReadOnlySpan<char> value) where T : Enum;
 
+    long stanzaIdentifier;
+
     public Token<StanzaIdentifier> NewStanzaIdentifier()
     {
-        return GetToken<StanzaIdentifier>(Guid.NewGuid().ToString("N"));
+        string id = StanzaIdentifierMode switch {
+            IdentifierGenerationMode.Sequential => Interlocked.Increment(ref stanzaIdentifier).ToString(),
+            _ => Guid.NewGuid().ToString("N")
+        };
+        return GetToken<StanzaIdentifier>(id);
     }
 
     readonly ConcurrentDictionary<string, Func<ValueTask<IInfoQueryHandler>>> callbacks = new(ReferenceEqualityComparer.Instance);
@@ -87,4 +95,10 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
         }
         return callback();
     }
+}
+
+public enum IdentifierGenerationMode
+{
+    Random,
+    Sequential
 }

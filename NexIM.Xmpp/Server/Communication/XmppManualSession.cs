@@ -28,6 +28,8 @@ public sealed class XmppManualSession(Stream stream, XmppServerReceiver receiver
 
     public override string DefaultLanguage => defaultLanguage;
 
+    public override IdentifierGenerationMode StanzaIdentifierMode => IdentifierGenerationMode.Sequential;
+
     protected override void OpenXmlStream(Stream stream, out XmlReader reader, out XmlWriter writer)
     {
         reader = XmlReader.Create(stream, readerSettings);
