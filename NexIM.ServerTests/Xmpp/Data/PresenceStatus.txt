@@ -1,0 +1,5 @@
+<presence><show>away</show><status>Be right back</status><priority>5</priority></presence>
+<presence type="unavailable"><status>Gone fishing</status></presence>
+##
+<presence from="test@localhost/res"><show>away</show><status>Be right back</status><priority>5</priority></presence>
+<presence type="unavailable" from="test@localhost/res"><status>Gone fishing</status></presence>

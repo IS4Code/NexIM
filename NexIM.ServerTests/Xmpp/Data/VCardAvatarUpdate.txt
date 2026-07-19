@@ -1,0 +1,11 @@
+<iq type="set" id="vs1"><vCard xmlns="vcard-temp"><PHOTO><TYPE>image/png</TYPE><BINVAL>iVBORw0KGgo=</BINVAL></PHOTO></vCard></iq>
+<presence><x xmlns="vcard-temp:x:update"><photo>4caece539b039b16e16206ea2478f8c5ffb2ca05</photo></x></presence>
+<presence><x xmlns="vcard-temp:x:update"/></presence>
+<presence/>
+<presence><x xmlns="vcard-temp:x:update"><photo>0000000000000000000000000000000000000000</photo></x></presence>
+##
+<iq type="result" from="test@localhost" id="vs1" />
+<presence from="test@localhost/res"><x xmlns="vcard-temp:x:update"><photo>4caece539b039b16e16206ea2478f8c5ffb2ca05</photo></x></presence>
+<presence from="test@localhost/res"><x xmlns="vcard-temp:x:update" /></presence>
+<presence from="test@localhost/res" />
+<presence from="test@localhost/res"><x xmlns="vcard-temp:x:update"><photo>0000000000000000000000000000000000000000</photo></x></presence>

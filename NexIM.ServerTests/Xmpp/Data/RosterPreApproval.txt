@@ -1,0 +1,9 @@
+<presence type="subscribed" to="preapproved@example.org"/>
+<iq type="get" id="rget1"><query xmlns="jabber:iq:roster"/></iq>
+<iq type="set" id="rset1"><query xmlns="jabber:iq:roster"><item jid="preapproved@example.org" subscription="remove"/></query></iq>
+<iq type="get" id="rget2"><query xmlns="jabber:iq:roster"/></iq>
+##
+<iq type="result" from="test@localhost" to="test@localhost/res" id="rget1"><query xmlns="jabber:iq:roster"><item jid="preapproved@example.org" subscription="none" approved="true" /></query></iq>
+<iq type="set" from="test@localhost" to="test@localhost/res" id=""><query xmlns="jabber:iq:roster"><item jid="preapproved@example.org" subscription="remove" approved="true" /></query></iq>
+<iq type="result" from="test@localhost" id="rset1" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="rget2"><query xmlns="jabber:iq:roster" /></iq>

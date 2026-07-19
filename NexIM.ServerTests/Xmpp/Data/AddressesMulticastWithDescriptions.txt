@@ -1,0 +1,3 @@
+<message type="chat" to="localhost" id="mc4"><addresses xmlns="http://jabber.org/protocol/address"><address type="to" jid="test@localhost/res" desc="Primary recipient"/><address type="cc" jid="test@localhost/res" desc="Copy"/></addresses><body>Multi address</body></message>
+##
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="mc4"><body>Multi address</body><addresses xmlns="http://jabber.org/protocol/address"><address type="to" jid="test@localhost/res" desc="Primary recipient" /><address type="cc" jid="test@localhost/res" desc="Copy" /></addresses></message>

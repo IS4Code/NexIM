@@ -1,0 +1,5 @@
+<iq type="set" id="vs4"><vCard xmlns="vcard-temp"><PHOTO><TYPE>image/png</TYPE><BINVAL>iVBORw0KGgo=</BINVAL></PHOTO><PHOTO><TYPE>image/jpeg</TYPE><BINVAL>/9j/4AAQ</BINVAL></PHOTO></vCard></iq>
+<iq type="get" id="vg4"><vCard xmlns="vcard-temp"/></iq>
+##
+<iq type="result" from="test@localhost" id="vs4" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="vg4"><vCard xmlns="vcard-temp"><VERSION /><FN /><N /><PHOTO><TYPE>image/png</TYPE><BINVAL>iVBORw0KGgo=</BINVAL></PHOTO><PHOTO><TYPE>image/jpeg</TYPE><BINVAL>/9j/4AAQ</BINVAL></PHOTO></vCard></iq>

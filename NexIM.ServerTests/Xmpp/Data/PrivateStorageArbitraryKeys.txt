@@ -1,0 +1,9 @@
+<iq type="set" id="ps3"><query xmlns="jabber:iq:private"><prefs xmlns="urn:example:prefs"><theme>dark</theme></prefs></query></iq>
+<iq type="get" id="pg3"><query xmlns="jabber:iq:private"><prefs xmlns="urn:example:prefs"/></query></iq>
+<iq type="set" id="ps4"><query xmlns="jabber:iq:private"><empty xmlns="urn:example:empty"/></query></iq>
+<iq type="get" id="pg4"><query xmlns="jabber:iq:private"><empty xmlns="urn:example:empty"/></query></iq>
+##
+<iq type="result" from="test@localhost" id="ps3" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="pg3"><query xmlns="jabber:iq:private"><prefs xmlns="urn:example:prefs"><theme>dark</theme></prefs></query></iq>
+<iq type="result" from="test@localhost" id="ps4" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="pg4"><query xmlns="jabber:iq:private"><empty xmlns="urn:example:empty" /></query></iq>

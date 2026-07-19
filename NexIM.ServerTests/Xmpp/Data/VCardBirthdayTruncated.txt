@@ -1,0 +1,9 @@
+<iq type="set" id="vs2"><vCard xmlns="vcard-temp"><BDAY>1990</BDAY></vCard></iq>
+<iq type="get" id="vg2"><vCard xmlns="vcard-temp"/></iq>
+<iq type="set" id="vs3"><vCard xmlns="vcard-temp"><BDAY>--05-15</BDAY></vCard></iq>
+<iq type="get" id="vg3"><vCard xmlns="vcard-temp"/></iq>
+##
+<iq type="result" from="test@localhost" id="vs2" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="vg2"><vCard xmlns="vcard-temp"><VERSION /><FN /><N /><BDAY>1990</BDAY></vCard></iq>
+<iq type="result" from="test@localhost" id="vs3" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="vg3"><vCard xmlns="vcard-temp"><VERSION /><FN /><N /><BDAY>--05-15</BDAY></vCard></iq>

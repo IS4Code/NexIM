@@ -1,0 +1,9 @@
+<iq type="set" id="ps1"><query xmlns="jabber:iq:private"><storage xmlns="storage:bookmarks"><conference name="Test Room" jid="room@conference.localhost" autojoin="true"/></storage></query></iq>
+<iq type="get" id="pg1"><query xmlns="jabber:iq:private"><storage xmlns="storage:bookmarks"/></query></iq>
+<iq type="set" id="ps2"><query xmlns="jabber:iq:private"><storage xmlns="storage:bookmarks"><conference name="Updated Room" jid="room2@conference.localhost" autojoin="false"/></storage></query></iq>
+<iq type="get" id="pg2"><query xmlns="jabber:iq:private"><storage xmlns="storage:bookmarks"/></query></iq>
+##
+<iq type="result" from="test@localhost" id="ps1" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="pg1"><query xmlns="jabber:iq:private"><storage xmlns="storage:bookmarks"><conference name="Test Room" jid="room@conference.localhost" autojoin="true" /></storage></query></iq>
+<iq type="result" from="test@localhost" id="ps2" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="pg2"><query xmlns="jabber:iq:private"><storage xmlns="storage:bookmarks"><conference name="Updated Room" jid="room2@conference.localhost" autojoin="false" /></storage></query></iq>

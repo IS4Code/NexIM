@@ -1,0 +1,5 @@
+<iq type="get" to="test@localhost" id="di2"><query xmlns="http://jabber.org/protocol/disco#info"/></iq>
+<iq type="get" to="test@localhost" id="dit2"><query xmlns="http://jabber.org/protocol/disco#items"/></iq>
+##
+<iq type="result" from="localhost" to="test@localhost/res" id="di2"><query xmlns="http://jabber.org/protocol/disco#info"><identity category="account" type="registered" /><feature var="http://jabber.org/protocol/disco#info" /><feature var="http://jabber.org/protocol/disco#items" /><feature var="urn:xmpp:ping" /><feature var="urn:xmpp:time" /></query></iq>
+<iq type="result" from="localhost" to="test@localhost/res" id="dit2"><query xmlns="http://jabber.org/protocol/disco#items" /></iq>

@@ -1,0 +1,7 @@
+<message type="chat" to="test@localhost/res" id="r1"><body>Hi</body><request xmlns="urn:xmpp:receipts"/></message>
+<message type="chat" to="test@localhost/res" id="r2"><received xmlns="urn:xmpp:receipts" id="r1"/></message>
+<message type="chat" to="test@localhost/res" id="r3"><request xmlns="urn:xmpp:receipts"/><received xmlns="urn:xmpp:receipts" id="r1"/></message>
+##
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="r1"><body>Hi</body><request xmlns="urn:xmpp:receipts" /></message>
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="r2"><received id="r1" xmlns="urn:xmpp:receipts" /></message>
+<message type="error" from="test@localhost/res" id="r3"><error type="modify" code="400" by="localhost"><bad-request xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /><text xmlns="urn:ietf:params:xml:ns:xmpp-stanzas">A delivery notification cannot be requested for a message acknowledgment.</text></error></message>

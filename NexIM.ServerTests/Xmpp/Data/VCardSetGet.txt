@@ -1,0 +1,5 @@
+<iq type="set" id="vs1"><vCard xmlns="vcard-temp"><FN>Test User</FN><N><FAMILY>User</FAMILY><GIVEN>Test</GIVEN></N><NICKNAME>Testy</NICKNAME><EMAIL><INTERNET/><HOME/><USERID>test@example.org</USERID></EMAIL><TEL><VOICE/><HOME/><NUMBER>+1234567890</NUMBER></TEL><ORG><ORGNAME>ACME</ORGNAME><ORGUNIT>R&amp;D</ORGUNIT></ORG><TITLE>Engineer</TITLE><URL>https://example.org/</URL><BDAY>1990-05-15</BDAY></vCard></iq>
+<iq type="get" id="vg1"><vCard xmlns="vcard-temp"/></iq>
+##
+<iq type="result" from="test@localhost" id="vs1" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="vg1"><vCard xmlns="vcard-temp"><VERSION /><FN>Test User</FN><N><FAMILY>User</FAMILY><GIVEN>Test</GIVEN></N><NICKNAME>Testy</NICKNAME><BDAY>1990-05-15</BDAY><TEL><HOME /><VOICE /><NUMBER>+1234567890</NUMBER></TEL><EMAIL><HOME /><INTERNET /><USERID>test@example.org</USERID></EMAIL><TITLE>Engineer</TITLE><ORG><ORGNAME>ACME</ORGNAME><ORGUNIT>R&amp;D</ORGUNIT></ORG><URL>https://example.org/</URL></vCard></iq>

@@ -1,0 +1,11 @@
+<message type="chat" to="test@localhost/res" id="cs1"><active xmlns="http://jabber.org/protocol/chatstates"/></message>
+<message type="chat" to="test@localhost/res" id="cs2"><composing xmlns="http://jabber.org/protocol/chatstates"/></message>
+<message type="chat" to="test@localhost/res" id="cs3"><paused xmlns="http://jabber.org/protocol/chatstates"/></message>
+<message type="chat" to="test@localhost/res" id="cs4"><inactive xmlns="http://jabber.org/protocol/chatstates"/></message>
+<message type="chat" to="test@localhost/res" id="cs5"><gone xmlns="http://jabber.org/protocol/chatstates"/></message>
+##
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="cs1"><active xmlns="http://jabber.org/protocol/chatstates" /></message>
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="cs2"><composing xmlns="http://jabber.org/protocol/chatstates" /></message>
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="cs3"><paused xmlns="http://jabber.org/protocol/chatstates" /></message>
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="cs4"><inactive xmlns="http://jabber.org/protocol/chatstates" /></message>
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="cs5"><gone xmlns="http://jabber.org/protocol/chatstates" /></message>

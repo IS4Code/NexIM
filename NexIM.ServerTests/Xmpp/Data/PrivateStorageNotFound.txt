@@ -1,0 +1,3 @@
+<iq type="get" id="pg0"><query xmlns="jabber:iq:private"><nope xmlns="urn:example:nope"/></query></iq>
+##
+<iq type="error" from="test@localhost" id="pg0"><error type="cancel" code="404" by="localhost"><item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></iq>

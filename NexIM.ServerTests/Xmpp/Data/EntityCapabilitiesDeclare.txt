@@ -1,0 +1,5 @@
+<presence><c xmlns="http://jabber.org/protocol/caps" hash="sha-1" node="http://example.org/client" ver="ohli7QIDm0Wn9Uf2k7/ogl7EalU="/></presence>
+<iq type="result" id="1"><query xmlns="http://jabber.org/protocol/disco#info" node="http://example.org/client#ohli7QIDm0Wn9Uf2k7/ogl7EalU="><identity category="client" type="pc" name="Test Client"/><feature var="http://jabber.org/protocol/caps"/><feature var="http://jabber.org/protocol/disco#info"/></query></iq>
+##
+<iq type="get" from="localhost" id="1"><query node="http://example.org/client#ohli7QIDm0Wn9Uf2k7/ogl7EalU=" xmlns="http://jabber.org/protocol/disco#info" /></iq>
+<presence from="test@localhost/res"><c hash="sha-1" node="http://example.org/client" ver="ohli7QIDm0Wn9Uf2k7/ogl7EalU=" xmlns="http://jabber.org/protocol/caps" /></presence>

@@ -1,0 +1,3 @@
+<iq type="get" to="test@localhost/res" id="di3"><query xmlns="http://jabber.org/protocol/disco#info"/></iq>
+##
+<iq type="error" from="test@localhost/res" id="di3"><error type="modify" code="400" by="localhost"><bad-request xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></iq>

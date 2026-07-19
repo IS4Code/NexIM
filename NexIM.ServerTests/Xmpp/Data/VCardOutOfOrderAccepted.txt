@@ -1,0 +1,5 @@
+<iq type="set" id="vs5"><vCard xmlns="vcard-temp"><URL>https://example.org/</URL><TITLE>Engineer</TITLE><FN>Test User</FN><NICKNAME>Testy</NICKNAME><N><GIVEN>Test</GIVEN><FAMILY>User</FAMILY></N></vCard></iq>
+<iq type="get" id="vg5"><vCard xmlns="vcard-temp"/></iq>
+##
+<iq type="result" from="test@localhost" id="vs5" />
+<iq type="result" from="test@localhost" to="test@localhost/res" id="vg5"><vCard xmlns="vcard-temp"><VERSION /><FN>Test User</FN><N><FAMILY>User</FAMILY><GIVEN>Test</GIVEN></N><NICKNAME>Testy</NICKNAME><TITLE>Engineer</TITLE><URL>https://example.org/</URL></vCard></iq>
