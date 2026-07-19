@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
@@ -64,6 +64,12 @@ public abstract class TestHelper
 
     static int running = 0;
 
+    public static async ValueTask RegisterAccounts(NexServer server)
+    {
+        await RegisterAccount(server, "test", "test", "test@example.org");
+        await RegisterAccount(server, "test2", "test2", "test2@example.org");
+    }
+
     protected static void ServerInitialize(TestContext testContext)
     {
         if(Interlocked.Increment(ref running) != 1)
@@ -78,9 +84,14 @@ public abstract class TestHelper
         var server = receiver.Server = new NexServer(new NexDatabase.Sqlite {
             ConnectionString = $"Data Source=\"{dbPath}\""
         });
+        RegisterAccounts(server).AsTask().GetAwaiter().GetResult();
+    }
+
+    private static async ValueTask RegisterAccount(NexServer server, string user, string passwordString, string email)
+    {
         using var password = new TemporaryString();
-        password.Append("test");
-        server.Register(new AccountName("test", "localhost"), password, new("test@example.org"), new()).AsTask().GetAwaiter().GetResult();
+        password.Append(passwordString);
+        await server.Register(new AccountName(user, "localhost"), password, new(email), new());
     }
 
     protected static void ServerCleanup()
@@ -95,69 +106,143 @@ public abstract class TestHelper
         File.Delete(dbPath);
     }
 
-    XmppManualSession session = null!;
-    Pipe clientToServerPipe = null!;
-    Pipe serverToClientPipe = null!;
+    XmppTestClient primaryClient = null!;
+    readonly List<XmppTestClient> secondaryClients = new();
     CancellationTokenSource testCts = null!;
-    Task sessionTask = null!;
 
     [TestInitialize]
     public void TestInitialize()
     {
-        clientToServerPipe = new();
-        serverToClientPipe = new();
         testCts = new();
-
-        // Provide auth message
-        Send("Prologue1");
-
-        // Create session over the two channels
-        session = new(
-            new BidirectionalStream(
-                clientToServerPipe.Reader.AsStream(),
-                serverToClientPipe.Writer.AsStream()
-            ),
-            receiver,
-            xmppReaderSettings,
-            xmppWriterSettings
-        );
-
-        // Connect to receiver
-        var handler = receiver.Connected(session).AsTask().GetAwaiter().GetResult();
-
-        // Start session
-        sessionTask = session.Run(handler, testCts.Token).AsTask();
-
-        // Check auth response
-        Receive("Prologue1");
-
-        // Bind
-        Send("Prologue2");
-
-        // Check bound
-        Receive("Prologue2");
-
-        // Ignore anything else
-        FlushReceive();
+        primaryClient = new("Prologue1", "Prologue2", testCts.Token);
     }
 
     [TestCleanup]
     public void TestCleanup()
     {
+        testCts.Cancel();
         try
         {
-            testCts.Cancel();
-            clientToServerPipe.Writer.Complete();
-            serverToClientPipe.Reader.Complete();
-
-            // Stopped
-            sessionTask.GetAwaiter().GetResult();
+            primaryClient.Shutdown();
         }
         finally
         {
-            // Wait until done
-            session.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            foreach(var client in secondaryClients)
+            {
+                client.Shutdown();
+            }
+            secondaryClients.Clear();
         }
+    }
+
+    protected sealed class XmppTestClient
+    {
+        readonly Pipe clientToServerPipe = new();
+        readonly Pipe serverToClientPipe = new();
+        readonly XmppManualSession session;
+        readonly Task sessionTask;
+
+        internal XmppTestClient(string prologue1, string prologue2, CancellationToken cancellationToken)
+        {
+            // Provide auth message
+            Send(prologue1);
+
+            // Create session over the two channels
+            session = new(
+                new BidirectionalStream(
+                    clientToServerPipe.Reader.AsStream(),
+                    serverToClientPipe.Writer.AsStream()
+                ),
+                receiver,
+                xmppReaderSettings,
+                xmppWriterSettings
+            );
+
+            // Connect to receiver
+            var handler = receiver.Connected(session).AsTask().GetAwaiter().GetResult();
+
+            // Start session
+            sessionTask = session.Run(handler, cancellationToken).AsTask();
+
+            // Check auth response
+            Receive(prologue1);
+
+            // Bind
+            Send(prologue2);
+
+            // Check bound
+            Receive(prologue2);
+
+            // Ignore anything else
+            FlushReceive();
+        }
+
+        internal void Send(string file)
+        {
+            using(var writer = new StreamWriter(clientToServerPipe.Writer.AsStream(leaveOpen: true)))
+            {
+                foreach(var line in LoadResource(file, true))
+                {
+                    // Ignore newlines
+                    writer.Write(line);
+                }
+            }
+        }
+
+        internal void Receive(string file)
+        {
+            if(sessionTask.Wait(5))
+            {
+                throw new InvalidOperationException("The session was closed.");
+            }
+
+            var stringReader = new StringReader(String.Concat(LoadResource(file, false)));
+            using(var expected = XmlReader.Create(stringReader, testReaderSettings))
+            {
+                using var reader = XmlReader.Create(serverToClientPipe.Reader.AsStream(leaveOpen: true), testReaderSettings);
+                AssertEqualXml(expected, reader, () => stringReader.Peek() == -1);
+            }
+        }
+
+        internal void FlushReceive()
+        {
+            var reader = serverToClientPipe.Reader;
+            while(reader.TryRead(out var result))
+            {
+                // Move past all remaining data
+                reader.AdvanceTo(result.Buffer.End);
+            }
+        }
+
+        internal void FinishReceive()
+        {
+            var reader = serverToClientPipe.Reader;
+            Assert.IsFalse(reader.TryRead(out _), "Unexpected data remaining in the stream.");
+        }
+
+        internal void Shutdown()
+        {
+            try
+            {
+                clientToServerPipe.Writer.Complete();
+                serverToClientPipe.Reader.Complete();
+
+                // Stopped
+                sessionTask.GetAwaiter().GetResult();
+            }
+            finally
+            {
+                // Wait until done
+                session.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        }
+    }
+
+    protected XmppTestClient CreateSecondClient()
+    {
+        var client = new XmppTestClient("Prologue1Second", "Prologue2Second", testCts.Token);
+        secondaryClients.Add(client);
+        return client;
     }
 
     private static Stream LoadResourceStream(string name)
@@ -198,48 +283,13 @@ public abstract class TestHelper
         }
     }
 
-    protected void Send(string file)
-    {
-        using(var writer = new StreamWriter(clientToServerPipe.Writer.AsStream(leaveOpen: true)))
-        {
-            foreach(var line in LoadResource(file, true))
-            {
-                // Ignore newlines
-                writer.Write(line);
-            }
-        }
-    }
+    protected void Send(string file) => primaryClient.Send(file);
 
-    protected void Receive(string file)
-    {
-        if(sessionTask.Wait(5))
-        {
-            throw new InvalidOperationException("The session was closed.");
-        }
+    protected void Receive(string file) => primaryClient.Receive(file);
 
-        var stringReader = new StringReader(String.Concat(LoadResource(file, false)));
-        using(var expected = XmlReader.Create(stringReader, testReaderSettings))
-        {
-            using var reader = XmlReader.Create(serverToClientPipe.Reader.AsStream(leaveOpen: true), testReaderSettings);
-            AssertEqualXml(expected, reader, () => stringReader.Peek() == -1);
-        }
-    }
+    protected void FlushReceive() => primaryClient.FlushReceive();
 
-    protected void FlushReceive()
-    {
-        var reader = serverToClientPipe.Reader;
-        while(reader.TryRead(out var result))
-        {
-            // Move past all remaining data
-            reader.AdvanceTo(result.Buffer.End);
-        }
-    }
-
-    protected void FinishReceive()
-    {
-        var reader = serverToClientPipe.Reader;
-        Assert.IsFalse(reader.TryRead(out _), "Unexpected data remaining in the stream.");
-    }
+    protected void FinishReceive() => primaryClient.FinishReceive();
 
     private static void AssertEqualXml(XmlReader expected, XmlReader actual, Func<bool> isFinished)
     {

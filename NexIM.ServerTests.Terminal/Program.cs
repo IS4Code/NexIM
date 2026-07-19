@@ -51,41 +51,88 @@ class Program
         // Prepare the server
         var receiver = new XmppServerReceiver();
 
-        CancellationToken cancellationToken = default;
         TaskCompletionSource programFinished = new();
+        var clients = Array.Empty<Client>();
         try
         {
-            cancellationToken = AppCancellation(programFinished.Task);
+            var cancellationToken = AppCancellation(programFinished.Task);
 
             var server = receiver.Server = new NexServer(new NexDatabase.Sqlite {
                 ConnectionString = $"Data Source=\"{dbPath}\""
             });
 
-            using(var password = new TemporaryString())
+            await TestHelper.RegisterAccounts(server);
+
+            clients = new[] {
+                new Client(1, "Prologue1", "Prologue2", ConsoleColor.Cyan),
+                new Client(2, "Prologue1Second", "Prologue2Second", ConsoleColor.Green)
+            };
+
+            var startTasks = new Task[clients.Length];
+            for(int i = 0; i < clients.Length; i++)
             {
-                password.Append("test");
-                await server.Register(new AccountName("test", "localhost"), password, new("test@example.org"), new());
+                startTasks[i] = clients[i].Start(receiver, cancellationToken);
+            }
+            await Task.WhenAll(startTasks);
+
+            // Route to client based on prefix
+            while(Console.ReadLine() is { } line)
+            {
+                var target = clients[0];
+                foreach(var client in clients)
+                {
+                    var prefix = client.Prefix;
+                    if(line.StartsWith(prefix, StringComparison.Ordinal))
+                    {
+                        target = client;
+                        line = line[prefix.Length..].TrimStart(' ');
+                        break;
+                    }
+                }
+                target.WriteLine(line);
             }
 
-            var clientToServerPipe = new Pipe();
-            var serverToClientPipe = new Pipe();
+            foreach(var client in clients)
+            {
+                client.CompleteInput();
+            }
+        }
+        finally
+        {
+            foreach(var client in clients)
+            {
+                await client.DisposeAsync();
+            }
 
-            cancellationToken.Register(() => {
-                clientToServerPipe.Writer.Complete();
-                serverToClientPipe.Reader.Complete();
-            });
+            receiver.Server.Close();
+            File.Delete(dbPath);
+
+            programFinished.TrySetResult();
+            termSignalRegistration?.Dispose();
+            sigHupSignalRegistration?.Dispose();
+        }
+    }
+
+    sealed class Client(int index, string prologue1, string prologue2, ConsoleColor color) : IAsyncDisposable
+    {
+        public string Prefix { get; } = $"{index}>";
+
+        readonly Pipe clientToServerPipe = new();
+        readonly Pipe serverToClientPipe = new();
+
+        XmppManualSession? session;
+        Stream? readerStream, outputStream;
+        StreamWriter inputWriter = null!;
+
+        public async Task Start(XmppServerReceiver receiver, CancellationToken cancellationToken)
+        {
+            inputWriter = new StreamWriter(clientToServerPipe.Writer.AsStream(leaveOpen: true));
 
             // Provide auth message
-            using(var writer = new StreamWriter(clientToServerPipe.Writer.AsStream(leaveOpen: true)))
-            {
-                foreach(var line in TestHelper.LoadResource("Prologue1", true))
-                {
-                    writer.Write(line);
-                }
-            }
+            Send(prologue1);
 
             // Create session over the two channels
-            await using var session = new XmppManualSession(
+            session = new XmppManualSession(
                 new BidirectionalStream(
                     clientToServerPipe.Reader.AsStream(),
                     serverToClientPipe.Writer.AsStream()
@@ -119,39 +166,46 @@ class Program
             }
 
             // Redirect output to console now
-            using var readerStream = serverToClientPipe.Reader.AsStream();
-            using var outputStream = new ConsoleDebuggingStream(Stream.Null, Console.ForegroundColor) {
-                SendIndicator = "",
+            readerStream = serverToClientPipe.Reader.AsStream();
+            outputStream = new ConsoleDebuggingStream(Stream.Null, color) {
+                SendIndicator = Prefix + " ",
                 ReceiveIndicator = "",
                 IndicatorSeparator = ""
             };
             _ = readerStream.CopyToAsync(outputStream, cancellationToken);
 
-            using(var writer = new StreamWriter(clientToServerPipe.Writer.AsStream()))
-            {
-                // Send bind
-                foreach(var line in TestHelper.LoadResource("Prologue2", true))
-                {
-                    writer.Write(line);
-                }
-                writer.Flush();
+            // Send bind
+            Send(prologue2);
+        }
 
-                // Redirect console to input
-                while(Console.ReadLine() is { } line)
-                {
-                    writer.Write(line);
-                    writer.Flush();
-                }
+        public async ValueTask DisposeAsync()
+        {
+            outputStream?.Dispose();
+            readerStream?.Dispose();
+            if(session != null)
+            {
+                await session.DisposeAsync();
             }
         }
-        finally
-        {
-            receiver.Server.Close();
-            File.Delete(dbPath);
 
-            programFinished.TrySetResult();
-            termSignalRegistration?.Dispose();
-            sigHupSignalRegistration?.Dispose();
+        void Send(string file)
+        {
+            foreach(var line in TestHelper.LoadResource(file, true))
+            {
+                inputWriter.Write(line);
+            }
+            inputWriter.Flush();
+        }
+
+        public void WriteLine(string line)
+        {
+            inputWriter.Write(line);
+            inputWriter.Flush();
+        }
+
+        public void CompleteInput()
+        {
+            clientToServerPipe.Writer.Complete();
         }
     }
 
