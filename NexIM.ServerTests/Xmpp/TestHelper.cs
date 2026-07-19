@@ -48,7 +48,18 @@ public abstract class TestHelper
         WriteEndDocumentOnClose = false
     };
 
-    static readonly XmlReaderSettings testReaderSettings = new() {
+    static readonly XmlReaderSettings testPipeReaderSettings = new() {
+        Async = true,
+        CheckCharacters = false,
+        CloseInput = false,
+        ConformanceLevel = ConformanceLevel.Fragment,
+        DtdProcessing = DtdProcessing.Ignore,
+        IgnoreComments = true,
+        IgnoreWhitespace = false,
+        ValidationType = ValidationType.None,
+        XmlResolver = XmlResolver.ThrowingResolver
+    };
+    static readonly XmlReaderSettings testStringReaderSettings = new() {
         Async = false,
         CheckCharacters = false,
         CloseInput = false,
@@ -197,9 +208,12 @@ public abstract class TestHelper
             }
 
             var stringReader = new StringReader(String.Concat(LoadResource(file, false)));
-            using(var expected = XmlReader.Create(stringReader, testReaderSettings))
+            using(var expected = XmlReader.Create(stringReader, testStringReaderSettings))
             {
-                using var reader = XmlReader.Create(serverToClientPipe.Reader.AsStream(leaveOpen: true), testReaderSettings);
+                var stream = new TimeoutableStream(serverToClientPipe.Reader.AsStream(leaveOpen: true)) {
+                    ReadTimeout = 2000
+                };
+                using var reader = XmlReader.Create(stream, testPipeReaderSettings);
                 AssertEqualXml(expected, reader, () => stringReader.Peek() == -1);
             }
         }
@@ -302,14 +316,8 @@ public abstract class TestHelper
 
             do
             {
-                bool result = false;
-#pragma warning disable SYSLIB0046
-                ControlledExecution.Run(() => {
-                    // Might block when no data was received
-                    result = actual.Read();
-                }, new CancellationTokenSource(2000).Token);
-#pragma warning restore SYSLIB0046
-                Assert.IsTrue(result, "XML stream ended prematurely.");
+                // Go through async read to trigger timeout
+                Assert.IsTrue(actual.ReadAsync().GetAwaiter().GetResult(), "XML stream ended prematurely.");
             }
             while(actual.NodeType is XmlNodeType.None or XmlNodeType.Whitespace);
 
