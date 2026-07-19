@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
+using NexIM.Server.Events;
 
 namespace NexIM.Server.Database;
 
@@ -138,7 +139,8 @@ internal abstract class DatabaseContext : DbContext
         IResolver<TimeZoneOffset>,
         IResolver<DateComponents>,
         IResolver<Remote<TemporaryFile>?>,
-        IResolver<ValueUri>
+        IResolver<ValueUri>,
+        IResolver<EventExtensions>
     {
         readonly TimeZoneOffsetFormatter timeZoneOffsetFormatter = new(standardResolver);
         readonly DateFormatter dateFormatter = new(standardResolver);
@@ -168,6 +170,11 @@ internal abstract class DatabaseContext : DbContext
         IMessagePackFormatter<ValueUri>? IResolver<ValueUri>.GetFormatter()
         {
             return valueUriFormatter;
+        }
+
+        IMessagePackFormatter<EventExtensions>? IResolver<EventExtensions>.GetFormatter()
+        {
+            return EventExtensionsFormatter.Instance;
         }
     }
 
