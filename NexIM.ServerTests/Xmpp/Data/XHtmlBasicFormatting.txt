@@ -1,0 +1,3 @@
+<message type="chat" to="test@localhost/res" id="basic1"><body>Hello brave, new world.</body><html xmlns="http://jabber.org/protocol/xhtml-im"><body xmlns="http://www.w3.org/1999/xhtml"><p>Hello <strong>brave</strong>, <em>new</em> world.</p></body></html></message>
+##
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="basic1"><body>Hello brave, new world.</body><html xmlns="http://jabber.org/protocol/xhtml-im"><body xmlns="http://www.w3.org/1999/xhtml"><p>Hello <strong>brave</strong>, <em>new</em> world.</p></body></html></message>

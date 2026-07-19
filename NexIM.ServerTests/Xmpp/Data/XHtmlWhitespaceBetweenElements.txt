@@ -1,0 +1,3 @@
+<message type="chat" to="test@localhost/res" id="ws1"><body>A B</body><html xmlns="http://jabber.org/protocol/xhtml-im"><body xmlns="http://www.w3.org/1999/xhtml"><p><strong>A</strong> <em>B</em></p></body></html></message>
+##
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="ws1"><body>A B</body><html xmlns="http://jabber.org/protocol/xhtml-im"><body xmlns="http://www.w3.org/1999/xhtml"><p><strong>A</strong> <em>B</em></p></body></html></message>
