@@ -27,7 +27,7 @@ public readonly record struct LanguageTaggedString : IComparable<LanguageTaggedS
     public static string DefaultLanguage {
         get {
             var culture = CultureInfo.CurrentUICulture;
-            if(culture == CultureInfo.InvariantCulture)
+            if(CultureInfo.InvariantCulture.Equals(culture))
             {
                 return "en";
             }
