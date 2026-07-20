@@ -50,9 +50,9 @@ partial class Account : IEventHandler
         }
     }
 
-    private StatusReport Report(StatusCode code)
+    private StatusReport Report(StatusCode code, string? resource = null)
     {
-        return new(Name.ToIdentifier(), code);
+        return new(Name.ToIdentifier(resource), code);
     }
 
     private ValueTask<StatusReports> RouteMessage(TargetType targetType, Identifiers targetTo, MessageEvent msgEvent)
@@ -426,7 +426,8 @@ partial class Account : IEventHandler
             // Local delivery - pick individual session
             if(GetSession(resource) is not { } session)
             {
-                tasks.Add(new(Report(StatusCode.NotFound)));
+                // TODO Find another recipient
+                tasks.Add(new(Report(StatusCode.NotFound, resource)));
                 continue;
             }
             tasks.Add(session.Outbound(updateTarget ? evnt.WithTo(identifier) : evnt));
