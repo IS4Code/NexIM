@@ -259,6 +259,20 @@ public abstract class TestHelper
         return client;
     }
 
+    protected XmppTestClient CreateSecondResourceClient()
+    {
+        var client = new XmppTestClient("Prologue1", "Prologue2SecondResource", testCts.Token);
+        secondaryClients.Add(client);
+        return client;
+    }
+
+    protected XmppTestClient CreateConflictingResourceClient()
+    {
+        var client = new XmppTestClient("Prologue1", "Prologue2Conflict", testCts.Token);
+        secondaryClients.Add(client);
+        return client;
+    }
+
     private static Stream LoadResourceStream(string name)
     {
         return

@@ -1,0 +1,2 @@
+<message type="chat" to="test2@localhost" id="offline1"><body>Are you there?</body></message>
+##

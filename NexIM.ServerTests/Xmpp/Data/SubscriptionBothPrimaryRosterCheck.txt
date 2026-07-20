@@ -1,0 +1,3 @@
+<iq type="get" id="rb1"><query xmlns="jabber:iq:roster"/></iq>
+##
+<iq type="result" from="test@localhost" to="test@localhost/res" id="rb1"><query xmlns="jabber:iq:roster"><item jid="test2@localhost" subscription="both" /></query></iq>

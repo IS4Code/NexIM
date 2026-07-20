@@ -1,0 +1,3 @@
+<presence/>
+##
+<presence from="test2@localhost/res" />

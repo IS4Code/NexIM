@@ -1,0 +1,3 @@
+<presence><priority>5</priority></presence>
+##
+<presence from="test@localhost/res2"><priority>5</priority></presence>

@@ -1,0 +1,3 @@
+##
+<presence type="subscribed" from="test2@localhost" />
+<presence from="test2@localhost/res" />

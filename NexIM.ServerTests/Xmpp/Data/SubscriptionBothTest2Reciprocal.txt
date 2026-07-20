@@ -1,0 +1,2 @@
+<presence type="subscribe" to="test@localhost"/>
+##

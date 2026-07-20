@@ -1,0 +1,23 @@
+# Stream open
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xml:lang="en" version="1.0" to="localhost">
+##
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" version="1.0" xml:lang="en" from="localhost">
+<stream:features>
+<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind" />
+<session xmlns="urn:ietf:params:xml:ns:xmpp-session">
+<optional />
+</session>
+<ver xmlns="urn:xmpp:features:rosterver" />
+<sub xmlns="urn:xmpp:features:pre-approval" />
+</stream:features>
+
+##
+
+# Bind (conflicting resource, already bound by primary client)
+<iq type="set" id="bind_1">
+<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
+<resource>res</resource>
+</bind>
+</iq>
+##
+<iq type="error" id="bind_1"><error type="cancel" code="409" by="localhost"><conflict xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></iq>

@@ -1,0 +1,3 @@
+<message type="chat" to="localhost" id="mc1"><addresses xmlns="http://jabber.org/protocol/address"><address type="to" jid="test@localhost/res"/><address type="to" jid="test2@localhost/res"/></addresses><body>Test message</body></message>
+##
+<message type="chat" from="test@localhost/res" to="test@localhost/res" id="mc1"><body>Test message</body><addresses xmlns="http://jabber.org/protocol/address"><address type="to" jid="test@localhost/res" /><address type="to" jid="test2@localhost/res" delivered="true" /></addresses></message>

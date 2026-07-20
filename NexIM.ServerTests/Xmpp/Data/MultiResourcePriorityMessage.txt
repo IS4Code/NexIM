@@ -1,0 +1,3 @@
+<message type="chat" to="test@localhost" id="prio1"><body>For top priority</body></message>
+##
+<message type="chat" from="test2@localhost/res" to="test@localhost/res2" id="prio1"><body>For top priority</body></message>

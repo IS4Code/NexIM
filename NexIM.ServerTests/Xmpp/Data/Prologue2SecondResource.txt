@@ -1,0 +1,27 @@
+# Stream open
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xml:lang="en" version="1.0" to="localhost">
+##
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" version="1.0" xml:lang="en" from="localhost">
+<stream:features>
+<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind" />
+<session xmlns="urn:ietf:params:xml:ns:xmpp-session">
+<optional />
+</session>
+<ver xmlns="urn:xmpp:features:rosterver" />
+<sub xmlns="urn:xmpp:features:pre-approval" />
+</stream:features>
+
+##
+
+# Bind
+<iq type="set" id="bind_1">
+<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
+<resource>res2</resource>
+</bind>
+</iq>
+##
+<iq type="result" from="localhost" to="test@localhost/res2" id="bind_1">
+<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
+<jid>test@localhost/res2</jid>
+</bind>
+</iq>

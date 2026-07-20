@@ -1,0 +1,4 @@
+<presence/>
+<presence type="subscribe" to="test2@localhost"/>
+##
+<presence from="test@localhost/res" />

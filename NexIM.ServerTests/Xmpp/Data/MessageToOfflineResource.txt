@@ -1,0 +1,3 @@
+<message type="chat" to="test2@localhost/nonexistent" id="offline2"><body>Are you there?</body></message>
+##
+<message type="error" from="test2@localhost/nonexistent" id="offline2"><error type="cancel" code="404" by="localhost"><item-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas" /></error></message>
