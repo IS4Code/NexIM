@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server;
+using NexIM.Server.Authentication;
 using NexIM.Xmpp.Protocol;
 
 namespace NexIM.Xmpp.Server.Communication;
@@ -28,6 +29,7 @@ public interface IXmppSession : IXmppSendingHandler
 
     AccountName AccountName { get; }
     XmppClientSession? ClientSession { get; set; }
+    SaslSession? SaslSession { get; set; }
 
     [MemberNotNullWhen(true, nameof(ClientSession))]
     bool IsAuthenticated { get; }
@@ -59,6 +61,7 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
 
     public AccountName AccountName => ClientSession?.Account.Name ?? RemoteResource?.Address.ToAccountName() ?? throw new InvalidOperationException("This session has not been authenticated.");
     public XmppClientSession? ClientSession { get; set; }
+    public SaslSession? SaslSession { get; set; }
     public bool IsAuthenticated => ClientSession != null;
 
     public Token<T> GetToken<T>(string value) where T : Enum => GetToken<T>(value.AsMemory());

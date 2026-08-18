@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
+using NexIM.Server.Authentication;
 using NexIM.Server.Tools;
 
 namespace NexIM.Server;
@@ -16,12 +17,20 @@ partial class NexServer
         }
     }
 
+    public SaslSession? CreateSaslSession(string mechanismName, bool isSecure, Func<string, AccountName> usernameResolver)
+    {
+        return mechanismName switch {
+            "PLAIN" when isSecure => new PlainSaslSession(this, usernameResolver),
+            _ => null
+        };
+    }
+
     public ValueTask<Account?> Authenticate(AccountName accountName, TemporaryString? password)
     {
         return AuthenticateAccount(accountName, password?.Value.AsMemory() ?? default, password);
     }
 
-    public ValueTask<Account?> AuthenticatePlain(TemporaryUtf8String? data, Func<string, AccountName> usernameResolver)
+    internal ValueTask<Account?> AuthenticatePlain(TemporaryUtf8String? data, Func<string, AccountName> usernameResolver)
     {
         if(data == null)
         {

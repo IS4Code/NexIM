@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives;
+using NexIM.Server.Authentication;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
+using NexIM.Xmpp.Server.Communication;
 
 namespace NexIM.Xmpp.Server.Handlers;
 
@@ -121,28 +123,21 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
 
     protected async override ValueTask OnSaslAuth(Token<SaslMechanism>? mechanismToken, TemporaryUtf8String? data)
     {
-        if(mechanismToken?.ToEnum() is not { } mechanism || mechanism is not (SaslMechanism.Plain or SaslMechanism.Anonymous or SaslMechanism.External))
+        if(mechanismToken is not { } mechanism)
         {
             throw XmppSaslException.InvalidMechanism();
         }
 
-        if(mechanism != SaslMechanism.Plain)
-        {
-            // TODO Support other mechanisms
-            throw XmppSaslException.NotAuthorized();
-        }
-
         var session = this.GetSession();
 
-        if(await this.GetServer().AuthenticatePlain(data, username => new XmppAddress(username, this.GetLocalResource().Address.Host).ToAccountName()) is not { } account)
+        if(this.GetServer().CreateSaslSession(mechanism.Value, session.IsSecure, username => new XmppAddress(username, this.GetLocalResource().Address.Host).ToAccountName()) is not { } saslSession)
         {
-            throw XmppSaslException.NotAuthorized();
+            throw XmppSaslException.InvalidMechanism();
         }
 
-        // Not bound yet
-        session.ClientSession = new XmppClientSession(account, null, session);
+        session.SaslSession = saslSession;
 
-        await session.SaslSuccess();
+        await SaslResponse(session, await saslSession.Authenticate(data));
     }
 
     static async ValueTask<TResult> NotImplemented<TResult>()
@@ -153,13 +148,77 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
 
     protected async override ValueTask OnSaslResponse(TemporaryUtf8String? data)
     {
-        await NotImplemented<object>();
+        var session = this.GetSession();
+
+        if(session.SaslSession is not { } saslSession)
+        {
+            // No authentication is in progress
+            throw XmppSaslException.NotAuthorized();
+        }
+
+        await SaslResponse(session, await saslSession.Continue(data));
     }
 
     protected async override ValueTask OnSaslAbort()
     {
-        // TODO Abort
+        var session = this.GetSession();
+
+        if(session.SaslSession is { } saslSession)
+        {
+            session.SaslSession = null;
+            await saslSession.DisposeAsync();
+        }
+
         throw XmppSaslException.Aborted();
+    }
+
+    static async ValueTask SaslResponse(IXmppSession session, SaslResponse response)
+    {
+        if(response.Status.ToXmppException() is { } xmppException)
+        {
+            // Failure
+            await SaslStop(session);
+            throw xmppException;
+        }
+        switch(response.Status)
+        {
+            case SaslStatus.Challenge:
+                try
+                {
+                    await session.SaslChallenge(response.ChallengeData);
+                }
+                finally
+                {
+                    response.ChallengeData?.Dispose();
+                }
+                return;
+
+            case SaslStatus.Success:
+                // Authenticated but not bound yet
+                await SaslStop(session);
+                session.ClientSession = new XmppClientSession(response.Account!, null, session);
+                await session.SaslSuccess();
+                return;
+
+            default:
+                await SaslStop(session);
+                throw response.Status.ToXmppException()!;
+        }
+    }
+
+    static async ValueTask SaslStop(IXmppSession session)
+    {
+        if(session.SaslSession is { } saslSession)
+        {
+            try
+            {
+                await saslSession.DisposeAsync();
+            }
+            finally
+            {
+                session.SaslSession = null;
+            }
+        }
     }
 
     protected override ValueTask<IMessageHandler> OnMessage(in Stanza stanza)
