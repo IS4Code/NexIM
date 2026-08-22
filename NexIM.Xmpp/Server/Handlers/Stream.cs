@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Xml;
 using NexIM.Primitives;
+using NexIM.Server;
 using NexIM.Server.Authentication;
 using NexIM.Xmpp.Protocol;
 using NexIM.Xmpp.Protocol.Handlers;
@@ -129,15 +130,24 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
         }
 
         var session = this.GetSession();
+        var localHost = this.GetLocalResource().Address.Host;
 
-        if(this.GetServer().CreateSaslSession(mechanism.Value, session.IsSecure, username => new XmppAddress(username, this.GetLocalResource().Address.Host).ToAccountName()) is not { } saslSession)
+        // Close previous exchange
+        await SaslStop(session);
+
+        AccountName ResolveUsername(string username)
+        {
+            return new XmppAddress(username, localHost).ToAccountName();
+        }
+
+        if(this.GetServer().CreateSaslSession(mechanism.Value, session.IsSecure, ResolveUsername) is not { } saslSession)
         {
             throw XmppSaslException.InvalidMechanism();
         }
 
         session.SaslSession = saslSession;
 
-        await SaslResponse(session, await saslSession.Authenticate(data));
+        await SaslResponse(session, await saslSession.Response(data));
     }
 
     static async ValueTask<TResult> NotImplemented<TResult>()
@@ -156,7 +166,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
             throw XmppSaslException.NotAuthorized();
         }
 
-        await SaslResponse(session, await saslSession.Continue(data));
+        await SaslResponse(session, await saslSession.Response(data));
     }
 
     protected async override ValueTask OnSaslAbort()
@@ -197,7 +207,14 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
                 // Authenticated but not bound yet
                 await SaslStop(session);
                 session.ClientSession = new XmppClientSession(response.Account!, null, session);
-                await session.SaslSuccess();
+                try
+                {
+                    await session.SaslSuccess(response.ChallengeData);
+                }
+                finally
+                {
+                    response.ChallengeData?.Dispose();
+                }
                 return;
 
             default:

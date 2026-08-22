@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
@@ -10,11 +11,32 @@ namespace NexIM.Server.Authentication;
 /// </summary>
 public abstract class SaslSession : IAsyncDisposable
 {
-    public abstract ValueTask<SaslResponse> Authenticate(TemporaryUtf8String? initialResponse);
+    IAsyncEnumerator<SaslResponse>? state;
 
-    public abstract ValueTask<SaslResponse> Continue(TemporaryUtf8String? response);
+    protected TemporaryUtf8String? CurrentResponse { get; private set; }
 
-    public virtual ValueTask DisposeAsync() => default;
+    protected abstract IAsyncEnumerator<SaslResponse> Run();
+
+    public async ValueTask<SaslResponse> Response(TemporaryUtf8String? response)
+    {
+        try
+        {
+            CurrentResponse = response;
+            state ??= Run();
+            if(!await state.MoveNextAsync())
+            {
+                // Produced no response
+                return SaslResponse.Failure();
+            }
+            return state.Current;
+        }
+        finally
+        {
+            response?.Dispose();
+        }
+    }
+
+    public virtual ValueTask DisposeAsync() => state?.DisposeAsync() ?? default;
 }
 
 public readonly struct SaslResponse
@@ -32,7 +54,7 @@ public readonly struct SaslResponse
 
     public static SaslResponse Challenge(TemporaryUtf8String? data) => new(SaslStatus.Challenge, data, null);
     public static SaslResponse Success(Account account, TemporaryUtf8String? data = null) => new(SaslStatus.Success, data, account);
-    public static SaslResponse Failure(SaslStatus reason) => new(reason, null, null);
+    public static SaslResponse Failure(SaslStatus reason = SaslStatus.AuthenticationFailed) => new(reason, null, null);
 }
 
 public enum SaslStatus

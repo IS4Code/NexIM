@@ -1,6 +1,5 @@
 using System;
-using System.Threading.Tasks;
-using NexIM.Primitives;
+using System.Collections.Generic;
 
 namespace NexIM.Server.Authentication;
 
@@ -9,16 +8,15 @@ namespace NexIM.Server.Authentication;
 /// </summary>
 sealed class PlainSaslSession(NexServer server, Func<string, AccountName> usernameResolver) : SaslSession
 {
-    public override ValueTask<SaslResponse> Authenticate(TemporaryUtf8String? initialResponse) => Finish(initialResponse);
-
-    public override ValueTask<SaslResponse> Continue(TemporaryUtf8String? response) => Finish(response);
-
-    async ValueTask<SaslResponse> Finish(TemporaryUtf8String? data)
+    protected async override IAsyncEnumerator<SaslResponse> Run()
     {
-        if(await server.AuthenticatePlain(data, usernameResolver) is not { } account)
+        if(await server.AuthenticatePlain(CurrentResponse, usernameResolver) is not { } account)
         {
-            return SaslResponse.Failure(SaslStatus.AuthenticationFailed);
+            yield return SaslResponse.Failure(SaslStatus.AuthenticationFailed);
         }
-        return SaslResponse.Success(account);
+        else
+        {
+            yield return SaslResponse.Success(account);
+        }
     }
 }
