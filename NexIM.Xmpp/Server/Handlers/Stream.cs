@@ -306,7 +306,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
         return NotImplemented<ISaslFailureHandler>();
     }
 
-    protected async override ValueTask OnSaslSuccess()
+    protected async override ValueTask OnSaslSuccess(TemporaryUtf8String? data)
     {
         await NotImplemented<object>();
     }

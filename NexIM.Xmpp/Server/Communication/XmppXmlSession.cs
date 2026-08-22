@@ -92,9 +92,9 @@ public abstract class XmppXmlSession : XmppSession
         await EnableCompression();
     }
 
-    protected async sealed override ValueTask OnSaslSuccess()
+    protected async sealed override ValueTask OnSaslSuccess(TemporaryUtf8String? data)
     {
-        await base.OnSaslSuccess();
+        await base.OnSaslSuccess(data);
         await FlushCommand();
 
         // Finish authentication while locked

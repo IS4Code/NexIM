@@ -48,7 +48,7 @@ public interface ITransportHandler : IPayloadHandler
     ValueTask<ISaslFailureHandler> SaslFailure();
 
     [Name("success", XmppSasl)]
-    ValueTask SaslSuccess();
+    ValueTask SaslSuccess(TemporaryUtf8String? data);
 }
 
 public interface IStreamHandler : ITransportHandler
