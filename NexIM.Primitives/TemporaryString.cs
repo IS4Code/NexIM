@@ -62,6 +62,20 @@ public abstract class TemporaryEncodedString : TemporaryArray<char>
         DecodeFrom(array.Value);
     }
 
+    public void ReadFrom<TElement, TArgs>(TemporaryArray<byte>.SynchronousSpanReader<TElement, TArgs> reader, Span<TElement> spanArg, TArgs args)
+    {
+        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
+        array.ReadFrom(reader, spanArg, args);
+        DecodeFrom(array.Value);
+    }
+
+    public void ReadFrom<TElement, TArgs>(TemporaryArray<byte>.SynchronousReadOnlySpanReader<TElement, TArgs> reader, ReadOnlySpan<TElement> spanArg, TArgs args)
+    {
+        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
+        array.ReadFrom(reader, spanArg, args);
+        DecodeFrom(array.Value);
+    }
+
     public async ValueTask ReadFromAsync<TArgs>(TemporaryArray<byte>.AsynchronousReader<TArgs> reader, TArgs args)
     {
         using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
@@ -120,6 +134,20 @@ public abstract class TemporaryEncodedString : TemporaryArray<char>
         using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
         EncodeTo(array);
         array.WriteTo(writer, args);
+    }
+
+    public void WriteTo<TElement, TArgs>(TemporaryArray<byte>.SynchronousSpanWriter<TElement, TArgs> writer, Span<TElement> spanArg, TArgs args)
+    {
+        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
+        EncodeTo(array);
+        array.WriteTo(writer, spanArg, args);
+    }
+
+    public void WriteTo<TElement, TArgs>(TemporaryArray<byte>.SynchronousReadOnlySpanWriter<TElement, TArgs> writer, ReadOnlySpan<TElement> spanArg, TArgs args)
+    {
+        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
+        EncodeTo(array);
+        array.WriteTo(writer, spanArg, args);
     }
 
     public async ValueTask WriteToAsync<TArgs>(TemporaryArray<byte>.AsynchronousWriter<TArgs> writer, TArgs args)

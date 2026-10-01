@@ -98,6 +98,8 @@ public enum SaslMechanism
     [Name("OTP")] Otp,
     [Name("PLAIN")] Plain,
     [Name("SAML20")] Saml20,
+    [Name("SCRAM-SHA-1")] ScramSha1,
+    [Name("SCRAM-SHA-256")] ScramSha256,
     [Name("SECURID")] Securid,
     [Name("SKEY")] Skey,
     [Name("SXOVER-PLUS")] SxoverPlus

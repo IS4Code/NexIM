@@ -11,7 +11,6 @@ namespace NexIM.Server.Tools;
 
 internal static class PasswordHasher
 {
-    const int headerSize = 2;
     static readonly HashInfo defaultHashInfo = new(HashAlgorithmName.SHA256, 600000, 32, 32);
 
     public static async ValueTask<byte[]> HashPassword(ReadOnlyMemory<char> password)
@@ -23,15 +22,15 @@ internal static class PasswordHasher
     private static byte[] HashPasswordCore(ReadOnlySpan<char> password)
     {
         var hashInfo = defaultHashInfo;
-        var result = new byte[headerSize + hashInfo.SaltAndKeyLength];
+        var result = new byte[HashInfo.HeaderSize + hashInfo.SaltAndKeyLength];
 
         // Write header
         result[0] = hashInfo.HashAlgorithmIndexAndSaltRatio;
         result[1] = hashInfo.IterationsPacked;
 
         // Prepare salt and key
-        var salt = result.AsSpan(headerSize, hashInfo.SaltLength);
-        var key = result.AsSpan(headerSize + salt.Length);
+        var salt = result.AsSpan(HashInfo.HeaderSize, hashInfo.SaltLength);
+        var key = result.AsSpan(HashInfo.HeaderSize + salt.Length);
         RandomNumberGenerator.Fill(salt);
 
         // Hash
@@ -47,18 +46,18 @@ internal static class PasswordHasher
 
     private static VerificationResult VerifyPasswordCore(ReadOnlySpan<char> password, ReadOnlySpan<byte> hash)
     {
-        if(hash.Length < headerSize)
+        if(hash.Length < HashInfo.HeaderSize)
         {
             // Invalid data
             return VerificationResult.NotVerified;
         }
 
         // Read header
-        var hashInfo = new HashInfo(hash[0], hash[1], hash.Length - headerSize);
+        var hashInfo = HashInfo.FromBytes(hash);
 
         // Get salt and key
-        var salt = hash.Slice(headerSize, hashInfo.SaltLength);
-        var expectedKey = hash.Slice(headerSize + salt.Length);
+        var salt = hash.Slice(HashInfo.HeaderSize, hashInfo.SaltLength);
+        var expectedKey = hash.Slice(HashInfo.HeaderSize + salt.Length);
 
         // Hash and compare
         Span<byte> key = stackalloc byte[expectedKey.Length];
@@ -69,6 +68,43 @@ internal static class PasswordHasher
             return VerificationResult.NotVerified;
         }
         return IsSufficientlyStrong(hashInfo, defaultHashInfo) ? VerificationResult.Verified : VerificationResult.VerifiedWeak;
+    }
+
+    public static bool GetDefaultPbkdf2Info(HashAlgorithmName algorithm, out int saltLength, out int iterations)
+    {
+        if(defaultHashInfo.HashAlgorithm == algorithm)
+        {
+            iterations = defaultHashInfo.Iterations;
+            saltLength = defaultHashInfo.SaltLength;
+            return true;
+        }
+
+        // Not supported
+        iterations = 0;
+        saltLength = 0;
+        return false;
+    }
+
+    public static bool ExtractPbkdf2Info(ReadOnlyMemory<byte> hash, HashAlgorithmName algorithm, out ReadOnlyMemory<byte> salt, out int iterations, out ReadOnlyMemory<byte> saltedPassword)
+    {
+        var span = hash.Span;
+        if(span.Length >= HashInfo.HeaderSize)
+        {
+            var hashInfo = HashInfo.FromBytes(span);
+            if(hashInfo.HashAlgorithm == algorithm)
+            {
+                iterations = hashInfo.Iterations;
+                salt = hash.Slice(HashInfo.HeaderSize, hashInfo.SaltLength);
+                saltedPassword = hash.Slice(HashInfo.HeaderSize + hashInfo.SaltLength, hashInfo.KeyLength);
+                return true;
+            }
+        }
+
+        // Not supported
+        salt = default;
+        iterations = 0;
+        saltedPassword = default;
+        return false;
     }
 
     private static bool IsSufficientlyStrong(HashInfo info, HashInfo defaultInfo)
@@ -172,6 +208,13 @@ internal static class PasswordHasher
             {
                 throw new ArgumentException($"The salt length is not directly representable in the structure. The closest length is {SaltLength}.", nameof(saltLength));
             }
+        }
+
+        public const int HeaderSize = 2;
+
+        public static HashInfo FromBytes(ReadOnlySpan<byte> span)
+        {
+            return new(span[0], span[1], span.Length - HeaderSize);
         }
 
         static int GetHashAlgorithmIndex(HashAlgorithmName hashAlgorithm)

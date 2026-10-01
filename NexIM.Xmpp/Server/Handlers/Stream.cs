@@ -60,6 +60,9 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
                         // Certificate could be used
                         await sasl.Mechanism(SaslMechanism.External.ToToken());
                     }
+                    // These do not transmit the password
+                    await sasl.Mechanism(SaslMechanism.ScramSha256.ToToken());
+                    await sasl.Mechanism(SaslMechanism.ScramSha1.ToToken());
                     if(session.IsSecure)
                     {
                         // Plaintext password requires a secure connection
@@ -184,42 +187,32 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
 
     static async ValueTask SaslResponse(IXmppSession session, SaslResponse response)
     {
-        if(response.Status.ToXmppException() is { } xmppException)
+        try
         {
-            // Failure
-            await SaslStop(session);
-            throw xmppException;
-        }
-        switch(response.Status)
-        {
-            case SaslStatus.Challenge:
-                try
-                {
+            switch(response.Status)
+            {
+                case SaslStatus.Challenge:
                     await session.SaslChallenge(response.ChallengeData);
-                }
-                finally
-                {
-                    response.ChallengeData?.Dispose();
-                }
-                return;
+                    return;
 
-            case SaslStatus.Success:
-                // Authenticated but not bound yet
-                await SaslStop(session);
-                session.ClientSession = new XmppClientSession(response.Account!, null, session);
-                try
-                {
+                case SaslStatus.Success:
+                    // Authenticated but not bound yet
+                    session.ClientSession = new XmppClientSession(response.Account!, null, session);
                     await session.SaslSuccess(response.ChallengeData);
-                }
-                finally
-                {
-                    response.ChallengeData?.Dispose();
-                }
-                return;
+                    return;
 
-            default:
+                default:
+                    // Failure
+                    throw response.Status.ToXmppException()!;
+            }
+        }
+        finally
+        {
+            if(response.Status != SaslStatus.Challenge)
+            {
+                // Final status
                 await SaslStop(session);
-                throw response.Status.ToXmppException()!;
+            }
         }
     }
 

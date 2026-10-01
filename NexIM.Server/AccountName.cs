@@ -47,6 +47,11 @@ public readonly struct AccountName : IEquatable<AccountName>, IComparable<Accoun
             comparer.Equals(Host, other.Host);
     }
 
+    public bool Matches(ReadOnlySpan<char> other)
+    {
+        return ToString().AsSpan().Equals(other, StringComparison.OrdinalIgnoreCase);
+    }
+
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
         return obj is AccountName other && Equals(other);

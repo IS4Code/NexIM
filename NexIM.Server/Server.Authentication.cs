@@ -1,5 +1,6 @@
 using System;
 using System.Net.Mail;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using NexIM.Primitives;
 using NexIM.Server.Accounts;
@@ -21,6 +22,8 @@ partial class NexServer
     {
         return mechanismName switch {
             "PLAIN" when isSecure => new PlainSaslSession(this, usernameResolver),
+            "SCRAM-SHA-1" => new ScramSaslSession(this, usernameResolver, HashAlgorithmName.SHA1),
+            "SCRAM-SHA-256" => new ScramSaslSession(this, usernameResolver, HashAlgorithmName.SHA256),
             _ => null
         };
     }
@@ -61,7 +64,7 @@ partial class NexServer
         var password = memory.Slice(passwordAt);
 
         var accountName = usernameResolver(username);
-        if(authzid.Length != 0 && !((ReadOnlySpan<char>)authzid.Span).Equals(accountName.ToString().AsSpan(), StringComparison.OrdinalIgnoreCase))
+        if(authzid.Length != 0 && !accountName.Matches(authzid.Span))
         {
             return default;
         }

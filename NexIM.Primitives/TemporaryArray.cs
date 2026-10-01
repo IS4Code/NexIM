@@ -14,9 +14,13 @@ namespace NexIM.Primitives;
 public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T : unmanaged, IEquatable<T>
 {
     public delegate int SynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
+    public delegate int SynchronousSpanReader<TElement, TArgs>(ArraySegment<T> outputBuffer, Span<TElement> spanArg, TArgs args);
+    public delegate int SynchronousReadOnlySpanReader<TElement, TArgs>(ArraySegment<T> outputBuffer, ReadOnlySpan<TElement> spanArg, TArgs args);
     public delegate ValueTask<int> AsynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
 
     public delegate void SynchronousWriter<TArgs>(ArraySegment<T> inputBuffer, TArgs args);
+    public delegate void SynchronousSpanWriter<TElement, TArgs>(ArraySegment<T> inputBuffer, Span<TElement> spanArg, TArgs args);
+    public delegate void SynchronousReadOnlySpanWriter<TElement, TArgs>(ArraySegment<T> inputBuffer, ReadOnlySpan<TElement> spanArg, TArgs args);
     public delegate ValueTask AsynchronousWriter<TArgs>(ArraySegment<T> inputBuffer, TArgs args);
 
     readonly ITemporaryArraySource<T> source;
@@ -214,6 +218,28 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
         while((read = reader(new(storage, Length, storage.Length - Length), args)) > 0);
     }
 
+    public void ReadFrom<TElement, TArgs>(SynchronousSpanReader<TElement, TArgs> reader, Span<TElement> spanArg, TArgs args)
+    {
+        int read = 0;
+        do
+        {
+            Length += read;
+            Reserve(Length + 1);
+        }
+        while((read = reader(new(storage, Length, storage.Length - Length), spanArg, args)) > 0);
+    }
+
+    public void ReadFrom<TElement, TArgs>(SynchronousReadOnlySpanReader<TElement, TArgs> reader, ReadOnlySpan<TElement> spanArg, TArgs args)
+    {
+        int read = 0;
+        do
+        {
+            Length += read;
+            Reserve(Length + 1);
+        }
+        while((read = reader(new(storage, Length, storage.Length - Length), spanArg, args)) > 0);
+    }
+
     public async ValueTask ReadFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args)
     {
         int read = 0;
@@ -223,6 +249,27 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
             Reserve(Length + 1);
         }
         while((read = await reader(new(storage, Length, storage.Length - Length), args)) > 0);
+    }
+    
+
+    public void FillFrom<TArgs>(SynchronousReader<TArgs> reader, TArgs args)
+    {
+        Length += reader(new(storage, Length, storage.Length - Length), args);
+    }
+
+    public void FillFrom<TElement, TArgs>(SynchronousSpanReader<TElement, TArgs> reader, Span<TElement> spanArg, TArgs args)
+    {
+        Length += reader(new(storage, Length, storage.Length - Length), spanArg, args);
+    }
+
+    public void FillFrom<TElement, TArgs>(SynchronousReadOnlySpanReader<TElement, TArgs> reader, ReadOnlySpan<TElement> spanArg, TArgs args)
+    {
+        Length += reader(new(storage, Length, storage.Length - Length), spanArg, args);
+    }
+
+    public async ValueTask FillFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args)
+    {
+        Length += await reader(new(storage, Length, storage.Length - Length), args);
     }
 
     public static TemporaryArray<T> CreateFrom<TArgs>(SynchronousReader<TArgs> reader, TArgs args, int capacity = DefaultCapacity, ITemporaryArraySource<T>? arraySource = null)
@@ -270,6 +317,16 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
     public void WriteTo<TArgs>(SynchronousWriter<TArgs> writer, TArgs args)
     {
         writer(Value, args);
+    }
+
+    public void WriteTo<TElement, TArgs>(SynchronousSpanWriter<TElement, TArgs> writer, Span<TElement> spanArg, TArgs args)
+    {
+        writer(Value, spanArg, args);
+    }
+
+    public void WriteTo<TElement, TArgs>(SynchronousReadOnlySpanWriter<TElement, TArgs> writer, ReadOnlySpan<TElement> spanArg, TArgs args)
+    {
+        writer(Value, spanArg, args);
     }
 
     public ValueTask WriteToAsync<TArgs>(AsynchronousWriter<TArgs> writer, TArgs args)
