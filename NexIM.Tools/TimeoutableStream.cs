@@ -11,21 +11,47 @@ public class TimeoutableStream(Stream inner) : AsyncStream
     public override int ReadTimeout { get; set; }
     public override int WriteTimeout { get; set; }
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => inner.ReadAsync(buffer, WithTimeout(cancellationToken, ReadTimeout));
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => inner.ReadAsync(buffer, offset, count, WithTimeout(cancellationToken, ReadTimeout));
-    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) => inner.WriteAsync(buffer, WithTimeout(cancellationToken, WriteTimeout));
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => inner.WriteAsync(buffer, offset, count, WithTimeout(cancellationToken, WriteTimeout));
-    public override Task FlushAsync(CancellationToken cancellationToken) => inner.FlushAsync(WithTimeout(cancellationToken, WriteTimeout));
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        using var cts = WithTimeout(cancellationToken, ReadTimeout, out var token);
+        return await inner.ReadAsync(buffer, token);
+    }
 
-    private CancellationToken WithTimeout(CancellationToken source, int timeout)
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        using var cts = WithTimeout(cancellationToken, ReadTimeout, out var token);
+        return await inner.ReadAsync(buffer, offset, count, token);
+    }
+
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        using var cts = WithTimeout(cancellationToken, WriteTimeout, out var token);
+        await inner.WriteAsync(buffer, token);
+    }
+
+    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        using var cts = WithTimeout(cancellationToken, WriteTimeout, out var token);
+        await inner.WriteAsync(buffer, offset, count, token);
+    }
+
+    public override async Task FlushAsync(CancellationToken cancellationToken)
+    {
+        using var cts = WithTimeout(cancellationToken, WriteTimeout, out var token);
+        await inner.FlushAsync(token);
+    }
+
+    private static CancellationTokenSource? WithTimeout(CancellationToken source, int timeout, out CancellationToken token)
     {
         if(timeout <= 0)
         {
-            return source;
+            token = source;
+            return null;
         }
         var cts = CancellationTokenSource.CreateLinkedTokenSource(source);
         cts.CancelAfter(timeout);
-        return cts.Token;
+        token = cts.Token;
+        return cts;
     }
 
     #region Non-timeouting synchronous implementation
