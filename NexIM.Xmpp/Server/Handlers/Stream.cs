@@ -15,6 +15,8 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
 {
     const bool supportsIqAuth = true;
 
+    public required override ICommandContext? Context { get => base.Context; init => base.Context = value; }
+
     string IXmppHandler.DefaultNamespace => this.GetSession().DefaultNamespace;
 
     async ValueTask IXmppReceivingHandler.StreamStarted()
@@ -68,6 +70,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
                         // Plaintext password requires a secure connection
                         await sasl.Mechanism(SaslMechanism.Plain.ToToken());
                     }
+                    await sasl.Mechanism(SaslMechanism.Anonymous.ToToken());
                 }
 
                 if(session.IsSecure)
@@ -143,7 +146,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
             return new XmppAddress(username, localHost).ToAccountName();
         }
 
-        if(this.GetServer().CreateSaslSession(mechanism.Value, session.IsSecure, ResolveUsername) is not { } saslSession)
+        if(this.GetServer().CreateSaslSession(mechanism.Value, session.IsSecure, ResolveUsername, session) is not { } saslSession)
         {
             throw XmppSaslException.InvalidMechanism();
         }

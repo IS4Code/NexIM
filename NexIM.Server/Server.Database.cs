@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -11,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using NexIM.Server.Accounts;
 using NexIM.Server.Accounts.VCards;
 using NexIM.Server.Database;
+using NexIM.Tools;
 
 namespace NexIM.Server;
 
@@ -325,6 +327,55 @@ partial class NexServer
         }
 
         return account;
+    }
+
+    private Account CreateTemporaryAccount(Func<string, AccountName> usernameResolver, AccountName? assertedName, INetworkSession networkSession)
+    {
+        var context = new AccountContext(this);
+        accountContexts.Add(context, null);
+
+        // Use GUID in account name
+        var identifier = IdentifierHelper.CreateGuid(out var timestamp);
+        var identity = new Identity(identifier, usernameResolver(identifier.ToString("N")));
+
+        // Not added to the DB context
+        return new Account(context, identity, Array.Empty<byte>()) {
+            Created = timestamp,
+            Email = GetDefaultEmail(assertedName, networkSession),
+            VCard = new()
+        };
+    }
+
+    const string unknownUser = "unknown";
+    const string invalidHost = "invalid";
+    static readonly MailAddress unknownEmail = new($"{unknownUser}@{invalidHost}");
+    static readonly SearchValues<char> invalidAddressChars = SearchValues.Create(" \t\r\n\"'<>()[]\\,:;@*");
+    private static MailAddress GetDefaultEmail(AccountName? accountName, INetworkSession networkSession)
+    {
+        if(accountName?.User is not { Length: > 0 } user || user.AsSpan().ContainsAny(invalidAddressChars))
+        {
+            // Bad user
+            user = unknownUser;
+        }
+        if(accountName?.Host is not { Length: > 0 } host || host.AsSpan().ContainsAny(invalidAddressChars))
+        {
+            // Bad host
+            host = networkSession.RemoteEndPoint.GetHostName();
+
+            if(host is not { Length: > 0 } || host.AsSpan().ContainsAny(invalidAddressChars))
+            {
+                host = invalidHost;
+            }
+        }
+
+        try
+        {
+            return new MailAddress($"{user}@{host}");
+        }
+        catch(FormatException)
+        {
+            return unknownEmail;
+        }
     }
 
     internal readonly record struct AccountRegistrationInfo(byte[] PasswordHash, MailAddress Email, VCard VCard);

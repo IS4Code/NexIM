@@ -21,8 +21,9 @@ public sealed class XmppManualSession(Stream stream, XmppServerReceiver receiver
     public override bool CanUpgradeTls => false;
     public override bool CanCompress => false;
 
-    public override EndPoint? LocalEndPoint => null;
-    public override EndPoint? RemoteEndPoint => null;
+    static readonly IPEndPoint loopback = new(IPAddress.Loopback, 0);
+    public override EndPoint LocalEndPoint => loopback;
+    public override EndPoint RemoteEndPoint => loopback;
     public override X509Certificate? RemoteCertificate => null;
     public override CancellationToken CancellationToken => CancellationToken.None;
 

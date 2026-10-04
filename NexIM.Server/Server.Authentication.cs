@@ -18,9 +18,10 @@ partial class NexServer
         }
     }
 
-    public SaslSession? CreateSaslSession(string mechanismName, bool isSecure, Func<string, AccountName> usernameResolver)
+    public SaslSession? CreateSaslSession(string mechanismName, bool isSecure, Func<string, AccountName> usernameResolver, INetworkSession networkSession)
     {
         return mechanismName switch {
+            "ANONYMOUS" => new AnonymousSaslSession(this, usernameResolver, networkSession),
             "PLAIN" when isSecure => new PlainSaslSession(this, usernameResolver),
             "SCRAM-SHA-1" => new ScramSaslSession(this, usernameResolver, HashAlgorithmName.SHA1),
             "SCRAM-SHA-256" => new ScramSaslSession(this, usernameResolver, HashAlgorithmName.SHA256),
@@ -79,6 +80,11 @@ partial class NexServer
         {
             memoryHandle?.Dispose();
         }
+    }
+
+    public async ValueTask<Account> AuthenticateAnonymous(Func<string, AccountName> usernameResolver, AccountName? assertedName, INetworkSession networkSession)
+    {
+        return CreateTemporaryAccount(usernameResolver, assertedName, networkSession);
     }
 
     public ValueTask<Account?> Register(AccountName accountName, TemporaryString password, MailAddress email, VCard vcard)

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -17,22 +16,10 @@ namespace NexIM.Xmpp.Server.Communication;
 /// Represents an outgoing XMPP session, i.e. a channel that supports
 /// sending XMPP commands to a remote entity.
 /// </summary>
-public interface IXmppSession : IXmppSendingHandler
+public interface IXmppSession : IClientNetworkSession<XmppClientSession>, IXmppSendingHandler
 {
-    bool Connected { get; }
-    bool IsSecure { get; }
     bool CanUpgradeTls { get; }
     bool CanCompress { get; }
-    EndPoint? LocalEndPoint { get; }
-    EndPoint? RemoteEndPoint { get; }
-    X509Certificate? RemoteCertificate { get; }
-
-    AccountName AccountName { get; }
-    XmppClientSession? ClientSession { get; set; }
-    SaslSession? SaslSession { get; set; }
-
-    [MemberNotNullWhen(true, nameof(ClientSession))]
-    bool IsAuthenticated { get; }
 
     void RegisterCallback(Token<StanzaIdentifier> identifier, Func<ValueTask<IInfoQueryHandler>> callback);
     ValueTask<IInfoQueryHandler>? FinishCallback(Token<StanzaIdentifier>? identifier);
@@ -52,8 +39,8 @@ public abstract class XmppSession : XmppSendingHandler, IXmppSession
     public abstract bool IsSecure { get; }
     public abstract bool CanUpgradeTls { get; }
     public abstract bool CanCompress { get; }
-    public abstract EndPoint? LocalEndPoint { get; }
-    public abstract EndPoint? RemoteEndPoint { get; }
+    public abstract EndPoint LocalEndPoint { get; }
+    public abstract EndPoint RemoteEndPoint { get; }
     public abstract X509Certificate? RemoteCertificate { get; }
     public abstract CancellationToken CancellationToken { get; }
 
