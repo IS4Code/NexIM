@@ -1,0 +1,26 @@
+# Stream open
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xml:lang="en" version="1.0" to="localhost">
+##
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" version="1.0" xml:lang="en" from="localhost">
+<stream:features>
+<mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl">
+<mechanism>SCRAM-SHA-256</mechanism>
+<mechanism>SCRAM-SHA-1</mechanism>
+<mechanism>PLAIN</mechanism>
+<mechanism>ANONYMOUS</mechanism>
+</mechanisms>
+<register xmlns="http://jabber.org/features/iq-register" />
+<auth xmlns="http://jabber.org/features/iq-auth" />
+<session xmlns="urn:ietf:params:xml:ns:xmpp-session">
+<optional />
+</session>
+<ver xmlns="urn:xmpp:features:rosterver" />
+<sub xmlns="urn:xmpp:features:pre-approval" />
+</stream:features>
+
+##
+
+# SASL auth
+<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="PLAIN">AHN1YnNjcmliZXIyAHN1YnNjcmliZXIy</auth>
+##
+<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl" />

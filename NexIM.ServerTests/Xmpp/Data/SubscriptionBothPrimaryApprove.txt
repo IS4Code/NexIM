@@ -1,2 +1,2 @@
-<presence type="subscribed" to="test2@localhost"/>
+<presence type="subscribed" to="subscriber2@localhost"/>
 ##

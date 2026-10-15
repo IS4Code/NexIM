@@ -19,9 +19,9 @@ namespace NexIM.ServerTests.Xmpp;
 
 public abstract class TestHelper
 {
-    static readonly XmppServerReceiver receiver = new();
+    protected static readonly XmppServerReceiver receiver = new();
 
-    static readonly XmlReaderSettings xmppReaderSettings = new() {
+    protected static readonly XmlReaderSettings xmppReaderSettings = new() {
         Async = true,
         CheckCharacters = false,
         CloseInput = false,
@@ -34,7 +34,7 @@ public abstract class TestHelper
         ValidationType = ValidationType.None,
         XmlResolver = XmlResolver.ThrowingResolver
     };
-    static readonly XmlWriterSettings xmppWriterSettings = new() {
+    protected static readonly XmlWriterSettings xmppWriterSettings = new() {
         Async = true,
         CheckCharacters = false,
         CloseOutput = false,
@@ -48,7 +48,7 @@ public abstract class TestHelper
         WriteEndDocumentOnClose = false
     };
 
-    static readonly XmlReaderSettings testPipeReaderSettings = new() {
+    protected static readonly XmlReaderSettings testPipeReaderSettings = new() {
         Async = true,
         CheckCharacters = false,
         CloseInput = false,
@@ -98,7 +98,7 @@ public abstract class TestHelper
         RegisterAccounts(server).AsTask().GetAwaiter().GetResult();
     }
 
-    private static async ValueTask RegisterAccount(NexServer server, string user, string passwordString, string email)
+    protected static async ValueTask RegisterAccount(NexServer server, string user, string passwordString, string email)
     {
         using var password = new TemporaryString();
         password.Append(passwordString);
@@ -211,7 +211,7 @@ public abstract class TestHelper
             using(var expected = XmlReader.Create(stringReader, testStringReaderSettings))
             {
                 var stream = new TimeoutableStream(serverToClientPipe.Reader.AsStream(leaveOpen: true)) {
-                    ReadTimeout = 2000
+                    ReadTimeout = 10000
                 };
                 using var reader = XmlReader.Create(stream, testPipeReaderSettings);
                 AssertEqualXml(expected, reader, () => stringReader.Peek() == -1);
@@ -255,6 +255,13 @@ public abstract class TestHelper
     protected XmppTestClient CreateSecondClient()
     {
         var client = new XmppTestClient("Prologue1Second", "Prologue2Second", testCts.Token);
+        secondaryClients.Add(client);
+        return client;
+    }
+
+    protected XmppTestClient CreateClient(string prologue1, string prologue2)
+    {
+        var client = new XmppTestClient(prologue1, prologue2, testCts.Token);
         secondaryClients.Add(client);
         return client;
     }

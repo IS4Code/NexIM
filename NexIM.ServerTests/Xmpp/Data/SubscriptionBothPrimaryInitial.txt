@@ -1,4 +1,4 @@
 <presence/>
-<presence type="subscribe" to="test2@localhost"/>
+<presence type="subscribe" to="subscriber2@localhost"/>
 ##
-<presence from="test@localhost/res" />
+<presence from="subscriber1@localhost/res" />

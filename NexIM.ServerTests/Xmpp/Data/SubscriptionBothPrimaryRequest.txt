@@ -1,2 +1,2 @@
 ##
-<presence type="subscribe" from="test2@localhost" />
+<presence type="subscribe" from="subscriber2@localhost" />
