@@ -332,7 +332,7 @@ sealed class ScramSaslSession(NexServer server, Func<string, AccountName> userna
         }
     }
 
-    static readonly TemporaryArray<char>.SynchronousReadOnlySpanReader<byte, ValueTuple> base64Reader = (buffer, span, _) => {
+    static readonly TemporaryArray<char>.SynchronousReadOnlySpanReader<byte, ValueTuple> base64Reader = (ArraySegment<char> buffer, ref ReadOnlySpan<byte> span, ValueTuple _) => {
         if(!Convert.TryToBase64Chars(span, buffer.AsSpan(), out var written))
         {
             throw new ArgumentException("The output buffer has wrong capacity.", nameof(buffer));
@@ -348,7 +348,7 @@ sealed class ScramSaslSession(NexServer server, Func<string, AccountName> userna
         return written;
     };
 
-    static readonly TemporaryArray<byte>.SynchronousReadOnlySpanReader<byte, HashInfo> hmacReader = (buffer, span, hashInfo) => {
+    static readonly TemporaryArray<byte>.SynchronousReadOnlySpanReader<byte, HashInfo> hmacReader = (ArraySegment<byte> buffer, ref ReadOnlySpan<byte> span, HashInfo hashInfo) => {
         int hashSize = hashInfo.HashSize;
         var key = span.Slice(0, hashSize);
         var source = span.Slice(hashSize);

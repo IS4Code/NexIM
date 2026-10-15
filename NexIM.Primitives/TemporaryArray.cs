@@ -14,8 +14,8 @@ namespace NexIM.Primitives;
 public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T : unmanaged, IEquatable<T>
 {
     public delegate int SynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
-    public delegate int SynchronousSpanReader<TElement, TArgs>(ArraySegment<T> outputBuffer, Span<TElement> spanArg, TArgs args);
-    public delegate int SynchronousReadOnlySpanReader<TElement, TArgs>(ArraySegment<T> outputBuffer, ReadOnlySpan<TElement> spanArg, TArgs args);
+    public delegate int SynchronousSpanReader<TElement, TArgs>(ArraySegment<T> outputBuffer, ref Span<TElement> spanArg, TArgs args);
+    public delegate int SynchronousReadOnlySpanReader<TElement, TArgs>(ArraySegment<T> outputBuffer, ref ReadOnlySpan<TElement> spanArg, TArgs args);
     public delegate ValueTask<int> AsynchronousReader<TArgs>(ArraySegment<T> outputBuffer, TArgs args);
 
     public delegate void SynchronousWriter<TArgs>(ArraySegment<T> inputBuffer, TArgs args);
@@ -226,7 +226,7 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
             Length += read;
             Reserve(Length + 1);
         }
-        while((read = reader(new(storage, Length, storage.Length - Length), spanArg, args)) > 0);
+        while((read = reader(new(storage, Length, storage.Length - Length), ref spanArg, args)) > 0);
     }
 
     public void ReadFrom<TElement, TArgs>(SynchronousReadOnlySpanReader<TElement, TArgs> reader, ReadOnlySpan<TElement> spanArg, TArgs args)
@@ -237,7 +237,7 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
             Length += read;
             Reserve(Length + 1);
         }
-        while((read = reader(new(storage, Length, storage.Length - Length), spanArg, args)) > 0);
+        while((read = reader(new(storage, Length, storage.Length - Length), ref spanArg, args)) > 0);
     }
 
     public async ValueTask ReadFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args)
@@ -259,12 +259,12 @@ public class TemporaryArray<T> : IList<T>, IReadOnlyList<T>, IDisposable where T
 
     public void FillFrom<TElement, TArgs>(SynchronousSpanReader<TElement, TArgs> reader, Span<TElement> spanArg, TArgs args)
     {
-        Length += reader(new(storage, Length, storage.Length - Length), spanArg, args);
+        Length += reader(new(storage, Length, storage.Length - Length), ref spanArg, args);
     }
 
     public void FillFrom<TElement, TArgs>(SynchronousReadOnlySpanReader<TElement, TArgs> reader, ReadOnlySpan<TElement> spanArg, TArgs args)
     {
-        Length += reader(new(storage, Length, storage.Length - Length), spanArg, args);
+        Length += reader(new(storage, Length, storage.Length - Length), ref spanArg, args);
     }
 
     public async ValueTask FillFromAsync<TArgs>(AsynchronousReader<TArgs> reader, TArgs args)

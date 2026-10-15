@@ -53,57 +53,111 @@ public abstract class TemporaryEncodedString : TemporaryArray<char>
 
     }
 
-    // TODO Use direct streaming without a backing byte array
+    public void Append(ReadOnlySpan<byte> bytes)
+    {
+        if(bytes.IsEmpty)
+        {
+            return;
+        }
 
+        DecodeFrom(Encoding.GetDecoder(), bytes, true);
+    }
+
+    const int streamBufferSize = 4096;
     public void ReadFrom<TArgs>(TemporaryArray<byte>.SynchronousReader<TArgs> reader, TArgs args)
     {
-        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
-        array.ReadFrom(reader, args);
-        DecodeFrom(array.Value);
+        var decoder = Encoding.GetDecoder();
+        using var chunk = new TemporaryArray<byte>(streamBufferSize, byteArraySource);
+        while(true)
+        {
+            chunk.FillFrom(reader, args);
+            if(chunk.Length == 0)
+            {
+                break;
+            }
+            DecodeFrom(decoder, chunk.Value, false);
+            chunk.Clear();
+        }
+        DecodeFrom(decoder, default, true);
     }
 
     public void ReadFrom<TElement, TArgs>(TemporaryArray<byte>.SynchronousSpanReader<TElement, TArgs> reader, Span<TElement> spanArg, TArgs args)
     {
-        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
-        array.ReadFrom(reader, spanArg, args);
-        DecodeFrom(array.Value);
+        var decoder = Encoding.GetDecoder();
+        using var chunk = new TemporaryArray<byte>(streamBufferSize, byteArraySource);
+        while(true)
+        {
+            chunk.FillFrom(reader, spanArg, args);
+            if(chunk.Length == 0)
+            {
+                break;
+            }
+            DecodeFrom(decoder, chunk.Value, false);
+            chunk.Clear();
+        }
+        DecodeFrom(decoder, default, true);
     }
 
     public void ReadFrom<TElement, TArgs>(TemporaryArray<byte>.SynchronousReadOnlySpanReader<TElement, TArgs> reader, ReadOnlySpan<TElement> spanArg, TArgs args)
     {
-        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
-        array.ReadFrom(reader, spanArg, args);
-        DecodeFrom(array.Value);
+        var decoder = Encoding.GetDecoder();
+        using var chunk = new TemporaryArray<byte>(streamBufferSize, byteArraySource);
+        while(true)
+        {
+            chunk.FillFrom(reader, spanArg, args);
+            if(chunk.Length == 0)
+            {
+                break;
+            }
+            DecodeFrom(decoder, chunk.Value, false);
+            chunk.Clear();
+        }
+        DecodeFrom(decoder, default, true);
     }
 
     public async ValueTask ReadFromAsync<TArgs>(TemporaryArray<byte>.AsynchronousReader<TArgs> reader, TArgs args)
     {
-        using var array = new TemporaryArray<byte>(arraySource: byteArraySource);
-        await array.ReadFromAsync(reader, args);
-        DecodeFrom(array.Value);
-    }
-
-    private void DecodeFrom(ArraySegment<byte> input)
-    {
-        var array = input.Array;
-        var offset = input.Offset;
-        var remaining = input.Count;
-
         var decoder = Encoding.GetDecoder();
-        ReadFrom((buffer, args) => {
-            decoder.Convert(array, offset, remaining, buffer.Array, buffer.Offset, buffer.Count, true, out var bytesUsed, out var charsUsed, out var completed);
-
-            if(remaining == 0 && charsUsed == 0 && !completed)
+        using var chunk = new TemporaryArray<byte>(streamBufferSize, byteArraySource);
+        while(true)
+        {
+            await chunk.FillFromAsync(reader, args);
+            if(chunk.Length == 0)
             {
-                throw new InvalidOperationException("Decoding cannot be finished.");
+                break;
             }
-
-            offset += bytesUsed;
-            remaining -= bytesUsed;
-
-            return charsUsed;
-        }, default(ValueTuple));
+            DecodeFrom(decoder, chunk.Value, false);
+            chunk.Clear();
+        }
+        DecodeFrom(decoder, default, true);
     }
+
+    private static unsafe void Convert(Decoder decoder, ReadOnlySpan<byte> bytes, Span<char> chars, bool flush, out int bytesUsed, out int charsUsed, out bool completed)
+    {
+        byte stub;
+        fixed(byte* bytesPtr = bytes)
+        fixed(char* charsPtr = chars)
+        {
+            // Prevent nullptr from being rejected
+            decoder.Convert(bytes.IsEmpty ? &stub : bytesPtr, bytes.Length, charsPtr, chars.Length, flush, out bytesUsed, out charsUsed, out completed);
+        }
+    }
+
+    private void DecodeFrom(Decoder decoder, ReadOnlySpan<byte> input, bool flush)
+    {
+        ReadFrom(decoderReader, input, (decoder, flush));
+    }
+
+    static readonly SynchronousReadOnlySpanReader<byte, (Decoder decoder, bool flush)> decoderReader = (ArraySegment<char> buffer, ref ReadOnlySpan<byte> input, (Decoder decoder, bool flush) data) => {
+        var (decoder, flush) = data;
+        Convert(decoder, input, buffer.AsSpan(), flush, out var bytesUsed, out var charsUsed, out var completed);
+        if(input.Length == 0 && charsUsed == 0 && !completed)
+        {
+            throw new InvalidOperationException("Decoding cannot be finished.");
+        }
+        input = input.Slice(bytesUsed);
+        return charsUsed;
+    };
 
     private void EncodeTo(TemporaryArray<byte> output)
     {
