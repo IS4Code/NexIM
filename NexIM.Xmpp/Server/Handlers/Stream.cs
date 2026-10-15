@@ -57,20 +57,10 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
 
                 await using(var sasl = await features.SaslMechanisms())
                 {
-                    if(session.RemoteCertificate != null)
+                    foreach(var mechanism in this.GetServer().GetSaslMechanisms(session))
                     {
-                        // Certificate could be used
-                        await sasl.Mechanism(SaslMechanism.External.ToToken());
+                        await sasl.Mechanism(Token<SaslMechanism>.FromAtomized(mechanism));
                     }
-                    // These do not transmit the password
-                    await sasl.Mechanism(SaslMechanism.ScramSha256.ToToken());
-                    await sasl.Mechanism(SaslMechanism.ScramSha1.ToToken());
-                    if(session.IsSecure)
-                    {
-                        // Plaintext password requires a secure connection
-                        await sasl.Mechanism(SaslMechanism.Plain.ToToken());
-                    }
-                    await sasl.Mechanism(SaslMechanism.Anonymous.ToToken());
                 }
 
                 if(session.IsSecure)
@@ -146,7 +136,7 @@ internal sealed class Stream : BaseStreamHandler<ICommandContext>, IXmppReceivin
             return new XmppAddress(username, localHost).ToAccountName();
         }
 
-        if(this.GetServer().CreateSaslSession(mechanism.Value, session.IsSecure, ResolveUsername, session) is not { } saslSession)
+        if(this.GetServer().CreateSaslSession(mechanism.Value, ResolveUsername, session) is not { } saslSession)
         {
             throw XmppSaslException.InvalidMechanism();
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -18,15 +19,33 @@ partial class NexServer
         }
     }
 
-    public SaslSession? CreateSaslSession(string mechanismName, bool isSecure, Func<string, AccountName> usernameResolver, INetworkSession networkSession)
+    public SaslSession? CreateSaslSession(string mechanismName, Func<string, AccountName> usernameResolver, INetworkSession networkSession)
     {
         return mechanismName switch {
             "ANONYMOUS" => new AnonymousSaslSession(this, usernameResolver, networkSession),
-            "PLAIN" when isSecure => new PlainSaslSession(this, usernameResolver),
+            "PLAIN" when networkSession.IsSecure => new PlainSaslSession(this, usernameResolver),
             "SCRAM-SHA-1" => new ScramSaslSession(this, usernameResolver, HashAlgorithmName.SHA1),
             "SCRAM-SHA-256" => new ScramSaslSession(this, usernameResolver, HashAlgorithmName.SHA256),
             _ => null
         };
+    }
+
+    public IEnumerable<string> GetSaslMechanisms(INetworkSession networkSession)
+    {
+        /*if(session.RemoteCertificate != null)
+        {
+            // Certificate could be used
+            yield return "EXTERNAL";
+        }*/
+        // These do not transmit the password
+        yield return "SCRAM-SHA-256";
+        yield return "SCRAM-SHA-1";
+        if(networkSession.IsSecure)
+        {
+            // Plaintext password requires a secure connection
+            yield return "PLAIN";
+        }
+        yield return "ANONYMOUS";
     }
 
     public ValueTask<Account?> Authenticate(AccountName accountName, TemporaryString? password)
