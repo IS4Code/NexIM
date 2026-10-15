@@ -12,12 +12,7 @@ namespace System.Runtime.CompilerServices
     /// This class should not be used by developers in source code.
     /// </summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
-#if SYSTEM_PRIVATE_CORELIB
-    public
-#else
-    internal
-#endif
-    static class IsExternalInit
+    internal static class IsExternalInit
     {
     }
 }

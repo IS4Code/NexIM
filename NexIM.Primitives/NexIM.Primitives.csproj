@@ -19,10 +19,6 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <DefineConstants>$(DefineConstants);DEFINE_TOOLS</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <None Include="..\LICENSE" Visible="false">
       <Pack>True</Pack>

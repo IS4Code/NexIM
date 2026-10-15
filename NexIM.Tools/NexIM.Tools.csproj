@@ -11,10 +11,6 @@
     <AssemblyTitle>$(Product) Tools</AssemblyTitle>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <DefineConstants>$(DefineConstants);DEFINE_TOOLS;TOOLS_PUBLIC</DefineConstants>
-  </PropertyGroup>
-
   <Import Project="..\NexIM.Shared\NexIM.Shared.projitems" Label="Shared" />
 
   <ItemGroup>

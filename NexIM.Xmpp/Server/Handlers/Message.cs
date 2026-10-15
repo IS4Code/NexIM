@@ -28,6 +28,8 @@ internal class Message : BaseDelegatingMessageHandler<CapturingHandler<IMessageH
     NonEmptyDictionary<MessageRelation, LocalizedString?>.Builder messageRelationsBuilder;
     bool isNotification;
 
+    public required override ICommandContext? Context { get => base.Context; init => base.Context = value; }
+
     protected sealed override CapturingHandler<IMessageHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 

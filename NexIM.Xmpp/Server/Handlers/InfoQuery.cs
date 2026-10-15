@@ -16,6 +16,8 @@ internal abstract class InfoQuery : BaseDelegatingInfoQueryHandler<CapturingHand
     protected bool Handled => handled;
     protected bool Recognized => InnerHandler.Calls.Count == 0;
 
+    public required override ICommandContext? Context { get => base.Context; init => base.Context = value; }
+
     protected sealed override CapturingHandler<IInfoQueryHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 

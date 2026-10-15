@@ -25,6 +25,8 @@ internal class Presence : BaseDelegatingPresenceHandler<CapturingHandler<IPresen
     AddressesParser<ICommandContext>? _addressesParser;
     AddressesParser<ICommandContext> addressesParser => _addressesParser ??= this.GetHandler<AddressesParser<ICommandContext>>();
 
+    public required override ICommandContext? Context { get => base.Context; init => base.Context = value; }
+
     protected sealed override CapturingHandler<IPresenceHandler> InnerHandler { get; } = new();
     protected sealed override EmptyDisposable Disposable => default;
 

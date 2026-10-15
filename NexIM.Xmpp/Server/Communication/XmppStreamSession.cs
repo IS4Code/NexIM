@@ -34,7 +34,7 @@ public abstract class XmppStreamSession : XmppHandlerSession
     protected void Initialize(Stream stream)
     {
         writer?.Dispose();
-        Reader?.Dispose();
+        reader?.Dispose();
 
         Stream = stream;
 

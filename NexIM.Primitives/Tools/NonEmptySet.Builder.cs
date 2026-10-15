@@ -5,8 +5,6 @@ using System.Runtime.InteropServices;
 
 namespace NexIM.Tools;
 
-#if DEFINE_TOOLS
-
 partial struct NonEmptySet<T>
 {
     public Builder ToBuilder()
@@ -200,5 +198,3 @@ partial struct NonEmptySet<T>
         readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
-
-#endif

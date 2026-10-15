@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +8,7 @@ using System.Xml.Linq;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml;
 using NexIM.Primitives.Xml.Handlers;
+using NexIM.Tools;
 
 namespace NexIM.Xmpp.Protocol.Grammar;
 
@@ -104,21 +104,18 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IMixedPaylo
 
     readonly struct XmlWriterFormatter(XmlWriter writer) : InlineStyle.IFormatter
     {
-        static readonly ConcurrentDictionary<string, string> nameCacheFirst = new();
-        static readonly ConcurrentDictionary<string, string> nameCacheMiddle = new();
-
-        static readonly Func<string, string> nameFirst = n => $"{n}:";
-        static readonly Func<string, string> nameMiddle = n => $";{n}:";
+        static readonly NameFirstCache nameCacheFirst = new();
+        static readonly NameMiddleCache nameCacheMiddle = new();
 
         public void WriteDeclaration(string name, string value, int index)
         {
             if(index > 0)
             {
-                writer.WriteString(nameCacheMiddle.GetOrAdd(name, nameMiddle));
+                writer.WriteString(nameCacheMiddle.Get(name));
             }
             else
             {
-                writer.WriteString(nameCacheFirst.GetOrAdd(name, nameFirst));
+                writer.WriteString(nameCacheFirst.Get(name));
             }
             writer.WriteString(value);
         }
@@ -127,13 +124,23 @@ public abstract partial class Encoder : XmlEncoder, IPayloadHandler, IMixedPaylo
         {
             if(index > 0)
             {
-                await writer.WriteStringAsync(nameCacheMiddle.GetOrAdd(name, nameMiddle));
+                await writer.WriteStringAsync(nameCacheMiddle.Get(name));
             }
             else
             {
-                await writer.WriteStringAsync(nameCacheFirst.GetOrAdd(name, nameFirst));
+                await writer.WriteStringAsync(nameCacheFirst.Get(name));
             }
             await writer.WriteStringAsync(value);
+        }
+
+        sealed class NameFirstCache : StringTransformationCache<string>
+        {
+            protected override string Transform(string n) => $"{n}:";
+        }
+
+        sealed class NameMiddleCache : StringTransformationCache<string>
+        {
+            protected override string Transform(string n) => $";{n}:";
         }
     }
 

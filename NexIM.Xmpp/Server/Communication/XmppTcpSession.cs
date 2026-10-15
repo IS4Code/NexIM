@@ -5,7 +5,6 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Xml;
-using NexIM.Server;
 using NexIM.Tools;
 
 namespace NexIM.Xmpp.Server.Communication;
