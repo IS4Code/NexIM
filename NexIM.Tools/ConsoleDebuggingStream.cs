@@ -19,6 +19,7 @@ public sealed class ConsoleDebuggingStream : NonSeekableStream
     public string SendIndicator { get; set; } = "<-";
     public string ReceiveIndicator { get; set; } = "->";
     public string IndicatorSeparator { get; set; } = " ";
+    public string? LineTerminator { get; set; } = ">";
 
     public ConsoleDebuggingStream(Stream inner, ConsoleColor color)
     {
@@ -79,9 +80,9 @@ public sealed class ConsoleDebuggingStream : NonSeekableStream
                 {
                     reader.DiscardBufferedData();
 
-                    if(line.EndsWith('>'))
+                    if(LineTerminator is not { } lineEnd || line.EndsWith(lineEnd, StringComparison.Ordinal))
                     {
-                        // Ends a tag - safe to report
+                        // Message end - safe to report
 
                         Reset();
 

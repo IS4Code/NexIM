@@ -32,11 +32,8 @@ partial class NexServer
 
     public IEnumerable<string> GetSaslMechanisms(INetworkSession networkSession)
     {
-        /*if(session.RemoteCertificate != null)
-        {
-            // Certificate could be used
-            yield return "EXTERNAL";
-        }*/
+        // TODO: External if certificate matches an account
+
         // These do not transmit the password
         yield return "SCRAM-SHA-256";
         yield return "SCRAM-SHA-1";
@@ -101,7 +98,7 @@ partial class NexServer
         }
     }
 
-    public async ValueTask<Account> AuthenticateAnonymous(Func<string, AccountName> usernameResolver, AccountName? assertedName, INetworkSession networkSession)
+    public async ValueTask<Account?> AuthenticateAnonymous(Func<string, AccountName> usernameResolver, AccountName? assertedName, INetworkSession networkSession)
     {
         return CreateTemporaryAccount(usernameResolver, assertedName, networkSession);
     }

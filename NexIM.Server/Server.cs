@@ -1,10 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 
 namespace NexIM.Server;
 
 public sealed partial class NexServer
 {
     internal NexDatabase DatabaseConfig { get; }
+
+    public string ProductName { get; } = typeof(NexServer).Assembly.GetCustomAttribute<AssemblyProductAttribute>()!.Product;
+    public string ProductVersion { get; } = typeof(NexServer).Assembly.GetName().Version!.ToString(3);
+    public DateTime StartDate { get; } = DateTime.UtcNow;
 
     public NexServer(NexDatabase database)
     {

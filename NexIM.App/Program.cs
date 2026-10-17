@@ -65,7 +65,7 @@ internal class Program
                 Console.WriteLine("Warning: An in-memory SQLite database will be used.");
                 connectionString = memorySqlite;
             }
-            config.XmppReceiver.Server = new NexServer(dbType switch {
+            var server = new NexServer(dbType switch {
                 DatabaseType.Sqlite => new NexDatabase.Sqlite {
                     ConnectionString = connectionString
                 },
@@ -77,6 +77,8 @@ internal class Program
                 },
                 _ => throw new ApplicationException($"{dbType.ToToken().Value} database is not supported.")
             });
+            config.XmppReceiver.Server = server;
+            config.IrcReceiver.Server = server;
 
             var tasks = new List<Task>();
 
@@ -94,6 +96,11 @@ internal class Program
             {
                 Console.WriteLine("Starting XMPP HTML service at: " + String.Join(", ", webListener.Prefixes));
                 tasks.Add(webListener.RunAsync(cancellationToken));
+            }
+            if(config.IrcTcp is { } ircTcpListener)
+            {
+                Console.WriteLine("Starting IRC TCP listener at: " + String.Join(", ", ircTcpListener.EndPoints));
+                tasks.Add(ircTcpListener.RunAsync(cancellationToken));
             }
             if(config.Metadata is { } metadataServer)
             {

@@ -4,6 +4,10 @@ VisualStudioVersion = 17.8.34601.278
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Xmpp", "NexIM.Xmpp\NexIM.Xmpp.csproj", "{AE773674-6177-4694-A144-860BF116FF17}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Irc", "NexIM.Irc\NexIM.Irc.csproj", "{8B80609F-8A45-403F-8A73-CE3B3C85CD1F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Irc.Protocol", "NexIM.Irc.Protocol\NexIM.Irc.Protocol.csproj", "{376E5A9E-D44A-4195-9A9E-33635B04A8BE}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Xml.Generator", "NexIM.Xml.Generator\NexIM.Xml.Generator.csproj", "{F7E98F9D-95B1-465F-8413-19944EC9A964}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NexIM.Server", "NexIM.Server\NexIM.Server.csproj", "{15D1C188-75E4-48FB-BE36-318C6953CFA0}"
@@ -82,6 +86,14 @@ Global
 		{2ECBF142-18F5-4154-9804-75539225BB8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2ECBF142-18F5-4154-9804-75539225BB8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2ECBF142-18F5-4154-9804-75539225BB8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B80609F-8A45-403F-8A73-CE3B3C85CD1F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B80609F-8A45-403F-8A73-CE3B3C85CD1F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B80609F-8A45-403F-8A73-CE3B3C85CD1F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B80609F-8A45-403F-8A73-CE3B3C85CD1F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{376E5A9E-D44A-4195-9A9E-33635B04A8BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{376E5A9E-D44A-4195-9A9E-33635B04A8BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{376E5A9E-D44A-4195-9A9E-33635B04A8BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{376E5A9E-D44A-4195-9A9E-33635B04A8BE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -95,5 +107,6 @@ Global
 		NexIM.Shared\NexIM.Shared.projitems*{a3a96e77-82cd-411f-8070-632c705a0d50}*SharedItemsImports = 5
 		NexIM.Shared\NexIM.Shared.projitems*{ae3ab3a9-eeb1-4928-b9c6-413cede373f5}*SharedItemsImports = 5
 		NexIM.Shared\NexIM.Shared.projitems*{af91cf4e-6de3-4e7c-a81b-d180749eb19e}*SharedItemsImports = 5
+		NexIM.Shared\NexIM.Shared.projitems*{376e5a9e-d44a-4195-9a9e-33635b04a8be}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using NexIM.App.Configuration.Handlers;
+using NexIM.Irc.Server;
+using NexIM.Irc.Server.Communication;
 using NexIM.Metadata;
 using NexIM.Primitives;
 using NexIM.Primitives.Xml.Handlers;
@@ -36,6 +38,8 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
     public XmppTcpListener? XmppTcp { get; private set; }
     public XmppWebSocketListener? XmppWebSocket { get; private set; }
     public XmppWebServer? XmppHtml { get; private set; }
+    public IrcServerReceiver IrcReceiver { get; } = new();
+    public IrcTcpListener? IrcTcp { get; private set; }
     public WellKnownServices? Metadata { get; private set; }
     public CertificateManager? CertificateManager { get; private set; }
     public List<CertificateSource>? CertificateSources { get; private set; }
@@ -401,6 +405,22 @@ sealed class ConfigurationHandler : BaseHandler, IServerHandler, IHttpHandler, I
             ) {
                 RefreshDelay = RefreshDelay
             };
+        }
+    }
+
+    async ValueTask<IIrcHandler> IServerHandler.Irc()
+    {
+        return new IrcHandler(IrcTcp ??= new(IrcReceiver));
+    }
+
+    sealed class IrcHandler(IrcTcpListener server) : BaseHandler, IIrcHandler
+    {
+        async ValueTask IServiceHandler.Endpoint(IReadOnlyList<string>? endpoints)
+        {
+            foreach(var endpoint in endpoints ?? Array.Empty<string>())
+            {
+                server.EndPoints.Add(IPEndPoint.Parse(endpoint));
+            }
         }
     }
 

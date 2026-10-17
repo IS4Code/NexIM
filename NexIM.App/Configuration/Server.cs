@@ -21,6 +21,9 @@ public interface IServerHandler : IPayloadHandler
     [Name("XMPP")]
     ValueTask<IXmppHandler> Xmpp();
 
+    [Name("IRC")]
+    ValueTask<IIrcHandler> Irc();
+
     [Name("Metadata")]
     ValueTask<IMetadataHandler> Metadata();
 }

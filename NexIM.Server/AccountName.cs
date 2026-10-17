@@ -75,7 +75,7 @@ public readonly struct AccountName : IEquatable<AccountName>, IComparable<Accoun
         return !a.Equals(b);
     }
 
-    public override string? ToString()
+    public override string ToString()
     {
         return
             User is { } user
