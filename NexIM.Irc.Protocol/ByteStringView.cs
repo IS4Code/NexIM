@@ -132,4 +132,5 @@ public readonly struct ByteStringView(ReadOnlyMemory<byte> data) : IEquatable<By
     public static implicit operator ByteStringView(Memory<byte> data) => new(data);
     public static implicit operator ByteStringView(ReadOnlyMemory<byte> data) => new(data);
     public static implicit operator ReadOnlySpan<byte>(ByteStringView str) => str.AsSpan();
+    public static implicit operator ReadOnlyMemory<byte>(ByteStringView str) => str.AsMemory();
 }

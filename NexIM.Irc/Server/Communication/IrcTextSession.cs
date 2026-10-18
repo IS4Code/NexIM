@@ -154,7 +154,7 @@ public abstract class IrcTextSession : IrcSession
 
                 var value = param.AsSpan();
 
-                if(paramIndex == parameters.Count)
+                if(paramIndex == parameters.Count && RequiresTrailing(value))
                 {
                     span.Write((byte)':');
                     WriteTrailingParameter(ref span, value);
@@ -172,6 +172,11 @@ public abstract class IrcTextSession : IrcSession
             originalSpan.Overlaps(span, out var written);
             return written;
         }
+    }
+
+    private static bool RequiresTrailing(ReadOnlySpan<byte> value)
+    {
+        return value.IsEmpty || value[0] == (byte)':' || value.IndexOf((byte)' ') != -1;
     }
 
     static readonly SearchValues<byte> invalidInMiddle = SearchValues.Create(" \0\r\n"u8);
@@ -428,7 +433,7 @@ public abstract class IrcTextSession : IrcSession
         parameterBuffer = null;
 
         NonEmptyDictionary<bstring, bstring>? serverTags, clientTags;
-        if(span.TryMatchStart((byte)'@'))
+        if(span.TryMatchFirst((byte)'@'))
         {
             if(!span.TrySplitAfter((byte)' ', out var tagsSpan))
             {
@@ -449,7 +454,7 @@ public abstract class IrcTextSession : IrcSession
                     continue;
                 }
 
-                if(tagSpan.TryMatchStart((byte)'+'))
+                if(tagSpan.TryMatchFirst((byte)'+'))
                 {
                     clientBuilder[new(line, tagSpan)] = new(line, valueSpan);
                 }
@@ -468,7 +473,7 @@ public abstract class IrcTextSession : IrcSession
         }
 
         IrcAddress source;
-        if(span.TryMatchStart((byte)':'))
+        if(span.TryMatchFirst((byte)':'))
         {
             if(!span.TrySplitAfter((byte)' ', out var sourceSpan))
             {
@@ -524,14 +529,14 @@ public abstract class IrcTextSession : IrcSession
 
         while(count < maxParameterCount)
         {
-            if(!span.StripStart((byte)' '))
+            if(!span.StripFirst((byte)' '))
             {
                 // Ignore starting space in middle parameter (not strictly allowed)
                 break;
             }
 
             // Parameter starts
-            if(span.TryMatchStart((byte)':') || count == maxParameterCount - 1)
+            if(span.TryMatchFirst((byte)':') || count == maxParameterCount - 1)
             {
                 // Trailing parameter - rest is last parameter
                 buffer[count++] = new(line, span);

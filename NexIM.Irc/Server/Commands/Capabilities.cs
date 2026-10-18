@@ -132,7 +132,7 @@ partial class Stream
         while(!span.IsEmpty)
         {
             span.TrySplitAfter((byte)' ', out var name);
-            var disable = name.TryMatchStart((byte)'-');
+            var disable = name.TryMatchFirst((byte)'-');
             if(name.IsEmpty)
             {
                 continue;

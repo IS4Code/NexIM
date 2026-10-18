@@ -116,7 +116,7 @@ public static class SpanExtensions
         return true;
     }
 
-    public static bool TryMatchStart<T>(this ref ReadOnlySpan<T> span, T firstElement) where T : IEquatable<T>
+    public static bool TryMatchFirst<T>(this ref ReadOnlySpan<T> span, T firstElement) where T : IEquatable<T>
     {
         if(span.IsEmpty)
         {
@@ -130,7 +130,7 @@ public static class SpanExtensions
         return false;
     }
 
-    public static bool TryMatchStart<T>(this ref Span<T> span, T firstElement) where T : IEquatable<T>
+    public static bool TryMatchFirst<T>(this ref Span<T> span, T firstElement) where T : IEquatable<T>
     {
         if(span.IsEmpty)
         {
@@ -144,7 +144,35 @@ public static class SpanExtensions
         return false;
     }
 
-    public static bool TryMatch<T>(this ref ReadOnlySpan<T> span, ReadOnlySpan<T> prefix)
+    public static bool TryMatchFirst<T>(this ref ReadOnlySpan<T> span, ReadOnlySpan<T> firstElements)
+    {
+        if(span.IsEmpty)
+        {
+            return false;
+        }
+        if(firstElements.IndexOf(span[0]) != -1)
+        {
+            span.Advance(1);
+            return true;
+        }
+        return false;
+    }
+
+    public static bool TryMatchFirst<T>(this ref Span<T> span, ReadOnlySpan<T> firstElements)
+    {
+        if(span.IsEmpty)
+        {
+            return false;
+        }
+        if(firstElements.IndexOf(span[0]) != -1)
+        {
+            span.Advance(1);
+            return true;
+        }
+        return false;
+    }
+
+    public static bool TryMatchStart<T>(this ref ReadOnlySpan<T> span, ReadOnlySpan<T> prefix)
     {
         if(span.IsEmpty)
         {
@@ -172,7 +200,7 @@ public static class SpanExtensions
         return false;
     }
 
-    public static bool StripStart<T>(this ref ReadOnlySpan<T> span, T element)
+    public static bool StripFirst<T>(this ref ReadOnlySpan<T> span, T element)
     {
         var index = span.IndexOfAnyExcept(element);
         if(index == -1)
@@ -184,7 +212,7 @@ public static class SpanExtensions
         return true;
     }
 
-    public static bool StripStart<T>(this ref Span<T> span, T element)
+    public static bool StripFirst<T>(this ref Span<T> span, T element)
     {
         var index = ((ReadOnlySpan<T>)span).IndexOfAnyExcept(element);
         if(index == -1)
