@@ -27,6 +27,11 @@ public static class NetworkExtensions
     {
         // TODO Resolve using DNS
 
+        if(IPAddress.IsLoopback(address))
+        {
+            return "localhost";
+        }
+
         if(address.IsIPv4MappedToIPv6)
         {
             address = address.MapToIPv4();
