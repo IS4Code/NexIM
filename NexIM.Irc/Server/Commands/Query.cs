@@ -44,9 +44,20 @@ partial class Stream
 
     static readonly bstring caseMappingFeature = "CASEMAPPING=rfc7613"u8.ToArray();
     static readonly bstring hostLenFeature = "HOSTLEN=253"u8.ToArray();
-
     async ValueTask SendSupportedFeatures()
     {
         await SendReply(MessageReply.ISupport, caseMappingFeature, hostLenFeature, "are supported by this server");
+    }
+
+    static readonly bstring pong = "PONG"u8.ToArray();
+    private ValueTask PingCommand(in CommandMessage message)
+    {
+        if(message.Parameters.Count < 1)
+        {
+            return SendReply(MessageReply.NeedMoreParams, message.Command, Texts.NotEnoughParameters);
+        }
+        // No event because this has no target
+        var token = message.Parameters[0];
+        return SendCommand(pong, token);
     }
 }

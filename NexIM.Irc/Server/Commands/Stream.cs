@@ -212,6 +212,7 @@ internal sealed partial class Stream : ICommandHandler, IIrcReceivingHandler
                 if(Ascii.EqualsIgnoreCase(rest, "ING"u8))
                 {
                     // PING
+                    return PingCommand(message);
                 }
                 if(Ascii.EqualsIgnoreCase(rest, "ONG"u8))
                 {
