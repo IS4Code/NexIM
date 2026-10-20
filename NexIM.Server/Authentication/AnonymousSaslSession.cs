@@ -12,8 +12,14 @@ sealed class AnonymousSaslSession(NexServer server, Func<string, AccountName> us
     protected async override IAsyncEnumerator<SaslResponse> Run()
     {
         var assertedName = GetAssertedName(CurrentResponse);
-        var account = await server.AuthenticateAnonymous(usernameResolver, assertedName, networkSession);
-        yield return SaslResponse.Success(account);
+        if(await server.AuthenticateAnonymous(usernameResolver, assertedName, networkSession) is not { } account)
+        {
+            yield return SaslResponse.Failure(SaslStatus.AuthenticationFailed);
+        }
+        else
+        {
+            yield return SaslResponse.Success(account);
+        }
     }
 
     const int maxTraceLength = 255;
