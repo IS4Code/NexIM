@@ -41,7 +41,7 @@ partial class Stream
             // A parameter with nothing in it is no nickname at all
             return SendReply(MessageReply.NoNicknameGiven, Texts.NoNicknameGiven);
         }
-        if(!IrcAddress.TryFromNickname(newNickname, out _))
+        if(!IrcEndPoint.TryFromNickname(newNickname, out _))
         {
             return SendReply(MessageReply.ErroneusNickname, newNickname, Texts.ErroneusNickname);
         }

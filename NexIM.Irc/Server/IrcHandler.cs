@@ -26,8 +26,8 @@ public interface IIrcReceivingHandler : IIrcHandler
 /// </summary>
 public interface IIrcSendingHandler : IIrcHandler
 {
-    IrcAddress LocalAddress { get; set; }
-    IrcAddress RemoteAddress { get; set; }
+    IrcEndPoint LocalAddress { get; set; }
+    IrcEndPoint RemoteAddress { get; set; }
     Capabilities Capabilities { get; set; }
 }
 
@@ -36,8 +36,8 @@ public interface IIrcSendingHandler : IIrcHandler
 /// </summary>
 public abstract class IrcSendingHandler : IIrcSendingHandler
 {
-    public IrcAddress LocalAddress { get; set; }
-    public IrcAddress RemoteAddress { get; set; }
+    public IrcEndPoint LocalAddress { get; set; }
+    public IrcEndPoint RemoteAddress { get; set; }
     public Capabilities Capabilities { get; set; }
     public abstract Encoding Encoding { get; }
 

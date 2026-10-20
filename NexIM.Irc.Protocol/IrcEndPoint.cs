@@ -6,10 +6,12 @@ using System.Text;
 namespace NexIM.Irc.Protocol;
 
 [StructLayout(LayoutKind.Auto)]
-public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddress>
+public readonly struct IrcEndPoint : IEquatable<IrcEndPoint>, IComparable<IrcEndPoint>
 {
     public ByteStringView Value { get; }
     readonly int userStart, hostStart;
+
+    internal (int, int) ParseData => (userStart, hostStart);
 
     public bool IsEmpty => Value.IsEmpty;
 
@@ -62,14 +64,14 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         }
     }
 
-    private IrcAddress(ByteStringView value, int userStart, int hostStart)
+    internal IrcEndPoint(ByteStringView value, int userStart, int hostStart)
     {
         Value = value;
         this.userStart = userStart;
         this.hostStart = hostStart;
     }
 
-    public IrcAddress(ByteStringView value, Components allowedComponents = (Components)(-1))
+    public IrcEndPoint(ByteStringView value, Components allowedComponents = (Components)(-1))
     {
         if(!TryParse(value, allowedComponents, out this, out var exception))
         {
@@ -77,7 +79,7 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         }
     }
 
-    public IrcAddress(ReadOnlySpan<byte> nickname = default, ReadOnlySpan<byte> user = default, ReadOnlySpan<byte> host = default)
+    public IrcEndPoint(ReadOnlySpan<byte> nickname = default, ReadOnlySpan<byte> user = default, ReadOnlySpan<byte> host = default)
     {
         if(!TryCreate(nickname, user, host, out this, out var exception))
         {
@@ -85,7 +87,7 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         }
     }
 
-    public static IrcAddress FromNickname(ByteStringView nickname)
+    public static IrcEndPoint FromNickname(ByteStringView nickname)
     {
         if(!TryFromNickname(nickname, out var address, out var exception))
         {
@@ -94,12 +96,12 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         return address;
     }
 
-    public static bool TryFromNickname(ByteStringView nickname, out IrcAddress address)
+    public static bool TryFromNickname(ByteStringView nickname, out IrcEndPoint address)
     {
         return TryFromNickname(nickname, out address, out _);
     }
 
-    private static bool TryFromNickname(ByteStringView nickname, out IrcAddress address, [NotNullWhen(false)] out Exception? exception)
+    private static bool TryFromNickname(ByteStringView nickname, out IrcEndPoint address, [NotNullWhen(false)] out Exception? exception)
     {
         var span = nickname.AsSpan();
         if(span.IsEmpty)
@@ -126,7 +128,7 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         return true;
     }
 
-    public static IrcAddress FromHost(ByteStringView host)
+    public static IrcEndPoint FromHost(ByteStringView host)
     {
         if(!TryFromHost(host, out var address, out var exception))
         {
@@ -135,12 +137,12 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         return address;
     }
 
-    public static bool TryFromHost(ByteStringView host, out IrcAddress address)
+    public static bool TryFromHost(ByteStringView host, out IrcEndPoint address)
     {
         return TryFromHost(host, out address, out _);
     }
 
-    private static bool TryFromHost(ByteStringView host, out IrcAddress address, [NotNullWhen(false)] out Exception? exception)
+    private static bool TryFromHost(ByteStringView host, out IrcEndPoint address, [NotNullWhen(false)] out Exception? exception)
     {
         var span = host.AsSpan();
         if(span.IsEmpty)
@@ -166,12 +168,12 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         return true;
     }
 
-    public static bool TryCreate(ReadOnlySpan<byte> nickname, ReadOnlySpan<byte> user, ReadOnlySpan<byte> host, out IrcAddress address)
+    public static bool TryCreate(ReadOnlySpan<byte> nickname, ReadOnlySpan<byte> user, ReadOnlySpan<byte> host, out IrcEndPoint address)
     {
         return TryCreate(nickname, user, host, out address, out _);
     }
 
-    private static bool TryCreate(ReadOnlySpan<byte> nickname, ReadOnlySpan<byte> user, ReadOnlySpan<byte> host, out IrcAddress address, [NotNullWhen(false)] out Exception? exception)
+    private static bool TryCreate(ReadOnlySpan<byte> nickname, ReadOnlySpan<byte> user, ReadOnlySpan<byte> host, out IrcEndPoint address, [NotNullWhen(false)] out Exception? exception)
     {
         if(nickname.IndexOfAny(user.IsEmpty && host.IsEmpty ? ".!@"u8 : "!@"u8) != -1)
         {
@@ -252,12 +254,12 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         return true;
     }
 
-    public static bool TryParse(ByteStringView value, Components components, out IrcAddress address)
+    public static bool TryParse(ByteStringView value, Components components, out IrcEndPoint address)
     {
         return TryParse(value, components, out address, out _);
     }
 
-    private static bool TryParse(ByteStringView value, Components components, out IrcAddress address, [NotNullWhen(false)] out Exception? exception)
+    private static bool TryParse(ByteStringView value, Components components, out IrcEndPoint address, [NotNullWhen(false)] out Exception? exception)
     {
         var span = value.AsSpan();
         int userAt = span.IndexOf((byte)'!');
@@ -377,14 +379,14 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         return Value.ToString(encoding);
     }
 
-    public bool Equals(IrcAddress other)
+    public bool Equals(IrcEndPoint other)
     {
         return Value == other.Value;
     }
 
     public override bool Equals(object obj)
     {
-        return obj is IrcAddress other && Equals(other);
+        return obj is IrcEndPoint other && Equals(other);
     }
 
     public override int GetHashCode()
@@ -392,7 +394,7 @@ public readonly struct IrcAddress : IEquatable<IrcAddress>, IComparable<IrcAddre
         return Value.GetHashCode();
     }
 
-    public int CompareTo(IrcAddress other)
+    public int CompareTo(IrcEndPoint other)
     {
         return Value.CompareTo(other.Value);
     }

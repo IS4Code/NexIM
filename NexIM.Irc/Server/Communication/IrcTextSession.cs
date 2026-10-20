@@ -472,7 +472,7 @@ public abstract class IrcTextSession : IrcSession
             clientTags = default;
         }
 
-        IrcAddress source;
+        IrcEndPoint source;
         if(span.TryMatchFirst((byte)':'))
         {
             if(!span.TrySplitAfter((byte)' ', out var sourceSpan))

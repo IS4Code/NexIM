@@ -10,7 +10,7 @@ namespace NexIM.Irc;
 
 internal static class AdapterExtensions
 {
-    public static IrcAddress ToAddress(this Identifier identifier, IIrcSession? session = null)
+    public static IrcEndPoint ToAddress(this Identifier identifier, IIrcSession? session = null)
     {
         var encoder = ByteStringCache.Global.Get(session?.Encoding ?? Encoding.UTF8);
         if(identifier.Account is not { } accountName)
@@ -21,7 +21,7 @@ internal static class AdapterExtensions
                 return default;
             }
             // Just identifier
-            return IrcAddress.FromNickname(encoder.Get(resource));
+            return IrcEndPoint.FromNickname(encoder.Get(resource));
         }
         if(accountName.IsLocal)
         {
@@ -34,7 +34,7 @@ internal static class AdapterExtensions
                     return default;
                 }
                 // Just resource
-                return IrcAddress.FromNickname(encoder.Get(resource));
+                return IrcEndPoint.FromNickname(encoder.Get(resource));
             }
             // User makes host necessary
             if(session != null)
@@ -61,11 +61,11 @@ internal static class AdapterExtensions
                 if(identifier.Resource is not { } resource)
                 {
                     // Just host
-                    return IrcAddress.FromHost(encoder.Get(host));
+                    return IrcEndPoint.FromHost(encoder.Get(host));
                 }
                 // Resource and host
                 var addr = encoder.Get($"{resource}@{host}");
-                return new(addr, IrcAddress.Components.Nickname | IrcAddress.Components.Host);
+                return new(addr, IrcEndPoint.Components.Nickname | IrcEndPoint.Components.Host);
             }
             else
             {
@@ -81,7 +81,7 @@ internal static class AdapterExtensions
         }
     }
 
-    public static Identifier ToIdentifier(this IrcAddress address, IIrcSession? session = null)
+    public static Identifier ToIdentifier(this IrcEndPoint address, IIrcSession? session = null)
     {
         var encoding = session?.Encoding ?? Encoding.UTF8;
 

@@ -8,7 +8,7 @@ namespace NexIM.Irc.Protocol;
 public readonly record struct CommandMessage(
     ByteStringView Command,
     MessageParameters Parameters = default,
-    IrcAddress Source = default,
+    IrcEndPoint Source = default,
     NonEmptyDictionary<ByteStringView, ByteStringView>? ServerTags = null,
     NonEmptyDictionary<ByteStringView, ByteStringView>? ClientTags = null
 )
@@ -20,7 +20,7 @@ public readonly record struct CommandMessage(
 public readonly record struct ReplyMessage(
     MessageReply Reply,
     MessageParameters Parameters = default,
-    IrcAddress Source = default,
+    IrcEndPoint Source = default,
     NonEmptyDictionary<ByteStringView, ByteStringView>? ServerTags = null,
     NonEmptyDictionary<ByteStringView, ByteStringView>? ClientTags = null
 )

@@ -26,7 +26,7 @@ internal sealed partial class Stream : ICommandHandler, IIrcReceivingHandler
     {
         // TODO Use server name
         var session = this.GetSession();
-        session.LocalAddress = new IrcAddress(host: GetHostName(session.LocalEndPoint));
+        session.LocalAddress = new IrcEndPoint(host: GetHostName(session.LocalEndPoint));
     }
 
     async ValueTask IIrcReceivingHandler.StreamStopped()
@@ -67,7 +67,7 @@ internal sealed partial class Stream : ICommandHandler, IIrcReceivingHandler
         return true;
     }
 
-    private IrcAddress BuildRemoteAddress()
+    private IrcEndPoint BuildRemoteAddress()
     {
         var session = this.GetSession();
         if(session.IsAuthenticated)
@@ -78,15 +78,15 @@ internal sealed partial class Stream : ICommandHandler, IIrcReceivingHandler
         var host = GetHostName(session.RemoteEndPoint);
         var user = nickname.IsEmpty ? default : this.user;
 
-        if(!IrcAddress.TryCreate(nickname, user, host, out var address))
+        if(!IrcEndPoint.TryCreate(nickname, user, host, out var address))
         {
             // A username that cannot be part of an address is left out of it
-            IrcAddress.TryCreate(nickname, default, host, out address);
+            IrcEndPoint.TryCreate(nickname, default, host, out address);
         }
         return address;
     }
 
-    private ValueTask SendCommandWithParams(IrcAddress source, bstring command, ReadOnlySpan<bstring> @params)
+    private ValueTask SendCommandWithParams(IrcEndPoint source, bstring command, ReadOnlySpan<bstring> @params)
     {
         if(@params.IsEmpty)
         {
@@ -108,7 +108,7 @@ internal sealed partial class Stream : ICommandHandler, IIrcReceivingHandler
         }
     }
 
-    private ValueTask SendCommandWithParams(IrcAddress source, MessageReply reply, ReadOnlySpan<bstring> @params)
+    private ValueTask SendCommandWithParams(IrcEndPoint source, MessageReply reply, ReadOnlySpan<bstring> @params)
     {
         if(@params.IsEmpty)
         {
