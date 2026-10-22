@@ -5,6 +5,9 @@ using System.Text;
 
 namespace NexIM.Irc.Protocol;
 
+/// <summary>
+/// Identifies one end-point in a given IRC communication, either bare or qualified.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct IrcEndPoint : IEquatable<IrcEndPoint>, IComparable<IrcEndPoint>
 {
@@ -168,6 +171,16 @@ public readonly struct IrcEndPoint : IEquatable<IrcEndPoint>, IComparable<IrcEnd
         return true;
     }
 
+    public static bool TryCreate(ReadOnlySpan<byte> nickname, out IrcEndPoint address)
+    {
+        return TryCreate(nickname, default, default, out address, out _);
+    }
+
+    public static bool TryCreate(ReadOnlySpan<byte> nickname, ReadOnlySpan<byte> user, out IrcEndPoint address)
+    {
+        return TryCreate(nickname, user, default, out address, out _);
+    }
+
     public static bool TryCreate(ReadOnlySpan<byte> nickname, ReadOnlySpan<byte> user, ReadOnlySpan<byte> host, out IrcEndPoint address)
     {
         return TryCreate(nickname, user, host, out address, out _);
@@ -252,6 +265,11 @@ public readonly struct IrcEndPoint : IEquatable<IrcEndPoint>, IComparable<IrcEnd
         address = new(buffer, userStart, hostStart);
         exception = null;
         return true;
+    }
+
+    public static bool TryParse(ByteStringView value, out IrcEndPoint address)
+    {
+        return TryParse(value, (Components)(-1), out address, out _);
     }
 
     public static bool TryParse(ByteStringView value, Components components, out IrcEndPoint address)
@@ -398,6 +416,9 @@ public readonly struct IrcEndPoint : IEquatable<IrcEndPoint>, IComparable<IrcEnd
     {
         return Value.CompareTo(other.Value);
     }
+
+    public static bool operator ==(IrcEndPoint a, IrcEndPoint b) => a.Equals(b);
+    public static bool operator !=(IrcEndPoint a, IrcEndPoint b) => !a.Equals(b);
 
     [Flags]
     public enum Components
