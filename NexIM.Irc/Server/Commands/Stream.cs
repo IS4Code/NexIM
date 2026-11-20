@@ -48,6 +48,12 @@ internal sealed partial class Stream : ICommandHandler, IIrcReceivingHandler
         return new AccountName(username, this.GetSession().LocalEndPoint.GetHostName() ?? "");
     }
 
+    private ValueTask HandleReport(Event evnt, StatusReport report)
+    {
+        // TODO
+        return default;
+    }
+
     private async ValueTask<bool> Login(Account? account)
     {
         if(account == null)
@@ -221,6 +227,7 @@ internal sealed partial class Stream : ICommandHandler, IIrcReceivingHandler
                 if(Ascii.EqualsIgnoreCase(rest, "RIVMSG"u8))
                 {
                     // PRIVMSG
+                    return PrivMsgCommand(message);
                 }
                 break;
 

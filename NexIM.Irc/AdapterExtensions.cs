@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using NexIM.Irc.Protocol;
 using NexIM.Irc.Server.Communication;
 using NexIM.Irc.Tools;
@@ -10,9 +9,9 @@ namespace NexIM.Irc;
 
 internal static class AdapterExtensions
 {
-    public static IrcEndPoint ToAddress(this Identifier identifier, IIrcSession? session = null)
+    public static IrcEndPoint ToAddress(this Identifier identifier, IIrcSession session)
     {
-        var encoder = ByteStringCache.Global.Get(session?.Encoding ?? Encoding.UTF8);
+        var encoder = ByteStringCache.Global.Get(session.Encoding);
         if(identifier.Account is not { } accountName)
         {
             if(identifier.Resource is not { } resource)
@@ -36,9 +35,9 @@ internal static class AdapterExtensions
                 // Just resource
                 return IrcEndPoint.FromNickname(encoder.Get(resource));
             }
-            // User makes host necessary
-            if(session != null)
+            else
             {
+                // User makes host necessary
                 if(identifier.Resource is not { } resource)
                 {
                     // TODO Cannot encode user if there is no nickname
@@ -46,10 +45,6 @@ internal static class AdapterExtensions
                 }
                 var addr = encoder.Get($"{resource}!{user}@{session.LocalAddress.Host}");
                 return new(addr);
-            }
-            else
-            {
-                throw new ArgumentNullException(nameof(session));
             }
         }
         else
@@ -81,9 +76,9 @@ internal static class AdapterExtensions
         }
     }
 
-    public static Identifier ToIdentifier(this IrcEndPoint address, IIrcSession? session = null)
+    public static Identifier ToIdentifier(this IrcEndPoint address, IIrcSession session)
     {
-        var encoding = session?.Encoding ?? Encoding.UTF8;
+        var encoding = session.Encoding;
 
         var nickname = address.Nickname;
         var user = address.User;
@@ -106,5 +101,41 @@ internal static class AdapterExtensions
             return new(accountName, null);
         }
         return new(accountName, nickname.ToString(encoding));
+    }
+
+    public static Identifier ToIdentifier(this IrcUser address, IIrcSession session)
+    {
+        var encoding = session.Encoding;
+
+        var user = address.User;
+        var host = address.Host;
+        return new(new(user.ToString(encoding), host.ToString(encoding)), null);
+    }
+
+    public static Identifier ToIdentifier(this IrcChannel address, IIrcSession session)
+    {
+        var encoding = session.Encoding;
+
+        // Mask supplies the server name
+        var name = address.Name;
+        var mask = address.Mask;
+        return new(new(name.ToString(encoding), mask.ToString(encoding)), null);
+    }
+
+    public static Identifier ToIdentifier(this IrcTarget address, IIrcSession session)
+    {
+        if(address.TryToEndPoint(out var endPoint))
+        {
+            return ToIdentifier(endPoint, session);
+        }
+        if(address.TryToUser(out var user))
+        {
+            return ToIdentifier(user, session);
+        }
+        if(address.TryToChannel(out var channel))
+        {
+            return ToIdentifier(channel, session);
+        }
+        throw new ArgumentException("Unknown address kind.", nameof(address));
     }
 }

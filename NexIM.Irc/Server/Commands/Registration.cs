@@ -103,7 +103,7 @@ partial class Stream
         if(!session.IsAuthenticated)
         {
             // Anonymous authentication
-            var assertedName = address.ToIdentifier().Account;
+            var assertedName = address.ToIdentifier(session).Account;
 
             if(!await Login(await server.AuthenticateAnonymous(FormAccountName, assertedName, session)))
             {
