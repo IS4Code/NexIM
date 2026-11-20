@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Reflection;
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using NexIM.Server.Tools;
 
 namespace NexIM.Server;
 
@@ -11,6 +13,7 @@ public sealed partial class NexServer
     public string ProductName { get; } = typeof(NexServer).Assembly.GetCustomAttribute<AssemblyProductAttribute>()!.Product;
     public string ProductVersion { get; } = typeof(NexServer).Assembly.GetName().Version!.ToString(3);
     public DateTime StartDate { get; } = DateTime.UtcNow;
+    public ICryptoProvider CryptoProvider { get; set; } = DefaultCryptoProvider.Instance;
 
     public NexServer(NexDatabase database)
     {
@@ -61,5 +64,20 @@ public abstract record NexDatabase
         {
             builder.UseNpgsql(ConnectionString);
         }
+    }
+}
+
+sealed file class DefaultCryptoProvider : ICryptoProvider
+{
+    public static readonly DefaultCryptoProvider Instance = new();
+
+    private DefaultCryptoProvider()
+    {
+
+    }
+
+    public void RandomFill(Span<byte> data)
+    {
+        RandomNumberGenerator.Fill(data);
     }
 }

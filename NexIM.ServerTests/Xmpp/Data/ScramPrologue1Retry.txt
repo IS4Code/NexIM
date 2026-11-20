@@ -1,0 +1,40 @@
+# Stream open
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" xml:lang="en" version="1.0" to="localhost">
+##
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" version="1.0" xml:lang="en" from="localhost">
+<stream:features>
+<mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl">
+<mechanism>SCRAM-SHA-256</mechanism>
+<mechanism>SCRAM-SHA-1</mechanism>
+<mechanism>PLAIN</mechanism>
+<mechanism>ANONYMOUS</mechanism>
+</mechanisms>
+<register xmlns="http://jabber.org/features/iq-register" />
+<auth xmlns="http://jabber.org/features/iq-auth" />
+<session xmlns="urn:ietf:params:xml:ns:xmpp-session">
+<optional />
+</session>
+<ver xmlns="urn:xmpp:features:rosterver" />
+<sub xmlns="urn:xmpp:features:pre-approval" />
+</stream:features>
+
+##
+
+# Wrong password proof is rejected
+<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="SCRAM-SHA-256">biwsbj1zY3JhbSxyPW5leGltLWNsaWVudC1ub25jZQ==</auth>
+##
+<challenge xmlns="urn:ietf:params:xml:ns:xmpp-sasl">cj1uZXhpbS1jbGllbnQtbm9uY2VibVY0YVcwdGMyVnlkbVZ5TFc1dmJtTmwscz1BQUVDQXdRRkJnY0lDUW9MREEwT0R4QVJFaE1VRlJZWEdCa2FHeHdkSGg4PSxpPTU4Mzg0OA==</challenge>
+##
+<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">Yz1iaXdzLHI9bmV4aW0tY2xpZW50LW5vbmNlYm1WNGFXMHRjMlZ5ZG1WeUxXNXZibU5sLHA9S0R0QU1GR0NoYXpaeXA3TGM4Q0dZSGpNWFlCQVkyaTRFaU9LZXlEa0ZEMD0=</response>
+##
+<failure xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><not-authorized /></failure>
+##
+
+# Retry with the correct proof
+<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="SCRAM-SHA-256">biwsbj1zY3JhbSxyPW5leGltLWNsaWVudC1ub25jZQ==</auth>
+##
+<challenge xmlns="urn:ietf:params:xml:ns:xmpp-sasl">cj1uZXhpbS1jbGllbnQtbm9uY2VibVY0YVcwdGMyVnlkbVZ5TFc1dmJtTmwscz1BQUVDQXdRRkJnY0lDUW9MREEwT0R4QVJFaE1VRlJZWEdCa2FHeHdkSGg4PSxpPTU4Mzg0OA==</challenge>
+##
+<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">Yz1iaXdzLHI9bmV4aW0tY2xpZW50LW5vbmNlYm1WNGFXMHRjMlZ5ZG1WeUxXNXZibU5sLHA9dHhRTjhac0ZFcmV2UzRlS3RDbnNxOHM5Yi9zY2hNVm1PcFpva3FDR2RoTT0=</response>
+##
+<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dj1Sd1JSNmtUVlBXN0R2M0hvazZYcW5iYTE2cjdweFAzQlMvMDVlai84S3pjPQ==</success>

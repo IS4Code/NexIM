@@ -318,12 +318,12 @@ sealed class ScramSaslSession(NexServer server, Func<string, AccountName> userna
     }
 
     const int serverNonceLength = 18;
-    static void GenerateNonce(TemporaryArray<char> output)
+    void GenerateNonce(TemporaryArray<char> output)
     {
         Span<byte> bytes = stackalloc byte[serverNonceLength];
         try
         {
-            RandomNumberGenerator.Fill(bytes);
+            server.CryptoProvider.RandomFill(bytes);
             output.FillFrom(base64Reader, bytes, default);
         }
         finally

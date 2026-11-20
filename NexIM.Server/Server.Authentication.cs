@@ -85,7 +85,7 @@ partial class NexServer
             if(result == PasswordHasher.VerificationResult.VerifiedWeak)
             {
                 // Give it a rehash
-                account.PasswordHash = await PasswordHasher.HashPassword(password);
+                account.PasswordHash = await PasswordHasher.HashPassword(password, CryptoProvider);
                 await account.Save();
             }
 
@@ -119,7 +119,7 @@ partial class NexServer
                 return null;
             }
 
-            hash = await PasswordHasher.HashPassword(password);
+            hash = await PasswordHasher.HashPassword(password, CryptoProvider);
         }
         finally
         {

@@ -13,13 +13,13 @@ internal static class PasswordHasher
 {
     static readonly HashInfo defaultHashInfo = new(HashAlgorithmName.SHA256, 600000, 32, 32);
 
-    public static async ValueTask<byte[]> HashPassword(ReadOnlyMemory<char> password)
+    public static async ValueTask<byte[]> HashPassword(ReadOnlyMemory<char> password, ICryptoProvider cryptoProvider)
     {
         await Task.Yield();
-        return HashPasswordCore(password.Span);
+        return HashPasswordCore(password.Span, cryptoProvider);
     }
 
-    private static byte[] HashPasswordCore(ReadOnlySpan<char> password)
+    private static byte[] HashPasswordCore(ReadOnlySpan<char> password, ICryptoProvider cryptoProvider)
     {
         var hashInfo = defaultHashInfo;
         var result = new byte[HashInfo.HeaderSize + hashInfo.SaltAndKeyLength];
@@ -31,7 +31,7 @@ internal static class PasswordHasher
         // Prepare salt and key
         var salt = result.AsSpan(HashInfo.HeaderSize, hashInfo.SaltLength);
         var key = result.AsSpan(HashInfo.HeaderSize + salt.Length);
-        RandomNumberGenerator.Fill(salt);
+        cryptoProvider.RandomFill(salt);
 
         // Hash
         Pbkdf2(password, salt, key, hashInfo);
